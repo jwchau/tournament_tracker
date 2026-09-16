@@ -1,6 +1,8 @@
+from typing import Iterator
+
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine
 
 DATABASE_URL = "sqlite:///./tournament_tracker.db"
 
@@ -17,3 +19,8 @@ def _set_sqlite_pragmas(dbapi_connection, connection_record) -> None:
 
 def init_db(bind: Engine = engine) -> None:
     SQLModel.metadata.create_all(bind)
+
+
+def get_session() -> Iterator[Session]:
+    with Session(engine) as session:
+        yield session
