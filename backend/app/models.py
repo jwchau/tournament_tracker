@@ -39,3 +39,19 @@ class Player(SQLModel, table=True):
 
 class PlayerCreate(SQLModel):
     name: str
+
+
+class Match(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    tournament_id: int = Field(foreign_key="tournament.id")
+    round: int
+    position: int
+    team1_id: int | None = Field(default=None, foreign_key="team.id")
+    team2_id: int | None = Field(default=None, foreign_key="team.id")
+    status: str
+    winner_id: int | None = Field(default=None, foreign_key="team.id")
+    winner_next_match_id: int | None = Field(default=None, foreign_key="match.id")
+    winner_next_slot: int | None = None
+    loser_next_match_id: int | None = Field(default=None, foreign_key="match.id")
+    loser_next_slot: int | None = None
+    version: int = 1

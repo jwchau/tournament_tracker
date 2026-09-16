@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
-import { listPlayers, listTeams, listTournaments } from './api'
+import { generateBracket, listPlayers, listTeams, listTournaments } from './api'
+import BracketDiagram from './BracketDiagram'
 import PlayerForm from './PlayerForm'
 
 function Roster({ teamId }) {
@@ -36,6 +37,7 @@ function TeamWithRoster({ team }) {
 
 function TournamentWithTeams({ tournament }) {
   const [teams, setTeams] = useState([])
+  const [bracketGenerated, setBracketGenerated] = useState(false)
 
   useEffect(() => {
     listTeams(tournament.id).then(setTeams)
@@ -49,6 +51,13 @@ function TournamentWithTeams({ tournament }) {
           <TeamWithRoster key={team.id} team={team} />
         ))}
       </ul>
+      <button
+        type="button"
+        onClick={() => generateBracket(tournament.id).then(() => setBracketGenerated(true))}
+      >
+        Generate bracket
+      </button>
+      {bracketGenerated && <BracketDiagram tournamentId={tournament.id} />}
     </li>
   )
 }

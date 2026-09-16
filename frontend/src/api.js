@@ -43,3 +43,11 @@ export function createPlayer(teamId, { name }) {
 export function listPlayers(teamId) {
   return getJson(`/teams/${teamId}/players`)
 }
+
+export function generateBracket(tournamentId) {
+  return postJson(`/tournaments/${tournamentId}/bracket/generate`, {})
+}
+
+export function getBracket(tournamentId) {
+  return getJson(`/tournaments/${tournamentId}/bracket`)
+}
