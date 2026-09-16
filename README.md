@@ -15,23 +15,43 @@ planned vertical slices.
 
 - **Backend**: Python, FastAPI, SQLModel/SQLAlchemy, SQLite (WAL mode,
   `busy_timeout` set). CORS is enabled for the frontend's dev origin
-  (`http://localhost:5173`).
+  (`http://localhost:5173`), the permanent external domain
+  (`https://tournament.john-chau.eu.org`), and any Cloudflare quick-tunnel
+  origin (`https://*.trycloudflare.com`).
 - **Frontend**: React + Vite.
 - **Dev/run environment**: Docker Compose (backend container, frontend
   container).
-- **Testing**: strict TDD (red-green-refactor). Backend: pytest. Frontend:
-  React Testing Library / Vitest.
+- **Testing**: strict TDD (red-green-refactor). Backend: pytest, with each
+  test running against an isolated in-memory SQLite session (see
+  `backend/tests/conftest.py`). Frontend: React Testing Library / Vitest.
 
 ## Status
 
-Slice 0 (project scaffolding) is implemented and verified end-to-end via
-`docker compose up`: a FastAPI backend with a `/health` endpoint, SQLite/WAL
-setup, and CORS enabled for the frontend dev origin; a Vite + React frontend
-that calls `/health` and renders connection status; both wired together via
-Docker Compose, with backend (pytest) and frontend (Vitest) test harnesses
-passing inside the running containers. No tournament domain logic
-(`Tournament`, `Team`, `Match`, etc.) exists yet — that starts with
-[tickets/01-tournament-and-team-setup.md](tickets/01-tournament-and-team-setup.md).
+- **Slice 0** (project scaffolding) — done. FastAPI backend with `/health`,
+  SQLite/WAL setup; Vite + React frontend that calls `/health` and renders
+  connection status; both wired via Docker Compose.
+- **Slice 01** ([tickets/01-tournament-and-team-setup.md](tickets/01-tournament-and-team-setup.md))
+  — done. `Tournament`, `Team`, and `Player` models; REST endpoints to
+  create/list each; an admin-setup frontend flow to create a tournament, add
+  teams, and add players to a roster, with a nested list view. See
+  [API endpoints](#api-endpoints) below.
+- **Next**: [tickets/02-single-elimination-bracket.md](tickets/02-single-elimination-bracket.md)
+  — not started (branch created, no implementation yet).
+
+Both backend and frontend test suites pass inside the running containers and
+standalone; verified end-to-end via `docker compose up`.
+
+## API endpoints
+
+| Method | Path                          | Description                        |
+| ------ | ----------------------------- | ----------------------------------- |
+| POST   | `/tournaments`                | Create a tournament                 |
+| GET    | `/tournaments`                | List tournaments                    |
+| POST   | `/tournaments/{id}/teams`     | Add a team to a tournament (404 if tournament doesn't exist) |
+| GET    | `/tournaments/{id}/teams`     | List a tournament's teams           |
+| POST   | `/teams/{id}/players`         | Add a player to a team's roster (404 if team doesn't exist) |
+| GET    | `/teams/{id}/players`         | List a team's roster                |
+| GET    | `/health`                     | Health check                        |
 
 ## Getting started
 
@@ -94,6 +114,20 @@ docker compose exec backend uv run pytest # inside the running container
 cd frontend && npm test && npm run lint                       # standalone
 docker compose exec frontend node ./node_modules/vitest/vitest.mjs run # inside the running container
 ```
+
+## External access
+
+The app can be exposed outside localhost via a
+[Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+pointed at a permanent domain (`tournament.john-chau.eu.org` for the
+frontend, `tournament-api.john-chau.eu.org` for the backend), free on
+Cloudflare's tier — only the domain itself (a free [eu.org](https://eu.org)
+registration in this case) has any cost. Tunnel setup (`cloudflared`
+login/credentials/`config.yml`) lives on the host, not in this repo; the app
+side of it is just the CORS origin and Vite `allowedHosts` entries in
+`backend/app/main.py` and `frontend/vite.config.js`. Ephemeral quick tunnels
+(`cloudflared tunnel --url <local-url>`) also work out of the box via the
+`*.trycloudflare.com` regex/wildcard already configured in both places.
 
 ## Project layout
 
