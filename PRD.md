@@ -201,6 +201,12 @@ organizer, run via Docker Compose on a local machine or LAN at a venue.
 - Marking a match complete requires both teams known and a non-tied
   score; it sets `winner_id` and status in the same version-checked
   statement.
+- **Interim rule until §7.4 lands**: a match that is already `complete`
+  cannot be re-scored through the scoring endpoint at all (rejected, not
+  merely unsupported) — resubmitting a "corrected" score today would
+  silently overwrite `winner_id` with no cascading reset of whatever
+  downstream match already consumed the old winner. This restriction is
+  lifted once cascading correction (§7.4) is implemented.
 
 ### 7.3 Bracket advancement
 

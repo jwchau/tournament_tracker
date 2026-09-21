@@ -5,7 +5,7 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   server: {
-    allowedHosts: ['.trycloudflare.com', 'tournament.john-chau.eu.org'],
+    allowedHosts: ['.trycloudflare.com', 'tournament.johnchau.org'],
   },
   test: {
     environment: 'jsdom',

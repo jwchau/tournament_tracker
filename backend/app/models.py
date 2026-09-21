@@ -48,6 +48,8 @@ class Match(SQLModel, table=True):
     position: int
     team1_id: int | None = Field(default=None, foreign_key="team.id")
     team2_id: int | None = Field(default=None, foreign_key="team.id")
+    team1_score: int | None = None
+    team2_score: int | None = None
     status: str
     winner_id: int | None = Field(default=None, foreign_key="team.id")
     winner_next_match_id: int | None = Field(default=None, foreign_key="match.id")
