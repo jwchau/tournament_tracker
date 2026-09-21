@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
+from sqlmodel import Session, SQLModel, select
 
 from app.bracket import generate_single_elimination
 from app.db import get_session
 from app.models import Match, Player, PlayerCreate, Team, TeamCreate, Tournament, TournamentCreate
+from app.scoring import InvalidScore, MatchNotFound, VersionConflict, submit_score
 
 router = APIRouter()
 
@@ -126,3 +127,42 @@ def get_bracket(
     return list(
         session.exec(select(Match).where(Match.tournament_id == tournament_id)).all()
     )
+
+
+class ScoreSubmission(SQLModel):
+    team1_score: int
+    team2_score: int
+    version: int
+    complete: bool = False
+
+
+@router.get("/matches/{match_id}", response_model=Match)
+def get_match(match_id: int, session: Session = Depends(get_session)) -> Match:
+    match = session.get(Match, match_id)
+    if match is None:
+        raise HTTPException(status_code=404, detail="Match not found")
+    return match
+
+
+@router.patch("/matches/{match_id}/score", response_model=Match)
+def submit_match_score(
+    match_id: int, data: ScoreSubmission, session: Session = Depends(get_session)
+) -> Match:
+    try:
+        return submit_score(
+            session,
+            match_id,
+            data.team1_score,
+            data.team2_score,
+            data.version,
+            data.complete,
+        )
+    except MatchNotFound:
+        raise HTTPException(status_code=404, detail="Match not found")
+    except InvalidScore as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except VersionConflict:
+        raise HTTPException(
+            status_code=409,
+            detail="version conflict: match was updated by someone else, please refetch and retry",
+        )

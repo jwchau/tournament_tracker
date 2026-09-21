@@ -1,8 +1,8 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
-async function postJson(path, body) {
+async function sendJson(method, path, body) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: 'POST',
+    method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
@@ -10,6 +10,14 @@ async function postJson(path, body) {
     return Promise.reject(response)
   }
   return response.json()
+}
+
+function postJson(path, body) {
+  return sendJson('POST', path, body)
+}
+
+function patchJson(path, body) {
+  return sendJson('PATCH', path, body)
 }
 
 async function getJson(path) {
@@ -50,4 +58,17 @@ export function generateBracket(tournamentId) {
 
 export function getBracket(tournamentId) {
   return getJson(`/tournaments/${tournamentId}/bracket`)
+}
+
+export function getMatch(matchId) {
+  return getJson(`/matches/${matchId}`)
+}
+
+export function submitScore(matchId, { team1Score, team2Score, version, complete }) {
+  return patchJson(`/matches/${matchId}/score`, {
+    team1_score: team1Score,
+    team2_score: team2Score,
+    version,
+    complete,
+  })
 }
