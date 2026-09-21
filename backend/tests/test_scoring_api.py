@@ -7,6 +7,8 @@ def _create_ready_match(client):
         ).json()
         for seed, name in [(1, "Alpha"), (2, "Beta")]
     ]
+    for team in teams:
+        client.post(f"/teams/{team['id']}/players", json={"name": f"{team['name']} Player"})
     match = client.post(f"/tournaments/{tournament['id']}/bracket/generate").json()[0]
     return match
 

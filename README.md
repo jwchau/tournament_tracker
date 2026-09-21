@@ -42,7 +42,12 @@ planned vertical slices.
   — done. Bracket generation (`_seed_order`/`generate_single_elimination`)
   with standard seeding and bye handling; a `Match` model; endpoints to
   generate/fetch a bracket; an SVG `BracketDiagram` behind a "Generate
-  bracket" trigger.
+  bracket" trigger. `POST .../bracket/generate` validates readiness first
+  (`validate_teams_for_bracket` in `backend/app/bracket.py`) — rejects
+  (`400`) fewer than 2 teams, or any team with no players registered —
+  instead of the prior silent no-op (0 teams/1 team quietly persisted an
+  empty bracket with a `201`). The frontend surfaces the validation
+  message inline instead of failing silently.
 - **Slice 03** ([tickets/03-live-scoring-concurrency.md](tickets/03-live-scoring-concurrency.md))
   — done. `submit_score()` does a single version-checked `UPDATE` (409 on a
   rowcount-0 conflict) and, on completion, an atomic second `UPDATE` that
@@ -54,7 +59,12 @@ planned vertical slices.
   it exists the API simply refuses to silently overwrite a decided match.
   Frontend: `ScoreEntryForm` (shows version, submits, and surfaces a `409`
   with a refetch affordance) rendered per scorable match inside
-  `BracketDiagram`, which now polls every 4s.
+  `BracketDiagram`, which now polls every 4s. Polling is wrapped in a
+  circuit breaker (`frontend/src/circuitBreaker.js`) with a 5s per-request
+  timeout (`frontend/src/withTimeout.js`): after 3 consecutive failures
+  (error response, non-2xx, or timeout) it stops calling the backend
+  entirely — showing "Connection lost" — until a 30s cooldown elapses,
+  then probes again and closes once a request succeeds.
 - **Next**: [tickets/04-cascading-score-correction.md](tickets/04-cascading-score-correction.md)
   — not started.
 

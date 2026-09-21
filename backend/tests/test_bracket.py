@@ -1,4 +1,12 @@
-from app.bracket import _seed_order, generate_single_elimination
+import pytest
+
+from app.bracket import (
+    BracketNotReady,
+    _seed_order,
+    generate_single_elimination,
+    validate_teams_for_bracket,
+)
+from app.models import Player, Team
 
 
 def test_seed_order_for_power_of_two_sizes():
@@ -81,3 +89,35 @@ def test_generate_single_elimination_with_two_non_cascading_byes():
     assert matches[(2, 2)].team1_id == 20
     assert matches[(2, 2)].team2_id is None
     assert matches[(2, 2)].status == "pending"
+
+
+def test_validate_teams_for_bracket_requires_at_least_two_teams():
+    teams = [Team(id=1, tournament_id=1, name="Solo Squad")]
+    players = [Player(id=1, team_id=1, name="Alex")]
+
+    with pytest.raises(BracketNotReady, match="at least 2 teams"):
+        validate_teams_for_bracket(teams, players)
+
+
+def test_validate_teams_for_bracket_requires_every_team_to_have_a_player():
+    teams = [
+        Team(id=1, tournament_id=1, name="Ice Wolves"),
+        Team(id=2, tournament_id=1, name="Fire Hawks"),
+    ]
+    players = [Player(id=1, team_id=1, name="Alex")]
+
+    with pytest.raises(BracketNotReady, match="Fire Hawks"):
+        validate_teams_for_bracket(teams, players)
+
+
+def test_validate_teams_for_bracket_passes_when_every_team_has_a_player():
+    teams = [
+        Team(id=1, tournament_id=1, name="Ice Wolves"),
+        Team(id=2, tournament_id=1, name="Fire Hawks"),
+    ]
+    players = [
+        Player(id=1, team_id=1, name="Alex"),
+        Player(id=2, team_id=2, name="Sam"),
+    ]
+
+    validate_teams_for_bracket(teams, players)
