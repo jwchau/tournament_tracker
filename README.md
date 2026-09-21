@@ -153,6 +153,31 @@ side of it is just the CORS origin and Vite `allowedHosts` entries in
 (`cloudflared tunnel --url <local-url>`) also work out of the box via the
 `*.trycloudflare.com` regex/wildcard already configured in both places.
 
+### Alternative: frontend on Cloudflare Workers
+
+The backend can't run on Cloudflare Workers (stateful FastAPI + file-based
+SQLite needs a real, persistent host) and keeps running via Docker
+Compose + Tunnel as above regardless. The **frontend**, being a static Vite
+build, can optionally be deployed as a Workers Static Assets site instead of
+served from your own machine — `frontend/wrangler.jsonc` configures this.
+Set up via the Cloudflare dashboard's "Workers & Pages → Create → Import a
+repository" flow with:
+
+| Field                              | Value                                    |
+| ----------------------------------- | ----------------------------------------- |
+| Project name                        | `tournament-tracker` (matches `wrangler.jsonc`'s `name`) |
+| Build command                       | `npm install && npm run build`            |
+| Deploy command                      | `npx wrangler deploy` (default)           |
+| Non-production branch deploy command | `npx wrangler versions upload` (default) |
+| Path                                | `frontend` (this is a monorepo; scopes the build to that directory) |
+| API token                           | Use "Create new token" — Cloudflare mints and stores a scoped token itself, nothing to generate elsewhere |
+| Environment variable                | `VITE_API_BASE_URL` = the backend's public Tunnel URL (e.g. `https://tournament-api.johnchau.org`) — Vite bakes this in **at build time**, so it must be set as a build variable in the Cloudflare project, not left for runtime |
+
+Without `VITE_API_BASE_URL` set, the deployed frontend falls back to
+same-origin requests (`API_BASE_URL = ''` in `frontend/src/api.js`), which
+breaks every API call since the Worker only serves static assets and has no
+backend to proxy to.
+
 ## Project layout
 
 ```
