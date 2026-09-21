@@ -7,6 +7,8 @@ def _create_tournament_with_teams(client, seeds_and_names):
         ).json()
         for seed, name in seeds_and_names
     ]
+    for team in teams:
+        client.post(f"/teams/{team['id']}/players", json={"name": f"{team['name']} Player"})
     return tournament, teams
 
 
@@ -55,3 +57,28 @@ def test_get_bracket_returns_the_generated_matches(client):
     assert response.status_code == 200
     ids = {m["id"] for m in response.json()}
     assert ids == {m["id"] for m in generated}
+
+
+def test_generate_bracket_rejects_fewer_than_two_teams(client):
+    tournament, _ = _create_tournament_with_teams(client, [(1, "Ice Wolves")])
+
+    response = client.post(f"/tournaments/{tournament['id']}/bracket/generate")
+
+    assert response.status_code == 400
+    assert "at least 2 teams" in response.json()["detail"]
+
+
+def test_generate_bracket_rejects_a_team_with_no_players(client):
+    tournament = client.post("/tournaments", json={"name": "Spring Classic"}).json()
+    client.post(
+        f"/tournaments/{tournament['id']}/teams", json={"name": "Ice Wolves", "seed": 1}
+    )
+    team2 = client.post(
+        f"/tournaments/{tournament['id']}/teams", json={"name": "Fire Hawks", "seed": 2}
+    ).json()
+    client.post(f"/teams/{team2['id']}/players", json={"name": "Sam"})
+
+    response = client.post(f"/tournaments/{tournament['id']}/bracket/generate")
+
+    assert response.status_code == 400
+    assert "Ice Wolves" in response.json()["detail"]

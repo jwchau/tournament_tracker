@@ -38,10 +38,22 @@ function TeamWithRoster({ team }) {
 function TournamentWithTeams({ tournament }) {
   const [teams, setTeams] = useState([])
   const [bracketGenerated, setBracketGenerated] = useState(false)
+  const [bracketError, setBracketError] = useState(null)
 
   useEffect(() => {
     listTeams(tournament.id).then(setTeams)
   }, [tournament.id])
+
+  async function handleGenerateBracket() {
+    try {
+      await generateBracket(tournament.id)
+      setBracketGenerated(true)
+      setBracketError(null)
+    } catch (error) {
+      const body = await error?.json?.().catch(() => null)
+      setBracketError(body?.detail ?? 'Failed to generate bracket')
+    }
+  }
 
   return (
     <li>
@@ -51,12 +63,10 @@ function TournamentWithTeams({ tournament }) {
           <TeamWithRoster key={team.id} team={team} />
         ))}
       </ul>
-      <button
-        type="button"
-        onClick={() => generateBracket(tournament.id).then(() => setBracketGenerated(true))}
-      >
+      <button type="button" onClick={handleGenerateBracket}>
         Generate bracket
       </button>
+      {bracketError && <p role="alert">{bracketError}</p>}
       {bracketGenerated && <BracketDiagram tournamentId={tournament.id} />}
     </li>
   )

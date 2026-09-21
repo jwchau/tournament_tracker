@@ -1,5 +1,24 @@
 from dataclasses import dataclass
 
+from app.models import Player, Team
+
+
+class BracketNotReady(Exception):
+    pass
+
+
+def validate_teams_for_bracket(teams: list[Team], players: list[Player]) -> None:
+    if len(teams) < 2:
+        raise BracketNotReady("at least 2 teams are required to generate a bracket")
+
+    teams_with_players = {player.team_id for player in players}
+    missing = [team.name for team in teams if team.id not in teams_with_players]
+    if missing:
+        raise BracketNotReady(
+            "every team needs at least one player before generating a bracket: "
+            + ", ".join(missing)
+        )
+
 
 @dataclass
 class GeneratedMatch:

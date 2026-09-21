@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, SQLModel, select
 
-from app.bracket import generate_single_elimination
+from app.bracket import BracketNotReady, generate_single_elimination, validate_teams_for_bracket
 from app.db import get_session
 from app.models import Match, Player, PlayerCreate, Team, TeamCreate, Tournament, TournamentCreate
 from app.scoring import InvalidScore, MatchNotFound, VersionConflict, submit_score
@@ -85,6 +85,14 @@ def generate_bracket(
     teams = session.exec(
         select(Team).where(Team.tournament_id == tournament_id)
     ).all()
+    players = session.exec(
+        select(Player).where(Player.team_id.in_([team.id for team in teams]))
+    ).all()
+    try:
+        validate_teams_for_bracket(teams, players)
+    except BracketNotReady as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
     ordered_team_ids = [
         team.id for team in sorted(teams, key=lambda team: (team.seed is None, team.seed))
     ]
