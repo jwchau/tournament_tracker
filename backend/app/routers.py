@@ -75,6 +75,38 @@ def update_tournament(
     return tournament
 
 
+@router.delete("/tournaments/{tournament_id}", status_code=204)
+def delete_tournament(
+    tournament_id: int, session: Session = Depends(get_session)
+) -> None:
+    tournament = session.get(Tournament, tournament_id)
+    if tournament is None:
+        raise HTTPException(status_code=404, detail="Tournament not found")
+
+    teams = session.exec(
+        select(Team).where(Team.tournament_id == tournament_id)
+    ).all()
+    team_ids = [team.id for team in teams]
+    if team_ids:
+        players = session.exec(
+            select(Player).where(Player.team_id.in_(team_ids))
+        ).all()
+        for player in players:
+            session.delete(player)
+
+    matches = session.exec(
+        select(Match).where(Match.tournament_id == tournament_id)
+    ).all()
+    for match in matches:
+        session.delete(match)
+
+    for team in teams:
+        session.delete(team)
+
+    session.delete(tournament)
+    session.commit()
+
+
 @router.post(
     "/tournaments/{tournament_id}/teams", response_model=Team, status_code=201
 )

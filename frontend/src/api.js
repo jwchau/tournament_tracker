@@ -51,6 +51,10 @@ export function updateTournament(tournamentId, updates) {
   return patchJson(`/tournaments/${tournamentId}`, updates)
 }
 
+export function deleteTournament(tournamentId) {
+  return deleteRequest(`/tournaments/${tournamentId}`)
+}
+
 export function createTeam(tournamentId, { name, seed }) {
   return postJson(`/tournaments/${tournamentId}/teams`, { name, seed })
 }

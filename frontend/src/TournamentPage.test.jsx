@@ -22,6 +22,19 @@ function renderAt(tournamentId) {
   )
 }
 
+function renderAtWithHome(tournamentId) {
+  return render(
+    <MemoryRouter initialEntries={[`/tournaments/${tournamentId}`]}>
+      <NotificationProvider>
+        <Routes>
+          <Route path="/" element={<h2>Home page</h2>} />
+          <Route path="/tournaments/:tournamentId" element={<TournamentPage />} />
+        </Routes>
+      </NotificationProvider>
+    </MemoryRouter>,
+  )
+}
+
 test('loads the tournament and lists its teams with player counts, linking to their team pages', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
@@ -129,4 +142,46 @@ test('shows a notification with the validation detail when generating a bracket 
   fireEvent.click(await screen.findByRole('button', { name: /generate bracket/i }))
 
   expect(await screen.findByRole('alert')).toHaveTextContent(/at least 2 teams are required/i)
+})
+
+test('clicking delete tournament shows a confirmation modal that does nothing until confirmed', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  const deleteTournament = vi.spyOn(api, 'deleteTournament')
+
+  renderAtWithHome(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /delete tournament/i }))
+  expect(screen.getByRole('dialog', { name: /delete tournament/i })).toBeInTheDocument()
+
+  fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(deleteTournament).not.toHaveBeenCalled()
+  expect(screen.getByText('Spring Classic')).toBeInTheDocument()
+})
+
+test('confirming delete tournament removes it and redirects to the home page', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  const deleteTournament = vi.spyOn(api, 'deleteTournament').mockResolvedValue(undefined)
+
+  renderAtWithHome(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /delete tournament/i }))
+  fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+
+  expect(await screen.findByText('Home page')).toBeInTheDocument()
+  expect(deleteTournament).toHaveBeenCalledWith('1')
 })
