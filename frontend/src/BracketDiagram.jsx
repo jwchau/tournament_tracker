@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react'
 
 import { getBracket } from './api'
+import { createCircuitBreaker } from './circuitBreaker'
 import ScoreEntryForm from './ScoreEntryForm'
+import { withTimeout } from './withTimeout'
 
 const MATCH_WIDTH = 140
 const MATCH_HEIGHT = 40
 const ROUND_GAP = 60
 const ROW_UNIT = 60
 const POLL_INTERVAL_MS = 4000
+const REQUEST_TIMEOUT_MS = 5000
+const FAILURE_THRESHOLD = 3
+const COOLDOWN_MS = 30000
 
 function slotLabel(teamId, status) {
   if (teamId != null) return `Team ${teamId}`
@@ -21,14 +26,25 @@ function matchY(round, position) {
 
 export default function BracketDiagram({ tournamentId }) {
   const [matches, setMatches] = useState([])
+  const [connectionLost, setConnectionLost] = useState(false)
 
   useEffect(() => {
     let cancelled = false
+    const breaker = createCircuitBreaker({
+      failureThreshold: FAILURE_THRESHOLD,
+      cooldownMs: COOLDOWN_MS,
+    })
 
     function refresh() {
-      getBracket(tournamentId).then((data) => {
-        if (!cancelled) setMatches(data)
-      })
+      breaker
+        .execute(() => withTimeout(getBracket(tournamentId), REQUEST_TIMEOUT_MS))
+        .then((data) => {
+          if (!cancelled) setMatches(data)
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (!cancelled) setConnectionLost(breaker.getState() === 'open')
+        })
     }
 
     refresh()
@@ -58,6 +74,11 @@ export default function BracketDiagram({ tournamentId }) {
 
   return (
     <>
+      {connectionLost && (
+        <p role="status">
+          Connection lost — retrying automatically (checks again every {COOLDOWN_MS / 1000}s).
+        </p>
+      )}
       <svg
         role="img"
         aria-label="Bracket"

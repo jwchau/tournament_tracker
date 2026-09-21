@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
@@ -6,6 +6,7 @@ import BracketDiagram from './BracketDiagram'
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
 const eightTeamBracket = [
@@ -47,4 +48,25 @@ test('renders byes as pre-completed matches for a 5-team bracket', async () => {
   expect(screen.getAllByTestId(/^match-/)).toHaveLength(7)
   expect(screen.getAllByTestId(/^line-/)).toHaveLength(6)
   expect(screen.getAllByText('BYE')).toHaveLength(3)
+})
+
+test('stops polling after 3 consecutive failures and resumes after the cooldown', async () => {
+  vi.useFakeTimers()
+  const getBracket = vi.spyOn(api, 'getBracket').mockRejectedValue(new Error('network down'))
+
+  render(<BracketDiagram tournamentId={1} />)
+
+  await act(() => vi.advanceTimersByTimeAsync(0))
+  await act(() => vi.advanceTimersByTimeAsync(4000))
+  await act(() => vi.advanceTimersByTimeAsync(4000))
+  expect(getBracket).toHaveBeenCalledTimes(3)
+  expect(screen.getByText(/connection lost/i)).toBeInTheDocument()
+
+  await act(() => vi.advanceTimersByTimeAsync(28000))
+  expect(getBracket).toHaveBeenCalledTimes(3)
+
+  getBracket.mockResolvedValue(eightTeamBracket)
+  await act(() => vi.advanceTimersByTimeAsync(4000))
+  expect(getBracket).toHaveBeenCalledTimes(4)
+  expect(screen.queryByText(/connection lost/i)).not.toBeInTheDocument()
 })

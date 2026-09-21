@@ -54,7 +54,12 @@ planned vertical slices.
   it exists the API simply refuses to silently overwrite a decided match.
   Frontend: `ScoreEntryForm` (shows version, submits, and surfaces a `409`
   with a refetch affordance) rendered per scorable match inside
-  `BracketDiagram`, which now polls every 4s.
+  `BracketDiagram`, which now polls every 4s. Polling is wrapped in a
+  circuit breaker (`frontend/src/circuitBreaker.js`) with a 5s per-request
+  timeout (`frontend/src/withTimeout.js`): after 3 consecutive failures
+  (error response, non-2xx, or timeout) it stops calling the backend
+  entirely — showing "Connection lost" — until a 30s cooldown elapses,
+  then probes again and closes once a request succeeds.
 - **Next**: [tickets/04-cascading-score-correction.md](tickets/04-cascading-score-correction.md)
   — not started.
 
