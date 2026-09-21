@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
+from app.bracket import generate_single_elimination
 from app.db import get_session
-from app.models import Player, PlayerCreate, Team, TeamCreate, Tournament, TournamentCreate
+from app.models import Match, Player, PlayerCreate, Team, TeamCreate, Tournament, TournamentCreate
 
 router = APIRouter()
 
@@ -66,4 +67,62 @@ def create_player(
 def list_players(team_id: int, session: Session = Depends(get_session)) -> list[Player]:
     return list(
         session.exec(select(Player).where(Player.team_id == team_id)).all()
+    )
+
+
+@router.post(
+    "/tournaments/{tournament_id}/bracket/generate",
+    response_model=list[Match],
+    status_code=201,
+)
+def generate_bracket(
+    tournament_id: int, session: Session = Depends(get_session)
+) -> list[Match]:
+    if session.get(Tournament, tournament_id) is None:
+        raise HTTPException(status_code=404, detail="Tournament not found")
+
+    teams = session.exec(
+        select(Team).where(Team.tournament_id == tournament_id)
+    ).all()
+    ordered_team_ids = [
+        team.id for team in sorted(teams, key=lambda team: (team.seed is None, team.seed))
+    ]
+
+    generated = generate_single_elimination(ordered_team_ids)
+
+    rows_by_key = {}
+    for key, generated_match in generated.items():
+        row = Match(
+            tournament_id=tournament_id,
+            round=generated_match.round,
+            position=generated_match.position,
+            team1_id=generated_match.team1_id,
+            team2_id=generated_match.team2_id,
+            status=generated_match.status,
+            winner_id=generated_match.winner_id,
+        )
+        session.add(row)
+        rows_by_key[key] = row
+    session.flush()
+
+    for key, generated_match in generated.items():
+        if generated_match.winner_next is not None:
+            next_round, next_position, slot = generated_match.winner_next
+            row = rows_by_key[key]
+            row.winner_next_match_id = rows_by_key[(next_round, next_position)].id
+            row.winner_next_slot = slot
+
+    session.commit()
+    for row in rows_by_key.values():
+        session.refresh(row)
+
+    return list(rows_by_key.values())
+
+
+@router.get("/tournaments/{tournament_id}/bracket", response_model=list[Match])
+def get_bracket(
+    tournament_id: int, session: Session = Depends(get_session)
+) -> list[Match]:
+    return list(
+        session.exec(select(Match).where(Match.tournament_id == tournament_id)).all()
     )
