@@ -1,9 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session, SQLModel, func, select
 
 from app.bracket import BracketNotReady, generate_single_elimination, validate_teams_for_bracket
 from app.db import get_session
-from app.models import Match, Player, PlayerCreate, Team, TeamCreate, Tournament, TournamentCreate
+from app.models import (
+    Match,
+    Player,
+    PlayerCreate,
+    Team,
+    TeamCreate,
+    TeamSummary,
+    TeamUpdate,
+    Tournament,
+    TournamentCreate,
+    TournamentSummary,
+    TournamentUpdate,
+)
 from app.scoring import InvalidScore, MatchNotFound, VersionConflict, submit_score
 
 router = APIRouter()
@@ -20,9 +32,47 @@ def create_tournament(
     return tournament
 
 
-@router.get("/tournaments", response_model=list[Tournament])
-def list_tournaments(session: Session = Depends(get_session)) -> list[Tournament]:
-    return list(session.exec(select(Tournament)).all())
+@router.get("/tournaments", response_model=list[TournamentSummary])
+def list_tournaments(session: Session = Depends(get_session)) -> list[TournamentSummary]:
+    tournaments = session.exec(select(Tournament)).all()
+    counts = dict(
+        session.exec(
+            select(Team.tournament_id, func.count(Team.id)).group_by(Team.tournament_id)
+        ).all()
+    )
+    return [
+        TournamentSummary(**tournament.model_dump(), team_count=counts.get(tournament.id, 0))
+        for tournament in tournaments
+    ]
+
+
+@router.get("/tournaments/{tournament_id}", response_model=Tournament)
+def get_tournament(
+    tournament_id: int, session: Session = Depends(get_session)
+) -> Tournament:
+    tournament = session.get(Tournament, tournament_id)
+    if tournament is None:
+        raise HTTPException(status_code=404, detail="Tournament not found")
+    return tournament
+
+
+@router.patch("/tournaments/{tournament_id}", response_model=Tournament)
+def update_tournament(
+    tournament_id: int,
+    data: TournamentUpdate,
+    session: Session = Depends(get_session),
+) -> Tournament:
+    tournament = session.get(Tournament, tournament_id)
+    if tournament is None:
+        raise HTTPException(status_code=404, detail="Tournament not found")
+
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(tournament, field, value)
+
+    session.add(tournament)
+    session.commit()
+    session.refresh(tournament)
+    return tournament
 
 
 @router.post(
@@ -41,13 +91,51 @@ def create_team(
     return team
 
 
-@router.get("/tournaments/{tournament_id}/teams", response_model=list[Team])
+@router.get("/tournaments/{tournament_id}/teams", response_model=list[TeamSummary])
 def list_teams(
     tournament_id: int, session: Session = Depends(get_session)
-) -> list[Team]:
-    return list(
+) -> list[TeamSummary]:
+    teams = list(
         session.exec(select(Team).where(Team.tournament_id == tournament_id)).all()
     )
+    counts = (
+        dict(
+            session.exec(
+                select(Player.team_id, func.count(Player.id))
+                .where(Player.team_id.in_([team.id for team in teams]))
+                .group_by(Player.team_id)
+            ).all()
+        )
+        if teams
+        else {}
+    )
+    return [
+        TeamSummary(**team.model_dump(), player_count=counts.get(team.id, 0))
+        for team in teams
+    ]
+
+
+@router.get("/teams/{team_id}", response_model=Team)
+def get_team(team_id: int, session: Session = Depends(get_session)) -> Team:
+    team = session.get(Team, team_id)
+    if team is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+    return team
+
+
+@router.patch("/teams/{team_id}", response_model=Team)
+def update_team(
+    team_id: int, data: TeamUpdate, session: Session = Depends(get_session)
+) -> Team:
+    team = session.get(Team, team_id)
+    if team is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    team.name = data.name
+    session.add(team)
+    session.commit()
+    session.refresh(team)
+    return team
 
 
 @router.post("/teams/{team_id}/players", response_model=Player, status_code=201)
@@ -69,6 +157,21 @@ def list_players(team_id: int, session: Session = Depends(get_session)) -> list[
     return list(
         session.exec(select(Player).where(Player.team_id == team_id)).all()
     )
+
+
+@router.delete("/teams/{team_id}/players/{player_id}", status_code=204)
+def delete_player(
+    team_id: int, player_id: int, session: Session = Depends(get_session)
+) -> None:
+    if session.get(Team, team_id) is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    player = session.get(Player, player_id)
+    if player is None or player.team_id != team_id:
+        raise HTTPException(status_code=404, detail="Player not found")
+
+    session.delete(player)
+    session.commit()
 
 
 @router.post(

@@ -1,0 +1,49 @@
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
+
+const NotificationContext = createContext(() => {})
+
+const DISMISS_AFTER_MS = 5000
+
+export function NotificationProvider({ children }) {
+  const [notifications, setNotifications] = useState([])
+  const nextId = useRef(0)
+  const timeoutIds = useRef([])
+
+  useEffect(() => {
+    const ids = timeoutIds.current
+    return () => {
+      ids.forEach(clearTimeout)
+    }
+  }, [])
+
+  function notify(message, { type = 'info' } = {}) {
+    const id = nextId.current++
+    setNotifications((current) => [{ id, message, type }, ...current])
+    const timeoutId = setTimeout(() => {
+      setNotifications((current) => current.filter((notification) => notification.id !== id))
+    }, DISMISS_AFTER_MS)
+    timeoutIds.current.push(timeoutId)
+  }
+
+  return (
+    <NotificationContext.Provider value={notify}>
+      {children}
+      <div className="notification-stack">
+        {notifications.map((notification, index) => (
+          <div
+            key={notification.id}
+            role={notification.type === 'error' ? 'alert' : 'status'}
+            className={`notification notification-${notification.type}`}
+            style={{ '--stack-index': index, zIndex: notifications.length - index }}
+          >
+            {notification.message}
+          </div>
+        ))}
+      </div>
+    </NotificationContext.Provider>
+  )
+}
+
+export function useNotify() {
+  return useContext(NotificationContext)
+}

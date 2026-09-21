@@ -1,0 +1,132 @@
+import { fireEvent, render, screen } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { afterEach, expect, test, vi } from 'vitest'
+
+import * as api from './api'
+import { NotificationProvider } from './NotificationContext'
+import TournamentPage from './TournamentPage'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+function renderAt(tournamentId) {
+  return render(
+    <MemoryRouter initialEntries={[`/tournaments/${tournamentId}`]}>
+      <NotificationProvider>
+        <Routes>
+          <Route path="/tournaments/:tournamentId" element={<TournamentPage />} />
+        </Routes>
+      </NotificationProvider>
+    </MemoryRouter>,
+  )
+}
+
+test('loads the tournament and lists its teams with player counts, linking to their team pages', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([
+    { id: 10, tournament_id: 1, name: 'Ice Wolves', player_count: 2 },
+  ])
+
+  renderAt(1)
+
+  expect(await screen.findByText('Spring Classic')).toBeInTheDocument()
+  const link = screen.getByRole('link', { name: /ice wolves/i })
+  expect(link).toHaveAttribute('href', '/teams/10')
+  expect(screen.getByText(/2 players/i)).toBeInTheDocument()
+})
+
+test('toggling "show players" fetches and displays each team\'s roster', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([
+    { id: 10, tournament_id: 1, name: 'Ice Wolves', player_count: 2 },
+  ])
+  vi.spyOn(api, 'listPlayers').mockResolvedValue([
+    { id: 100, team_id: 10, name: 'Alex Kim' },
+    { id: 101, team_id: 10, name: 'Jordan Lee' },
+  ])
+
+  renderAt(1)
+
+  await screen.findByText(/ice wolves/i)
+  expect(screen.queryByText('Alex Kim')).not.toBeInTheDocument()
+
+  fireEvent.click(screen.getByRole('checkbox', { name: /show players/i }))
+
+  expect(await screen.findByText('Alex Kim')).toBeInTheDocument()
+  expect(screen.getByText('Jordan Lee')).toBeInTheDocument()
+  expect(api.listPlayers).toHaveBeenCalledWith(10)
+})
+
+test('editing tournament config submits the update, reflects the new values, and notifies', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  const updateTournament = vi.spyOn(api, 'updateTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic 2026',
+    advance_per_pool: 2,
+    playoff_bracket_count: 1,
+    court_count: 4,
+  })
+
+  renderAt(1)
+
+  await screen.findByText('Spring Classic')
+
+  fireEvent.change(screen.getByLabelText(/tournament name/i), {
+    target: { value: 'Spring Classic 2026' },
+  })
+  fireEvent.change(screen.getByLabelText(/advance per pool/i), { target: { value: '2' } })
+  fireEvent.change(screen.getByLabelText(/court count/i), { target: { value: '4' } })
+  fireEvent.click(screen.getByRole('button', { name: /save/i }))
+
+  expect(await screen.findByText('Spring Classic 2026')).toBeInTheDocument()
+  expect(screen.getByRole('status')).toHaveTextContent(/settings saved/i)
+  expect(updateTournament).toHaveBeenCalledWith(
+    '1',
+    expect.objectContaining({
+      name: 'Spring Classic 2026',
+      advance_per_pool: 2,
+      playoff_bracket_count: 1,
+      court_count: 4,
+    }),
+  )
+})
+
+test('shows a notification with the validation detail when generating a bracket is rejected', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  vi.spyOn(api, 'generateBracket').mockRejectedValue({
+    json: () => Promise.resolve({ detail: 'at least 2 teams are required to generate a bracket' }),
+  })
+
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /generate bracket/i }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/at least 2 teams are required/i)
+})

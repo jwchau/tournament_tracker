@@ -1,44 +1,30 @@
-import { useState } from 'react'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
 import HealthCheck from './HealthCheck'
-import TeamForm from './TeamForm'
-import TournamentForm from './TournamentForm'
-import TournamentList from './TournamentList'
+import MainPage from './MainPage'
+import NavBar from './NavBar'
+import { NavigationHistoryProvider } from './NavigationHistoryContext'
+import { NotificationProvider } from './NotificationContext'
+import TeamPage from './TeamPage'
+import TournamentPage from './TournamentPage'
 
 function App() {
-  const [selectedTournamentId, setSelectedTournamentId] = useState(null)
-  const [listKey, setListKey] = useState(0)
-
   return (
-    <>
-      <h1>Tournament Tracker</h1>
-      <HealthCheck />
+    <BrowserRouter>
+      <NotificationProvider>
+        <NavigationHistoryProvider>
+          <h1>Tournament Tracker</h1>
+          <HealthCheck />
+          <NavBar />
 
-      <section>
-        <h2>Create a tournament</h2>
-        <TournamentForm
-          onCreated={(tournament) => {
-            setSelectedTournamentId(tournament.id)
-            setListKey((key) => key + 1)
-          }}
-        />
-      </section>
-
-      {selectedTournamentId && (
-        <section>
-          <h2>Add a team</h2>
-          <TeamForm
-            tournamentId={selectedTournamentId}
-            onCreated={() => setListKey((key) => key + 1)}
-          />
-        </section>
-      )}
-
-      <section>
-        <h2>Tournaments</h2>
-        <TournamentList key={listKey} />
-      </section>
-    </>
+          <Routes>
+            <Route path="/" element={<MainPage />} />
+            <Route path="/tournaments/:tournamentId" element={<TournamentPage />} />
+            <Route path="/teams/:teamId" element={<TeamPage />} />
+          </Routes>
+        </NavigationHistoryProvider>
+      </NotificationProvider>
+    </BrowserRouter>
   )
 }
 

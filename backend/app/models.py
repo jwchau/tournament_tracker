@@ -18,6 +18,25 @@ class TournamentCreate(SQLModel):
     name: str
 
 
+class TournamentUpdate(SQLModel):
+    name: str | None = None
+    advance_per_pool: int | None = None
+    playoff_bracket_count: int | None = None
+    court_count: int | None = None
+
+
+class TournamentSummary(SQLModel):
+    id: int
+    name: str
+    format: str
+    stage: str
+    advance_per_pool: int
+    playoff_bracket_count: int
+    court_count: int
+    created_at: datetime
+    team_count: int
+
+
 class Team(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     tournament_id: int = Field(foreign_key="tournament.id")
@@ -29,6 +48,19 @@ class Team(SQLModel, table=True):
 class TeamCreate(SQLModel):
     name: str
     seed: int | None = None
+
+
+class TeamUpdate(SQLModel):
+    name: str
+
+
+class TeamSummary(SQLModel):
+    id: int
+    tournament_id: int
+    name: str
+    seed: int | None
+    pool_id: int | None
+    player_count: int
 
 
 class Player(SQLModel, table=True):
