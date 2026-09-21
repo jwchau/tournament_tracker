@@ -1,8 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import BracketDiagram from './BracketDiagram'
-import { generateBracket, getTournament, listPlayers, listTeams, updateTournament } from './api'
+import ConfirmModal from './ConfirmModal'
+import {
+  deleteTournament,
+  generateBracket,
+  getTournament,
+  listPlayers,
+  listTeams,
+  updateTournament,
+} from './api'
 import { useNotify } from './NotificationContext'
 import TeamForm from './TeamForm'
 
@@ -67,11 +75,13 @@ function ConfigForm({ tournamentId, tournament, onSaved }) {
 
 export default function TournamentPage() {
   const { tournamentId } = useParams()
+  const navigate = useNavigate()
   const [tournament, setTournament] = useState(null)
   const [teams, setTeams] = useState([])
   const [bracketGenerated, setBracketGenerated] = useState(false)
   const [showRosters, setShowRosters] = useState(false)
   const [playersByTeam, setPlayersByTeam] = useState({})
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const notify = useNotify()
 
   useEffect(() => {
@@ -98,6 +108,17 @@ export default function TournamentPage() {
     } catch (error) {
       const body = await error?.json?.().catch(() => null)
       notify(body?.detail ?? 'Failed to generate bracket', { type: 'error' })
+    }
+  }
+
+  async function handleDeleteTournament() {
+    setShowDeleteConfirm(false)
+    try {
+      await deleteTournament(tournamentId)
+      notify('Tournament deleted')
+      navigate('/')
+    } catch {
+      notify('Failed to delete tournament', { type: 'error' })
     }
   }
 
@@ -150,6 +171,22 @@ export default function TournamentPage() {
         </button>
         {bracketGenerated && <BracketDiagram tournamentId={tournamentId} />}
       </section>
+
+      <section>
+        <button type="button" onClick={() => setShowDeleteConfirm(true)}>
+          Delete tournament
+        </button>
+      </section>
+
+      <ConfirmModal
+        open={showDeleteConfirm}
+        title="Delete tournament"
+        message={`Delete "${tournament.name}"? This also removes its teams, players, and bracket. This can't be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={handleDeleteTournament}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </>
   )
 }

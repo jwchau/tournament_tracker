@@ -98,6 +98,13 @@ planned vertical slices.
   `player_count` per team, same grouped-count pattern as the tournament
   list's `team_count`) and a "Show players" toggle that lazily fetches and
   renders each team's full roster inline when switched on.
+- **Delete tournament** (not a numbered slice) — done. A "Delete tournament"
+  button at the bottom of `/tournaments/:id` opens a confirmation modal
+  (`ConfirmModal`, a reusable interactive dialog distinct from the
+  auto-dismissing notification toasts); confirming calls `DELETE
+  /tournaments/{id}` and redirects to the home page. The endpoint cascades:
+  it also deletes the tournament's teams, their players, and any generated
+  bracket matches, so nothing is left orphaned.
 - **Next**: [tickets/04-cascading-score-correction.md](tickets/04-cascading-score-correction.md)
   — not started.
 
@@ -112,6 +119,7 @@ standalone; verified end-to-end via `docker compose up`.
 | GET    | `/tournaments`                      | List tournaments, each with a computed `team_count` |
 | GET    | `/tournaments/{id}`                 | Get a single tournament (404 if it doesn't exist) |
 | PATCH  | `/tournaments/{id}`                 | Update `name`/`advance_per_pool`/`playoff_bracket_count`/`court_count` (partial; 404 if it doesn't exist) |
+| DELETE | `/tournaments/{id}`                 | Delete a tournament and cascade-delete its teams, players, and bracket matches (404 if it doesn't exist) |
 | POST   | `/tournaments/{id}/teams`           | Add a team to a tournament (404 if tournament doesn't exist) |
 | GET    | `/tournaments/{id}/teams`           | List a tournament's teams, each with a computed `player_count` |
 | GET    | `/teams/{id}`                       | Get a single team (404 if it doesn't exist) |
