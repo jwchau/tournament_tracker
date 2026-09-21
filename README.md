@@ -65,6 +65,39 @@ planned vertical slices.
   (error response, non-2xx, or timeout) it stops calling the backend
   entirely — showing "Connection lost" — until a 30s cooldown elapses,
   then probes again and closes once a request succeeds.
+- **Frontend restructuring** (not a numbered slice — a usability pass) — done.
+  Real client-side routing (`react-router-dom`): `/` (tournament list, name +
+  `team_count` per row), `/tournaments/:id` (settings form for `name`,
+  `advance_per_pool`, `playoff_bracket_count`, `court_count` — editable
+  anytime, no stage-based lock; team list; bracket generation/scoring, moved
+  here from the old flat page), `/teams/:teamId` (edit team name, roster with
+  per-player remove, add player). Backing endpoints added: `GET
+  /tournaments/{id}` (single), `PATCH /tournaments/{id}`, `GET /teams/{id}`
+  (single), `PATCH /teams/{id}`, `DELETE /teams/{id}/players/{playerId}`.
+  `GET /tournaments` (list) now returns `team_count` per row via a grouped
+  count query, not N+1 requests. No team deletion yet — a team already seeded
+  into a generated bracket has no cascading-reset story, same class of
+  problem as slice 04's correction work. No format picker on the settings
+  form either — double elimination (slice 05) and pools (slice 07) aren't
+  implemented, so `format` stays a single-elim placeholder for now.
+- **Usability pass 2** (not a numbered slice) — done. A nav bar under the
+  title (currently just a "Home" link) with back/forward buttons on either
+  end, backed by an in-app visited-page stack (`NavigationHistoryContext`) —
+  distinct from raw browser history so button enabled/disabled state is
+  predictable. A stacked, corner, non-interactive toast notification system
+  (`NotificationContext`/`useNotify`) fires on tournament/team/player
+  creation, tournament settings save, team name save, and bracket
+  generation (success and failure — the failure notification now carries the
+  backend's actual validation detail instead of a generic message); each
+  toast auto-dismisses after 5s, newest on top with a slight offset so a
+  backlog is visible as a stack. Creation forms (tournament, team, player)
+  clear their input after a successful submit; edit forms (tournament
+  settings, team name) don't, since there's nothing to "clear" for an
+  in-place edit. `/tournaments/:id` now shows each team's player count next
+  to its name (`GET /tournaments/{id}/teams` returns a computed
+  `player_count` per team, same grouped-count pattern as the tournament
+  list's `team_count`) and a "Show players" toggle that lazily fetches and
+  renders each team's full roster inline when switched on.
 - **Next**: [tickets/04-cascading-score-correction.md](tickets/04-cascading-score-correction.md)
   — not started.
 
@@ -76,11 +109,16 @@ standalone; verified end-to-end via `docker compose up`.
 | Method | Path                                | Description                        |
 | ------ | ----------------------------------- | ----------------------------------- |
 | POST   | `/tournaments`                      | Create a tournament                 |
-| GET    | `/tournaments`                      | List tournaments                    |
+| GET    | `/tournaments`                      | List tournaments, each with a computed `team_count` |
+| GET    | `/tournaments/{id}`                 | Get a single tournament (404 if it doesn't exist) |
+| PATCH  | `/tournaments/{id}`                 | Update `name`/`advance_per_pool`/`playoff_bracket_count`/`court_count` (partial; 404 if it doesn't exist) |
 | POST   | `/tournaments/{id}/teams`           | Add a team to a tournament (404 if tournament doesn't exist) |
-| GET    | `/tournaments/{id}/teams`           | List a tournament's teams           |
+| GET    | `/tournaments/{id}/teams`           | List a tournament's teams, each with a computed `player_count` |
+| GET    | `/teams/{id}`                       | Get a single team (404 if it doesn't exist) |
+| PATCH  | `/teams/{id}`                       | Update a team's `name` (404 if it doesn't exist) |
 | POST   | `/teams/{id}/players`               | Add a player to a team's roster (404 if team doesn't exist) |
 | GET    | `/teams/{id}/players`               | List a team's roster                |
+| DELETE | `/teams/{id}/players/{playerId}`    | Remove a player from the roster (404 if team or player doesn't exist, or the player belongs to a different team) |
 | POST   | `/tournaments/{id}/bracket/generate` | Generate and persist a single-elimination bracket |
 | GET    | `/tournaments/{id}/bracket`         | List a tournament's bracket matches |
 | GET    | `/matches/{id}`                     | Get a single match (404 if it doesn't exist) |

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
@@ -8,20 +8,23 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-test('submitting the form creates a tournament and shows it', async () => {
+test('submitting the form creates a tournament, notifies the caller, and clears the input', async () => {
   vi.spyOn(api, 'createTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
     stage: 'draft',
   })
+  const onCreated = vi.fn()
 
-  render(<TournamentForm />)
+  render(<TournamentForm onCreated={onCreated} />)
 
-  fireEvent.change(screen.getByLabelText(/tournament name/i), {
-    target: { value: 'Spring Classic' },
-  })
+  const input = screen.getByLabelText(/tournament name/i)
+  fireEvent.change(input, { target: { value: 'Spring Classic' } })
   fireEvent.click(screen.getByRole('button', { name: /create/i }))
 
-  expect(await screen.findByText('Spring Classic')).toBeInTheDocument()
+  await waitFor(() =>
+    expect(onCreated).toHaveBeenCalledWith({ id: 1, name: 'Spring Classic', stage: 'draft' }),
+  )
+  expect(input).toHaveValue('')
   expect(api.createTournament).toHaveBeenCalledWith({ name: 'Spring Classic' })
 })

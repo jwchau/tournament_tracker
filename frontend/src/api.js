@@ -28,12 +28,27 @@ async function getJson(path) {
   return response.json()
 }
 
+async function deleteRequest(path) {
+  const response = await fetch(`${API_BASE_URL}${path}`, { method: 'DELETE' })
+  if (!response.ok) {
+    return Promise.reject(response)
+  }
+}
+
 export function createTournament({ name }) {
   return postJson('/tournaments', { name })
 }
 
 export function listTournaments() {
   return getJson('/tournaments')
+}
+
+export function getTournament(tournamentId) {
+  return getJson(`/tournaments/${tournamentId}`)
+}
+
+export function updateTournament(tournamentId, updates) {
+  return patchJson(`/tournaments/${tournamentId}`, updates)
 }
 
 export function createTeam(tournamentId, { name, seed }) {
@@ -44,12 +59,24 @@ export function listTeams(tournamentId) {
   return getJson(`/tournaments/${tournamentId}/teams`)
 }
 
+export function getTeam(teamId) {
+  return getJson(`/teams/${teamId}`)
+}
+
+export function updateTeam(teamId, { name }) {
+  return patchJson(`/teams/${teamId}`, { name })
+}
+
 export function createPlayer(teamId, { name }) {
   return postJson(`/teams/${teamId}/players`, { name })
 }
 
 export function listPlayers(teamId) {
   return getJson(`/teams/${teamId}/players`)
+}
+
+export function deletePlayer(teamId, playerId) {
+  return deleteRequest(`/teams/${teamId}/players/${playerId}`)
 }
 
 export function generateBracket(tournamentId) {

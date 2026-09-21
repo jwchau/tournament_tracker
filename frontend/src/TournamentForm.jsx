@@ -1,15 +1,17 @@
 import { useState } from 'react'
 
 import { createTournament } from './api'
+import { useNotify } from './NotificationContext'
 
 export default function TournamentForm({ onCreated }) {
   const [name, setName] = useState('')
-  const [created, setCreated] = useState(null)
+  const notify = useNotify()
 
   async function handleSubmit(event) {
     event.preventDefault()
     const tournament = await createTournament({ name })
-    setCreated(tournament)
+    notify(`Tournament "${tournament.name}" created`)
+    setName('')
     onCreated?.(tournament)
   }
 
@@ -22,7 +24,6 @@ export default function TournamentForm({ onCreated }) {
         onChange={(event) => setName(event.target.value)}
       />
       <button type="submit">Create</button>
-      {created && <p>{created.name}</p>}
     </form>
   )
 }

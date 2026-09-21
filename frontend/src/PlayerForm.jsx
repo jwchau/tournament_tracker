@@ -1,15 +1,17 @@
 import { useState } from 'react'
 
 import { createPlayer } from './api'
+import { useNotify } from './NotificationContext'
 
 export default function PlayerForm({ teamId, onCreated }) {
   const [name, setName] = useState('')
-  const [created, setCreated] = useState(null)
+  const notify = useNotify()
 
   async function handleSubmit(event) {
     event.preventDefault()
     const player = await createPlayer(teamId, { name })
-    setCreated(player)
+    notify(`Player "${player.name}" added`)
+    setName('')
     onCreated?.(player)
   }
 
@@ -22,7 +24,6 @@ export default function PlayerForm({ teamId, onCreated }) {
         onChange={(event) => setName(event.target.value)}
       />
       <button type="submit">Add player</button>
-      {created && <p>{created.name}</p>}
     </form>
   )
 }
