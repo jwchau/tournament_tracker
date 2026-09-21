@@ -153,6 +153,14 @@ side of it is just the CORS origin and Vite `allowedHosts` entries in
 (`cloudflared tunnel --url <local-url>`) also work out of the box via the
 `*.trycloudflare.com` regex/wildcard already configured in both places.
 
+The tunnel is **not** installed as a Windows service — it only runs for as
+long as its terminal is open, and needs to be started manually (in its own
+terminal, alongside `docker compose up`) every time the server is brought up:
+
+```sh
+cloudflared tunnel run tournament-tracker
+```
+
 ### Alternative: frontend on Cloudflare Workers
 
 The backend can't run on Cloudflare Workers (stateful FastAPI + file-based
