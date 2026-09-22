@@ -103,3 +103,18 @@ export function submitScore(matchId, { team1Score, team2Score, version, complete
     complete,
   })
 }
+
+export function previewCorrection(matchId, { team1Score, team2Score }) {
+  return postJson(`/matches/${matchId}/correct/preview`, {
+    team1_score: team1Score,
+    team2_score: team2Score,
+  })
+}
+
+export function correctScore(matchId, { team1Score, team2Score, version }) {
+  return patchJson(`/matches/${matchId}/correct`, {
+    team1_score: team1Score,
+    team2_score: team2Score,
+    version,
+  })
+}

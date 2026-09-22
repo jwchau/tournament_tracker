@@ -55,9 +55,9 @@ planned vertical slices.
   SQL `CASE` on that row's *current* state — so two matches completing
   concurrently into different slots of the same downstream match can't
   clobber each other. A completed match cannot be re-scored through this
-  endpoint (`400`); cascading correction is deferred to slice 04, and until
-  it exists the API simply refuses to silently overwrite a decided match.
-  Frontend: `ScoreEntryForm` (shows version, submits, and surfaces a `409`
+  endpoint (`400`); changing a decided result goes through slice 04's
+  correction endpoint instead.
+  Frontend: `ScoreEntryForm` (submits with the match version, and surfaces a `409`
   with a refetch affordance) rendered per scorable match inside
   `BracketDiagram`, which now polls every 4s. Polling is wrapped in a
   circuit breaker (`frontend/src/circuitBreaker.js`) with a 5s per-request
@@ -105,7 +105,25 @@ planned vertical slices.
   /tournaments/{id}` and redirects to the home page. The endpoint cascades:
   it also deletes the tournament's teams, their players, and any generated
   bracket matches, so nothing is left orphaned.
-- **Next**: [tickets/04-cascading-score-correction.md](tickets/04-cascading-score-correction.md)
+- **Slice 04** ([tickets/04-cascading-score-correction.md](tickets/04-cascading-score-correction.md))
+  — done. `correct_score()` in `backend/app/scoring.py` re-scores a
+  completed match and, if the winner changed, walks `winner_next_match_id`
+  downstream: the next match gets the new winner in its slot, and every
+  match on the chain has its score/winner cleared and drops back to
+  `ready`/`pending`. The walk continues past each match that had been
+  completed (its winner had advanced too), all the way to the final if
+  needed. A score-only correction that keeps the same winner resets
+  nothing. The whole cascade is one transaction and every write is
+  version-checked, so a concurrent change rolls it all back with a `409`;
+  a scorekeeper still holding a pre-correction version of a reset match
+  also gets a `409`. Each correction is recorded in `CorrectionLog` (old/new
+  score and winner, reset match ids, timestamp), which tournament deletion
+  also cleans up. `preview_correction()` runs the same walk read-only for
+  the confirmation UI. Frontend: completed matches in `BracketDiagram` get
+  a "Correct …" button opening `CorrectionForm`; reviewing a new score
+  fetches the preview and shows a `ConfirmModal` listing what will be reset
+  before anything is applied.
+- **Next**: [tickets/05-double-elimination.md](tickets/05-double-elimination.md)
   — not started.
 
 Both backend and frontend test suites pass inside the running containers and
@@ -130,7 +148,9 @@ standalone; verified end-to-end via `docker compose up`.
 | POST   | `/tournaments/{id}/bracket/generate` | Generate and persist a single-elimination bracket |
 | GET    | `/tournaments/{id}/bracket`         | List a tournament's bracket matches |
 | GET    | `/matches/{id}`                     | Get a single match (404 if it doesn't exist) |
-| PATCH  | `/matches/{id}/score`               | Submit a score (`team1_score`, `team2_score`, `version`, `complete`); `409` on a version conflict, `400` if completion is invalid (tie, unknown team, or already complete) |
+| PATCH  | `/matches/{id}/score`               | Submit a score (`team1_score`, `team2_score`, `version`, `complete`); `409` on a version conflict, `400` if completion is invalid (tie, unknown team, or already complete — use `/correct` for completed matches) |
+| POST   | `/matches/{id}/correct/preview`     | Dry run of a correction (`team1_score`, `team2_score`): returns `reset_matches`, the downstream matches it would reset, without writing anything; `400` if the match isn't complete or the score is tied |
+| PATCH  | `/matches/{id}/correct`             | Correct a completed match (`team1_score`, `team2_score`, `version`); returns the corrected `match` and the `reset_matches`, and writes a `CorrectionLog` entry; `409` on a version conflict anywhere in the cascade, `400` if the match isn't complete or the score is tied |
 | GET    | `/health`                           | Health check                        |
 
 ## Getting started

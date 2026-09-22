@@ -80,6 +80,22 @@ test('shows the champion once the final match is complete', async () => {
   expect(champion).toHaveTextContent('Diggers')
 })
 
+test('offers a correction for completed matches between two teams but not for byes', async () => {
+  const played = fiveTeamBracket.map((match) =>
+    match.id === 16
+      ? { ...match, status: 'complete', team1_score: 21, team2_score: 10, winner_id: 20 }
+      : match,
+  )
+  vi.spyOn(api, 'getBracket').mockResolvedValue(played)
+
+  render(<BracketDiagram tournamentId={1} teams={teams} />)
+
+  expect(
+    await screen.findByRole('button', { name: 'Correct Spikers vs Diggers' }),
+  ).toBeInTheDocument()
+  expect(screen.getAllByRole('button', { name: /^correct/i })).toHaveLength(1)
+})
+
 test('does not show a champion while the final is unfinished', async () => {
   vi.spyOn(api, 'getBracket').mockResolvedValue(fiveTeamBracket)
 

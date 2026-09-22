@@ -4,6 +4,7 @@ from sqlmodel import Session, SQLModel, func, select
 from app.bracket import BracketNotReady, generate_single_elimination, validate_teams_for_bracket
 from app.db import get_session
 from app.models import (
+    CorrectionLog,
     Match,
     Player,
     PlayerCreate,
@@ -16,7 +17,14 @@ from app.models import (
     TournamentSummary,
     TournamentUpdate,
 )
-from app.scoring import InvalidScore, MatchNotFound, VersionConflict, submit_score
+from app.scoring import (
+    InvalidScore,
+    MatchNotFound,
+    VersionConflict,
+    correct_score,
+    preview_correction,
+    submit_score,
+)
 
 router = APIRouter()
 
@@ -97,6 +105,11 @@ def delete_tournament(
     matches = session.exec(
         select(Match).where(Match.tournament_id == tournament_id)
     ).all()
+    corrections = session.exec(
+        select(CorrectionLog).where(CorrectionLog.match_id.in_([m.id for m in matches]))
+    ).all()
+    for correction in corrections:
+        session.delete(correction)
     for match in matches:
         session.delete(match)
 
@@ -309,3 +322,55 @@ def submit_match_score(
             status_code=409,
             detail="version conflict: match was updated by someone else, please refetch and retry",
         )
+
+
+class CorrectionPreviewRequest(SQLModel):
+    team1_score: int
+    team2_score: int
+
+
+class CorrectionRequest(CorrectionPreviewRequest):
+    version: int
+
+
+class CorrectionPreview(SQLModel):
+    reset_matches: list[Match]
+
+
+class CorrectionResult(CorrectionPreview):
+    match: Match
+
+
+@router.post("/matches/{match_id}/correct/preview", response_model=CorrectionPreview)
+def preview_match_correction(
+    match_id: int, data: CorrectionPreviewRequest, session: Session = Depends(get_session)
+) -> CorrectionPreview:
+    try:
+        reset_matches = preview_correction(
+            session, match_id, data.team1_score, data.team2_score
+        )
+    except MatchNotFound:
+        raise HTTPException(status_code=404, detail="Match not found")
+    except InvalidScore as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return CorrectionPreview(reset_matches=reset_matches)
+
+
+@router.patch("/matches/{match_id}/correct", response_model=CorrectionResult)
+def correct_match_score(
+    match_id: int, data: CorrectionRequest, session: Session = Depends(get_session)
+) -> CorrectionResult:
+    try:
+        correction = correct_score(
+            session, match_id, data.team1_score, data.team2_score, data.version
+        )
+    except MatchNotFound:
+        raise HTTPException(status_code=404, detail="Match not found")
+    except InvalidScore as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except VersionConflict:
+        raise HTTPException(
+            status_code=409,
+            detail="version conflict: match was updated by someone else, please refetch and retry",
+        )
+    return CorrectionResult(match=correction.match, reset_matches=correction.reset_matches)
