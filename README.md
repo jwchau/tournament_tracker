@@ -157,7 +157,33 @@ planned vertical slices.
   Frontend: bracket boxes gain a third line ("Court 2 · Sat 10:30"), and
   every unfinished match (including TBD-vs-TBD, to plan ahead) gets a
   `ScheduleForm` with a court picker and date/time input.
-- **Next**: [tickets/07-pools-and-round-robin-scheduling.md](tickets/07-pools-and-round-robin-scheduling.md)
+- **Slice 07** ([tickets/07-pools-and-round-robin-scheduling.md](tickets/07-pools-and-round-robin-scheduling.md))
+  — done. A `Pool` table (pools may differ in size); `POST
+  .../pools/auto-assign` snake-seeds teams by `seed` (pool 1..P, then
+  P..1, ...), and `PATCH /teams/{id}` takes `pool_id` for manual moves.
+  Courts aren't stored per pool: `pool_courts()` in `backend/app/pools.py`
+  splits the tournament's `court_count` evenly at read time (remainder to
+  the earliest pools, numbered across pools, e.g. 5 courts / 3 pools →
+  [1,2], [3,4], [5]), so it can't go stale; a pool left without a court
+  can't be scheduled (`400`). `generate_round_robin()` groups pairings
+  into rounds of at most one per court with no team twice, each round
+  lasting `n` slots so a pairing's `n` games are back-to-back on one
+  court; filling courts comes first, then a seeded randomized greedy
+  search (300 attempts, deterministic) minimizes rotation violations —
+  slots beyond 2 in a row playing or idle. Many configurations can't be
+  perfect (see `tests/test_round_robin.py`), and with `n ≥ 3` a pairing's
+  block always runs `n` slots, accepted by design. Pool matches are
+  ordinary `Match` rows (`bracket="pool"`, `pool_id`, `round` = slot,
+  `court` set) scored through the existing endpoint and excluded from the
+  bracket; regenerating replaces an unplayed schedule but is refused once
+  anything is scored. Standings: win 3 / loss 0, ties broken by
+  head-to-head among just the tied teams, then pool-wide point
+  differential, then points scored. Frontend: a Pools section (add pools,
+  auto-assign, per-team pool picker) with, per pool, a schedule list by
+  slot (court, teams, score, idle teams split into "observing"/"resting"
+  purely for display, reusing `ScoreEntryForm`) and a live standings
+  table, both polling every 4s via `usePolling`.
+- **Next**: [tickets/08-pool-to-playoff-advancement.md](tickets/08-pool-to-playoff-advancement.md)
   — not started.
 
 Both backend and frontend test suites pass inside the running containers and
@@ -175,7 +201,15 @@ standalone; verified end-to-end via `docker compose up`.
 | POST   | `/tournaments/{id}/teams`           | Add a team to a tournament (404 if tournament doesn't exist) |
 | GET    | `/tournaments/{id}/teams`           | List a tournament's teams, each with a computed `player_count` |
 | GET    | `/teams/{id}`                       | Get a single team (404 if it doesn't exist) |
-| PATCH  | `/teams/{id}`                       | Update a team's `name` (404 if it doesn't exist) |
+| PATCH  | `/teams/{id}`                       | Update a team's `name` and/or `pool_id` (`null` unassigns); only the fields sent change; `400` if the pool belongs to another tournament, `404` if the team doesn't exist |
+| POST   | `/tournaments/{id}/pools`           | Create a pool (`name`) |
+| GET    | `/tournaments/{id}/pools`           | List pools in creation order, each with its `courts` (court numbers, derived from `court_count`) |
+| POST   | `/tournaments/{id}/pools/auto-assign` | Snake-seed every team into the pools by `seed`; `400` if there are no pools |
+| PATCH  | `/pools/{id}`                       | Rename a pool |
+| DELETE | `/pools/{id}`                       | Delete a pool, unassigning its teams and dropping its unplayed schedule; `400` once any of its matches is scored |
+| POST   | `/pools/{id}/generate-schedule`     | Generate the round-robin (`n` games per pairing, default 1); replaces an unplayed schedule; `400` if scored, fewer than 2 teams, or no court |
+| GET    | `/pools/{id}/matches`               | A pool's matches in slot order |
+| GET    | `/pools/{id}/standings`             | Ranked standings (`played`, `wins`, `losses`, `points`, `points_for`, `point_diff`, `rank`) |
 | POST   | `/teams/{id}/players`               | Add a player to a team's roster (404 if team doesn't exist) |
 | GET    | `/teams/{id}/players`               | List a team's roster                |
 | DELETE | `/teams/{id}/players/{playerId}`    | Remove a player from the roster (404 if team or player doesn't exist, or the player belongs to a different team) |

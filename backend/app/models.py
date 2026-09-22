@@ -38,6 +38,23 @@ class TournamentSummary(SQLModel):
     team_count: int
 
 
+class Pool(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    tournament_id: int = Field(foreign_key="tournament.id")
+    name: str
+
+
+class PoolCreate(SQLModel):
+    name: str
+
+
+class PoolSummary(SQLModel):
+    id: int
+    tournament_id: int
+    name: str
+    courts: list[int]
+
+
 class Team(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     tournament_id: int = Field(foreign_key="tournament.id")
@@ -52,7 +69,8 @@ class TeamCreate(SQLModel):
 
 
 class TeamUpdate(SQLModel):
-    name: str
+    name: str | None = None
+    pool_id: int | None = None
 
 
 class TeamSummary(SQLModel):
@@ -78,6 +96,7 @@ class Match(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     tournament_id: int = Field(foreign_key="tournament.id")
     bracket: str = Field(default="winners", sa_column_kwargs={"server_default": "winners"})
+    pool_id: int | None = Field(default=None, foreign_key="pool.id")
     round: int
     position: int
     team1_id: int | None = Field(default=None, foreign_key="team.id")

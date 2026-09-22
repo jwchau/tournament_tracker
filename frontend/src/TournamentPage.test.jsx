@@ -124,6 +124,28 @@ test('editing tournament config submits the update, reflects the new values, and
   )
 })
 
+test('shows each pool with its schedule controls and standings', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  vi.spyOn(api, 'listPools').mockResolvedValue([
+    { id: 7, tournament_id: 1, name: 'Pool A', courts: [1, 2] },
+  ])
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue([])
+  vi.spyOn(api, 'getPoolStandings').mockResolvedValue([])
+
+  renderAt(1)
+
+  expect(await screen.findByText('Pool A — courts 1, 2')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /generate schedule/i })).toBeInTheDocument()
+  expect(screen.getByRole('table', { name: /standings/i })).toBeInTheDocument()
+})
+
 test('generates a bracket in the chosen format, single by default', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,

@@ -12,6 +12,9 @@ import {
   updateTournament,
 } from './api'
 import { useNotify } from './NotificationContext'
+import PoolSchedule from './PoolSchedule'
+import PoolsPanel from './PoolsPanel'
+import PoolStandings from './PoolStandings'
 import TeamForm from './TeamForm'
 
 function ConfigForm({ tournamentId, tournament, onSaved }) {
@@ -162,6 +165,21 @@ export default function TournamentPage() {
         <TeamForm
           tournamentId={tournamentId}
           onCreated={(team) => setTeams((current) => [...current, { ...team, player_count: 0 }])}
+        />
+      </section>
+
+      <section>
+        <h3>Pools</h3>
+        <PoolsPanel
+          tournamentId={tournamentId}
+          teams={teams}
+          onTeamsChanged={setTeams}
+          renderPool={(pool) => (
+            <>
+              <PoolSchedule pool={pool} teams={teams} />
+              <PoolStandings poolId={pool.id} />
+            </>
+          )}
         />
       </section>
 
