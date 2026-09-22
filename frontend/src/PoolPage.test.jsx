@@ -53,7 +53,8 @@ test('shows the pool with its courts, schedule, standings, and a link back', asy
   expect(await screen.findByRole('heading', { name: 'Pool A' })).toBeInTheDocument()
   expect(screen.getByText('Courts 1, 2')).toBeInTheDocument()
   expect(await screen.findByText('Court 1: Spikers vs Diggers')).toBeInTheDocument()
-  expect(screen.getByRole('table', { name: /standings/i })).toBeInTheDocument()
+  // Standings mount once the first matches arrive, so wait for them too.
+  expect(await screen.findByRole('table', { name: /standings/i })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: /back to tournament/i })).toHaveAttribute(
     'href',
     '/tournaments/3',
