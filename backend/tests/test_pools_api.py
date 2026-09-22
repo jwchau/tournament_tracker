@@ -222,3 +222,19 @@ def test_a_pool_with_scored_matches_cannot_be_deleted(client):
     _score_first_match(client, pool["id"], complete=False)
 
     assert client.delete(f"/pools/{pool['id']}").status_code == 400
+
+
+def test_a_single_pool_can_be_fetched_with_its_courts(client):
+    tournament_id, _ = _tournament_with_teams(client, 0, court_count=3)
+    pools = _create_pools(client, tournament_id, 2)
+
+    response = client.get(f"/pools/{pools[1]['id']}")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": pools[1]["id"],
+        "tournament_id": tournament_id,
+        "name": "Pool 2",
+        "courts": [3],
+    }
+    assert client.get("/pools/999").status_code == 404

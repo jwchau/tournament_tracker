@@ -182,7 +182,9 @@ planned vertical slices.
   auto-assign, per-team pool picker) with, per pool, a schedule list by
   slot (court, teams, score, idle teams split into "observing"/"resting"
   purely for display, reusing `ScoreEntryForm`) and a live standings
-  table, both polling every 4s via `usePolling`.
+  table, both polling every 4s via `usePolling`. Each pool also has its
+  own page, `/pools/:id` (linked as "Open <pool>"), with just that pool's
+  courts, standings, and schedule — handy as a courtside display.
 - **Next**: [tickets/08-pool-to-playoff-advancement.md](tickets/08-pool-to-playoff-advancement.md)
   — not started.
 
@@ -205,6 +207,7 @@ standalone; verified end-to-end via `docker compose up`.
 | POST   | `/tournaments/{id}/pools`           | Create a pool (`name`) |
 | GET    | `/tournaments/{id}/pools`           | List pools in creation order, each with its `courts` (court numbers, derived from `court_count`) |
 | POST   | `/tournaments/{id}/pools/auto-assign` | Snake-seed every team into the pools by `seed`; `400` if there are no pools |
+| GET    | `/pools/{id}`                       | A single pool with its `courts` (404 if it doesn't exist) |
 | PATCH  | `/pools/{id}`                       | Rename a pool |
 | DELETE | `/pools/{id}`                       | Delete a pool, unassigning its teams and dropping its unplayed schedule; `400` once any of its matches is scored |
 | POST   | `/pools/{id}/generate-schedule`     | Generate the round-robin (`n` games per pairing, default 1); replaces an unplayed schedule; `400` if scored, fewer than 2 teams, or no court |

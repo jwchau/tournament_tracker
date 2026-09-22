@@ -39,8 +39,11 @@ def create_pool(
 def list_pools(
     tournament_id: int, session: Session = Depends(get_session)
 ) -> list[PoolSummary]:
-    tournament = _tournament_or_404(session, tournament_id)
-    pools = _pools_in_order(session, tournament_id)
+    return _pool_summaries(session, _tournament_or_404(session, tournament_id))
+
+
+def _pool_summaries(session: Session, tournament: Tournament) -> list[PoolSummary]:
+    pools = _pools_in_order(session, tournament.id)
     courts = pool_courts(tournament.court_count, len(pools))
     return [
         PoolSummary(**pool.model_dump(), courts=pool_court_numbers)
@@ -214,3 +217,10 @@ def delete_pool(pool_id: int, session: Session = Depends(get_session)) -> None:
         session.add(team)
     session.delete(pool)
     session.commit()
+
+
+@router.get("/pools/{pool_id}", response_model=PoolSummary)
+def get_pool(pool_id: int, session: Session = Depends(get_session)) -> PoolSummary:
+    pool = _pool_or_404(session, pool_id)
+    tournament = session.get(Tournament, pool.tournament_id)
+    return next(s for s in _pool_summaries(session, tournament) if s.id == pool.id)

@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
@@ -7,6 +8,10 @@ import PoolsPanel from './PoolsPanel'
 afterEach(() => {
   vi.restoreAllMocks()
 })
+
+function render(ui) {
+  return rtlRender(<MemoryRouter>{ui}</MemoryRouter>)
+}
 
 const pools = [
   { id: 1, tournament_id: 5, name: 'Pool A', courts: [1, 2] },
@@ -25,6 +30,7 @@ test('lists pools with their courts', async () => {
 
   expect(await screen.findByText('Pool A — courts 1, 2')).toBeInTheDocument()
   expect(screen.getByText('Pool B — court 3')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Open Pool A' })).toHaveAttribute('href', '/pools/1')
 })
 
 test('warns when a pool has no court', async () => {

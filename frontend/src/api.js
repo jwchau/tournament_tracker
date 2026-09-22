@@ -126,6 +126,10 @@ export function listPools(tournamentId) {
   return getJson(`/tournaments/${tournamentId}/pools`)
 }
 
+export function getPool(poolId) {
+  return getJson(`/pools/${poolId}`)
+}
+
 export function createPool(tournamentId, { name }) {
   return postJson(`/tournaments/${tournamentId}/pools`, { name })
 }

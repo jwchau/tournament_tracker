@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { autoAssignPools, createPool, listPools, updateTeam } from './api'
 
@@ -41,6 +42,7 @@ export default function PoolsPanel({ tournamentId, teams, onTeamsChanged, render
             <p>
               {pool.name} — {courtsLabel(pool.courts)}
             </p>
+            <Link to={`/pools/${pool.id}`}>Open {pool.name}</Link>
             {renderPool?.(pool)}
           </li>
         ))}
