@@ -3,14 +3,20 @@ import { useState } from 'react'
 import ConfirmModal from './ConfirmModal'
 import { correctScore, previewCorrection } from './api'
 
+function matchName(match) {
+  if (match.bracket === 'grand_final') {
+    return match.round === 1 ? 'Grand final' : 'Grand final reset'
+  }
+  const round = match.bracket === 'losers' ? 'Losers round' : 'Round'
+  return `${round} ${match.round} match ${match.position}`
+}
+
 function previewMessage(resetMatches) {
   if (resetMatches.length === 0) {
     return 'The winner does not change, so no other matches will be reset.'
   }
   const noun = resetMatches.length === 1 ? 'match' : 'matches'
-  const names = resetMatches
-    .map((match) => `Round ${match.round} match ${match.position}`)
-    .join(', ')
+  const names = resetMatches.map(matchName).join(', ')
   return `This will reset ${resetMatches.length} ${noun} (scores cleared, teams updated): ${names}.`
 }
 

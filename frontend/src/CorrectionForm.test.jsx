@@ -66,6 +66,24 @@ test('previews how many matches a correction will reset before committing it', a
   })
 })
 
+test('names losers-bracket and grand final matches in the preview', async () => {
+  vi.spyOn(api, 'previewCorrection').mockResolvedValue({
+    reset_matches: [
+      { id: 9, bracket: 'losers', round: 1, position: 2 },
+      { id: 12, bracket: 'grand_final', round: 1, position: 1 },
+      { id: 13, bracket: 'grand_final', round: 2, position: 1 },
+    ],
+  })
+
+  render(<CorrectionForm match={match} team1Name="Spikers" team2Name="Diggers" />)
+  enterCorrection('10', '21')
+
+  const dialog = await screen.findByRole('dialog')
+  expect(dialog).toHaveTextContent(
+    'This will reset 3 matches (scores cleared, teams updated): Losers round 1 match 2, Grand final, Grand final reset.',
+  )
+})
+
 test('says nothing else is reset when the winner does not change', async () => {
   vi.spyOn(api, 'previewCorrection').mockResolvedValue({ reset_matches: [] })
 

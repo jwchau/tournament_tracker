@@ -1,7 +1,10 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, SQLModel, func, select
 
-from app.bracket import BracketNotReady, generate_single_elimination, validate_teams_for_bracket
+from app.bracket import BracketNotReady, validate_teams_for_bracket
+from app.bracket import generate_bracket as build_bracket
 from app.db import get_session
 from app.models import (
     CorrectionLog,
@@ -219,16 +222,24 @@ def delete_player(
     session.commit()
 
 
+class BracketGenerateRequest(SQLModel):
+    format: Literal["single", "double"] = "single"
+
+
 @router.post(
     "/tournaments/{tournament_id}/bracket/generate",
     response_model=list[Match],
     status_code=201,
 )
 def generate_bracket(
-    tournament_id: int, session: Session = Depends(get_session)
+    tournament_id: int,
+    data: BracketGenerateRequest | None = None,
+    session: Session = Depends(get_session),
 ) -> list[Match]:
-    if session.get(Tournament, tournament_id) is None:
+    tournament = session.get(Tournament, tournament_id)
+    if tournament is None:
         raise HTTPException(status_code=404, detail="Tournament not found")
+    format = data.format if data is not None else "single"
 
     teams = session.exec(
         select(Team).where(Team.tournament_id == tournament_id)
@@ -245,12 +256,15 @@ def generate_bracket(
         team.id for team in sorted(teams, key=lambda team: (team.seed is None, team.seed))
     ]
 
-    generated = generate_single_elimination(ordered_team_ids)
+    generated = build_bracket(ordered_team_ids, format)
+    tournament.format = format
+    session.add(tournament)
 
     rows_by_key = {}
     for key, generated_match in generated.items():
         row = Match(
             tournament_id=tournament_id,
+            bracket=generated_match.bracket,
             round=generated_match.round,
             position=generated_match.position,
             team1_id=generated_match.team1_id,
@@ -263,11 +277,15 @@ def generate_bracket(
     session.flush()
 
     for key, generated_match in generated.items():
+        row = rows_by_key[key]
         if generated_match.winner_next is not None:
-            next_round, next_position, slot = generated_match.winner_next
-            row = rows_by_key[key]
-            row.winner_next_match_id = rows_by_key[(next_round, next_position)].id
+            *next_key, slot = generated_match.winner_next
+            row.winner_next_match_id = rows_by_key[tuple(next_key)].id
             row.winner_next_slot = slot
+        if generated_match.loser_next is not None:
+            *next_key, slot = generated_match.loser_next
+            row.loser_next_match_id = rows_by_key[tuple(next_key)].id
+            row.loser_next_slot = slot
 
     session.commit()
     for row in rows_by_key.values():

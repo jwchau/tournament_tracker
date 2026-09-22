@@ -83,8 +83,8 @@ export function deletePlayer(teamId, playerId) {
   return deleteRequest(`/teams/${teamId}/players/${playerId}`)
 }
 
-export function generateBracket(tournamentId) {
-  return postJson(`/tournaments/${tournamentId}/bracket/generate`, {})
+export function generateBracket(tournamentId, { format } = {}) {
+  return postJson(`/tournaments/${tournamentId}/bracket/generate`, format ? { format } : {})
 }
 
 export function getBracket(tournamentId) {

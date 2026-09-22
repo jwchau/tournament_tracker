@@ -123,7 +123,30 @@ planned vertical slices.
   a "Correct …" button opening `CorrectionForm`; reviewing a new score
   fetches the preview and shows a `ConfirmModal` listing what will be reset
   before anything is applied.
-- **Next**: [tickets/05-double-elimination.md](tickets/05-double-elimination.md)
+- **Slice 05** ([tickets/05-double-elimination.md](tickets/05-double-elimination.md))
+  — done. `generate_double_elimination()` in `backend/app/bracket.py` builds
+  the winners bracket from `generate_single_elimination()`, then the losers
+  bracket round by round: losers round 1 pairs off winners round 1's
+  losers, and each later winners round's losers drop in to face the
+  losers-bracket survivors one-for-one (every other drop reversed to avoid
+  immediate rematches), with a consolidation round between drops. The
+  losers final and winners final feed grand final 1. Each match now has a
+  `bracket` (`winners`/`losers`/`grand_final`), plus the
+  `loser_next_match_id`/`loser_next_slot` links. Any team count works: a
+  bye never produces a loser, so a losers match nothing can feed is created
+  already complete with no teams, and one with a single live side
+  auto-advances its team the moment it arrives (`_place_team` in
+  `backend/app/scoring.py`). Scoring drops each winners-bracket loser into
+  its losers slot. If the losers champion wins grand final 1, a grand-final
+  reset match (`grand_final` round 2) is created and decides the
+  tournament. Correction follows both winner and loser links, re-advances
+  through losers-bracket byes, and deletes the reset match whenever grand
+  final 1 is reset or corrected in the winners champion's favour (creating
+  it if corrected the other way). Frontend: a Single/Double format picker
+  next to "Generate bracket", and `BracketDiagram` lays out labelled
+  winners, losers, and grand final sections (reset match only once it
+  exists), with winner-advancement lines only — loser drops aren't drawn.
+- **Next**: [tickets/06-manual-match-scheduling.md](tickets/06-manual-match-scheduling.md)
   — not started.
 
 Both backend and frontend test suites pass inside the running containers and
@@ -145,7 +168,7 @@ standalone; verified end-to-end via `docker compose up`.
 | POST   | `/teams/{id}/players`               | Add a player to a team's roster (404 if team doesn't exist) |
 | GET    | `/teams/{id}/players`               | List a team's roster                |
 | DELETE | `/teams/{id}/players/{playerId}`    | Remove a player from the roster (404 if team or player doesn't exist, or the player belongs to a different team) |
-| POST   | `/tournaments/{id}/bracket/generate` | Generate and persist a single-elimination bracket |
+| POST   | `/tournaments/{id}/bracket/generate` | Generate and persist a bracket; optional body `{"format": "single" \| "double"}` (default `single`, saved as the tournament's `format`) |
 | GET    | `/tournaments/{id}/bracket`         | List a tournament's bracket matches |
 | GET    | `/matches/{id}`                     | Get a single match (404 if it doesn't exist) |
 | PATCH  | `/matches/{id}/score`               | Submit a score (`team1_score`, `team2_score`, `version`, `complete`); `409` on a version conflict, `400` if completion is invalid (tie, unknown team, or already complete — use `/correct` for completed matches) |

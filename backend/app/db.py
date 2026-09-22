@@ -32,8 +32,10 @@ def _add_missing_columns(bind: Engine) -> None:
     table that's already there, so a long-lived local SQLite file drifts out
     of sync as models gain fields (e.g. Match.team1_score/team2_score, added
     after some local databases already had a `match` table). This only
-    handles the additive case (a new nullable column); a renamed/dropped
-    column or a new NOT NULL column still needs a real migration.
+    handles the additive case: a new nullable column, or one with a
+    `server_default`, which SQLite backfills into existing rows (e.g.
+    Match.bracket = 'winners'). A renamed/dropped column or a new NOT NULL
+    column without a default still needs a real migration.
     """
     inspector = inspect(bind)
     existing_tables = set(inspector.get_table_names())
@@ -48,8 +50,12 @@ def _add_missing_columns(bind: Engine) -> None:
                 if column.name in existing_columns:
                     continue
                 ddl_type = column.type.compile(dialect=bind.dialect)
+                default = ""
+                if column.server_default is not None:
+                    value = str(column.server_default.arg).replace("'", "''")
+                    default = f" DEFAULT '{value}'"
                 connection.exec_driver_sql(
-                    f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {ddl_type}'
+                    f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {ddl_type}{default}'
                 )
 
 

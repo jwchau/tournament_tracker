@@ -77,6 +77,7 @@ class PlayerCreate(SQLModel):
 class Match(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     tournament_id: int = Field(foreign_key="tournament.id")
+    bracket: str = Field(default="winners", sa_column_kwargs={"server_default": "winners"})
     round: int
     position: int
     team1_id: int | None = Field(default=None, foreign_key="team.id")
