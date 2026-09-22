@@ -146,7 +146,18 @@ planned vertical slices.
   next to "Generate bracket", and `BracketDiagram` lays out labelled
   winners, losers, and grand final sections (reset match only once it
   exists), with winner-advancement lines only — loser drops aren't drawn.
-- **Next**: [tickets/06-manual-match-scheduling.md](tickets/06-manual-match-scheduling.md)
+- **Slice 06** ([tickets/06-manual-match-scheduling.md](tickets/06-manual-match-scheduling.md))
+  — done. `Match` gains optional `scheduled_time` (venue-local wall-clock
+  time, stored without a timezone so every viewer sees the same time) and
+  `court` (1..the tournament's `court_count`). `PATCH /matches/{id}/schedule`
+  changes only the fields sent (`null` clears one) in a single `UPDATE` of
+  just those columns — it deliberately doesn't touch `version`, scores, or
+  status, so a scheduling edit never makes a scorekeeper's pending
+  submission hit a `409`; last save wins for the schedule itself.
+  Frontend: bracket boxes gain a third line ("Court 2 · Sat 10:30"), and
+  every unfinished match (including TBD-vs-TBD, to plan ahead) gets a
+  `ScheduleForm` with a court picker and date/time input.
+- **Next**: [tickets/07-pools-and-round-robin-scheduling.md](tickets/07-pools-and-round-robin-scheduling.md)
   — not started.
 
 Both backend and frontend test suites pass inside the running containers and
@@ -174,6 +185,7 @@ standalone; verified end-to-end via `docker compose up`.
 | PATCH  | `/matches/{id}/score`               | Submit a score (`team1_score`, `team2_score`, `version`, `complete`); `409` on a version conflict, `400` if completion is invalid (tie, unknown team, or already complete — use `/correct` for completed matches) |
 | POST   | `/matches/{id}/correct/preview`     | Dry run of a correction (`team1_score`, `team2_score`): returns `reset_matches`, the downstream matches it would reset, without writing anything; `400` if the match isn't complete or the score is tied |
 | PATCH  | `/matches/{id}/correct`             | Correct a completed match (`team1_score`, `team2_score`, `version`); returns the corrected `match` and the `reset_matches`, and writes a `CorrectionLog` entry; `409` on a version conflict anywhere in the cascade, `400` if the match isn't complete or the score is tied |
+| PATCH  | `/matches/{id}/schedule`            | Set a match's `court` and/or `scheduled_time` (venue-local, e.g. `2026-10-03T10:30:00`); only the fields sent change, `null` clears; doesn't change `version`; `400` if `court` isn't 1..`court_count`, `404` if the match doesn't exist |
 | GET    | `/health`                           | Health check                        |
 
 ## Getting started

@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
@@ -208,6 +208,44 @@ test('the reset match decides the champion', async () => {
   render(<BracketDiagram tournamentId={1} teams={teams} />)
 
   expect(await screen.findByRole('region', { name: 'Champion' })).toHaveTextContent('Spikers')
+})
+
+test('shows each match court and time and offers a schedule editor for unfinished matches', async () => {
+  const scheduled = fiveTeamBracket.map((match) =>
+    match.id === 16 ? { ...match, court: 2, scheduled_time: '2026-10-03T10:30:00' } : match,
+  )
+  vi.spyOn(api, 'getBracket').mockResolvedValue(scheduled)
+
+  render(<BracketDiagram tournamentId={1} teams={teams} courtCount={3} />)
+
+  const box = await screen.findByTestId('match-2-2')
+  expect(box).toHaveTextContent('Court 2 · Sat 10:30')
+  // Matches 12, 15, 16 and 17 are unfinished; 11, 13 and 14 are byes.
+  expect(screen.getAllByRole('button', { name: /save schedule/i })).toHaveLength(4)
+  expect(screen.getByText('Round 2 match 2: Spikers vs Diggers')).toBeInTheDocument()
+})
+
+test('a saved schedule shows up in the bracket right away', async () => {
+  vi.spyOn(api, 'getBracket').mockResolvedValue(fiveTeamBracket)
+  vi.spyOn(api, 'scheduleMatch').mockImplementation((id, { court, scheduledTime }) =>
+    Promise.resolve({
+      ...fiveTeamBracket.find((match) => match.id === id),
+      court,
+      scheduled_time: `${scheduledTime}:00`,
+    }),
+  )
+
+  render(<BracketDiagram tournamentId={1} teams={teams} courtCount={3} />)
+
+  const [firstForm] = await screen.findAllByRole('button', { name: /save schedule/i })
+  const form = firstForm.closest('form')
+  fireEvent.change(within(form).getByLabelText(/court/i), { target: { value: '3' } })
+  fireEvent.change(within(form).getByLabelText(/time/i), {
+    target: { value: '2026-10-03T09:15' },
+  })
+  fireEvent.click(firstForm)
+
+  expect(await screen.findByText('Court 3 · Sat 09:15')).toBeInTheDocument()
 })
 
 test('stops polling after 3 consecutive failures and resumes after the cooldown', async () => {

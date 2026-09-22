@@ -1,7 +1,8 @@
+from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, SQLModel, func, select
+from sqlmodel import Session, SQLModel, func, select, update
 
 from app.bracket import BracketNotReady, validate_teams_for_bracket
 from app.bracket import generate_bracket as build_bracket
@@ -340,6 +341,34 @@ def submit_match_score(
             status_code=409,
             detail="version conflict: match was updated by someone else, please refetch and retry",
         )
+
+
+class ScheduleUpdate(SQLModel):
+    scheduled_time: datetime | None = None
+    court: int | None = None
+
+
+@router.patch("/matches/{match_id}/schedule", response_model=Match)
+def schedule_match(
+    match_id: int, data: ScheduleUpdate, session: Session = Depends(get_session)
+) -> Match:
+    match = session.get(Match, match_id)
+    if match is None:
+        raise HTTPException(status_code=404, detail="Match not found")
+
+    values = data.model_dump(exclude_unset=True)
+    court = values.get("court")
+    if court is not None:
+        court_count = session.get(Tournament, match.tournament_id).court_count
+        if not 1 <= court <= court_count:
+            raise HTTPException(
+                status_code=400, detail=f"court must be between 1 and {court_count}"
+            )
+    if values:
+        session.execute(update(Match).where(Match.id == match_id).values(**values))
+        session.commit()
+        session.refresh(match)
+    return match
 
 
 class CorrectionPreviewRequest(SQLModel):
