@@ -83,6 +83,76 @@ test('toggling "show players" fetches and displays each team\'s roster', async (
   expect(api.listPlayers).toHaveBeenCalledWith(10)
 })
 
+test('toggling "show players" again reuses the cached rosters instead of refetching', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([
+    { id: 10, tournament_id: 1, name: 'Ice Wolves', player_count: 1 },
+  ])
+  const listPlayers = vi
+    .spyOn(api, 'listPlayers')
+    .mockResolvedValue([{ id: 100, team_id: 10, name: 'Alex Kim' }])
+
+  renderAt(1)
+  await screen.findByText(/ice wolves/i)
+  const toggle = screen.getByRole('checkbox', { name: /show players/i })
+
+  // First show: cache miss, so the roster comes from the backend.
+  fireEvent.click(toggle)
+  expect(await screen.findByText('Alex Kim')).toBeInTheDocument()
+  expect(listPlayers).toHaveBeenCalledTimes(1)
+
+  fireEvent.click(toggle)
+  expect(screen.queryByText('Alex Kim')).not.toBeInTheDocument()
+
+  // Second show: cache hit, rendered immediately with no new request.
+  fireEvent.click(toggle)
+  expect(screen.getByText('Alex Kim')).toBeInTheDocument()
+  expect(listPlayers).toHaveBeenCalledTimes(1)
+})
+
+test('a team added after rosters were cached is fetched while cached teams are not', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([
+    { id: 10, tournament_id: 1, name: 'Ice Wolves', player_count: 1 },
+  ])
+  vi.spyOn(api, 'createTeam').mockResolvedValue({ id: 11, tournament_id: 1, name: 'Fire Hawks' })
+  const listPlayers = vi.spyOn(api, 'listPlayers').mockImplementation((teamId) =>
+    Promise.resolve(
+      teamId === 10 ? [{ id: 100, team_id: 10, name: 'Alex Kim' }] : [{ id: 200, team_id: 11, name: 'Sam Park' }],
+    ),
+  )
+
+  renderAt(1)
+  await screen.findByText(/ice wolves/i)
+  const toggle = screen.getByRole('checkbox', { name: /show players/i })
+  fireEvent.click(toggle)
+  await screen.findByText('Alex Kim')
+  fireEvent.click(toggle)
+
+  fireEvent.change(screen.getByLabelText(/team name/i), { target: { value: 'Fire Hawks' } })
+  fireEvent.click(screen.getByRole('button', { name: /add team/i }))
+  await screen.findByRole('link', { name: /fire hawks/i })
+
+  fireEvent.click(toggle)
+
+  expect(await screen.findByText('Sam Park')).toBeInTheDocument()
+  expect(screen.getByText('Alex Kim')).toBeInTheDocument()
+  // Ice Wolves was a cache hit; only Fire Hawks went to the backend.
+  expect(listPlayers.mock.calls.map(([teamId]) => teamId)).toEqual([10, 11])
+})
+
 test('editing tournament config submits the update, reflects the new values, and notifies', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
@@ -124,7 +194,7 @@ test('editing tournament config submits the update, reflects the new values, and
   )
 })
 
-test('shows each pool with its schedule controls and standings', async () => {
+test('shows each pool with its standings, leaving the schedule to the pool page', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
@@ -142,8 +212,10 @@ test('shows each pool with its schedule controls and standings', async () => {
   renderAt(1)
 
   expect(await screen.findByText('Pool A — courts 1, 2')).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /generate schedule/i })).toBeInTheDocument()
-  expect(screen.getByRole('table', { name: /standings/i })).toBeInTheDocument()
+  expect(await screen.findByRole('table', { name: /standings/i })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Open Pool A' })).toHaveAttribute('href', '/pools/7')
+  expect(screen.queryByRole('button', { name: /generate schedule/i })).not.toBeInTheDocument()
+  expect(api.getPoolMatches).not.toHaveBeenCalled()
 })
 
 test('generates a bracket in the chosen format, single by default', async () => {

@@ -1,6 +1,9 @@
 from collections import Counter
 
 import pytest
+from sqlmodel import select
+
+from app.models import CorrectionLog
 
 
 def _generate(client, team_count, format="double"):
@@ -241,6 +244,17 @@ def test_correcting_grand_final_one_to_the_winners_champion_removes_the_reset_ma
 
     assert [m["id"] for m in result["reset_matches"]] == [reset["id"]]
     assert [f["id"] for f in _grand_finals(client, tournament_id)] == [grand_final["id"]]
+
+
+def test_removing_the_reset_match_also_removes_its_correction_history(client, session):
+    tournament_id, _, grand_final, reset = _play_to_bracket_reset(client)
+    _complete(client, reset["id"])
+    _correct(client, reset["id"], team1_wins=False)
+
+    _correct(client, grand_final["id"], team1_wins=True)
+
+    logs = session.exec(select(CorrectionLog)).all()
+    assert [log.match_id for log in logs] == [grand_final["id"]]
 
 
 def test_correcting_grand_final_one_to_the_losers_champion_creates_the_reset_match(client):

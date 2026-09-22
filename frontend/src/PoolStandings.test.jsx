@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
@@ -6,6 +6,7 @@ import PoolStandings from './PoolStandings'
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
 const standings = [
@@ -38,4 +39,20 @@ test('renders the standings table in rank order with signed differentials', asyn
     ['2', 'Blockers', '2', '1', '1', '3', '-5', '31'],
     ['3', 'Spikers', '2', '1', '1', '3', '0', '29'],
   ])
+})
+
+test('a refresh button fetches the standings now and is disabled for 3 seconds', async () => {
+  vi.useFakeTimers()
+  const getPoolStandings = vi.spyOn(api, 'getPoolStandings').mockResolvedValue(standings)
+
+  render(<PoolStandings poolId={1} />)
+  await act(() => vi.advanceTimersByTimeAsync(0))
+  const button = screen.getByRole('button', { name: 'Refresh standings' })
+
+  await act(async () => fireEvent.click(button))
+  expect(getPoolStandings).toHaveBeenCalledTimes(2)
+  expect(button).toBeDisabled()
+
+  await act(() => vi.advanceTimersByTimeAsync(3000))
+  expect(button).toBeEnabled()
 })

@@ -6,6 +6,7 @@ async function sendJson(method, path, body) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
+  clearApiCache()
   if (!response.ok) {
     return Promise.reject(response)
   }
@@ -28,8 +29,68 @@ async function getJson(path) {
   return response.json()
 }
 
+// Page data (tournaments, teams, players, pools) keyed by path, so moving
+// between pages reuses what was already loaded instead of refetching it.
+// Every write clears it (once the server has answered), since one change can
+// show up in many cached reads, e.g. a new team changes team counts too.
+// Loaded data is also kept in sessionStorage so a reload of the same tab
+// starts warm. Storage can be unavailable (private mode, blocked site data),
+// in which case this is just an in-memory cache.
+const cache = new Map()
+const STORAGE_PREFIX = 'api-cache:'
+
+function readStored(path) {
+  try {
+    const stored = sessionStorage.getItem(STORAGE_PREFIX + path)
+    return stored === null ? undefined : JSON.parse(stored)
+  } catch {
+    return undefined
+  }
+}
+
+function writeStored(path, data) {
+  try {
+    sessionStorage.setItem(STORAGE_PREFIX + path, JSON.stringify(data))
+  } catch {
+    // Full or unavailable storage only costs a refetch after a reload.
+  }
+}
+
+export function clearApiCache() {
+  cache.clear()
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if (key.startsWith(STORAGE_PREFIX)) sessionStorage.removeItem(key)
+    }
+  } catch {
+    // Nothing stored to clear.
+  }
+}
+
+function getCachedJson(path) {
+  if (!cache.has(path)) {
+    const stored = readStored(path)
+    if (stored !== undefined) {
+      cache.set(path, Promise.resolve(stored))
+      return cache.get(path)
+    }
+    const request = getJson(path)
+    cache.set(path, request)
+    request.then(
+      (data) => {
+        if (cache.get(path) === request) writeStored(path, data)
+      },
+      () => {
+        if (cache.get(path) === request) cache.delete(path)
+      },
+    )
+  }
+  return cache.get(path)
+}
+
 async function deleteRequest(path) {
   const response = await fetch(`${API_BASE_URL}${path}`, { method: 'DELETE' })
+  clearApiCache()
   if (!response.ok) {
     return Promise.reject(response)
   }
@@ -40,11 +101,11 @@ export function createTournament({ name }) {
 }
 
 export function listTournaments() {
-  return getJson('/tournaments')
+  return getCachedJson('/tournaments')
 }
 
 export function getTournament(tournamentId) {
-  return getJson(`/tournaments/${tournamentId}`)
+  return getCachedJson(`/tournaments/${tournamentId}`)
 }
 
 export function updateTournament(tournamentId, updates) {
@@ -60,11 +121,11 @@ export function createTeam(tournamentId, { name, seed }) {
 }
 
 export function listTeams(tournamentId) {
-  return getJson(`/tournaments/${tournamentId}/teams`)
+  return getCachedJson(`/tournaments/${tournamentId}/teams`)
 }
 
 export function getTeam(teamId) {
-  return getJson(`/teams/${teamId}`)
+  return getCachedJson(`/teams/${teamId}`)
 }
 
 export function updateTeam(teamId, { name, poolId }) {
@@ -79,7 +140,7 @@ export function createPlayer(teamId, { name }) {
 }
 
 export function listPlayers(teamId) {
-  return getJson(`/teams/${teamId}/players`)
+  return getCachedJson(`/teams/${teamId}/players`)
 }
 
 export function deletePlayer(teamId, playerId) {
@@ -123,11 +184,11 @@ export function correctScore(matchId, { team1Score, team2Score, version }) {
 }
 
 export function listPools(tournamentId) {
-  return getJson(`/tournaments/${tournamentId}/pools`)
+  return getCachedJson(`/tournaments/${tournamentId}/pools`)
 }
 
 export function getPool(poolId) {
-  return getJson(`/pools/${poolId}`)
+  return getCachedJson(`/pools/${poolId}`)
 }
 
 export function createPool(tournamentId, { name }) {

@@ -179,12 +179,20 @@ planned vertical slices.
   anything is scored. Standings: win 3 / loss 0, ties broken by
   head-to-head among just the tied teams, then pool-wide point
   differential, then points scored. Frontend: a Pools section (add pools,
-  auto-assign, per-team pool picker) with, per pool, a schedule list by
-  slot (court, teams, score, idle teams split into "observing"/"resting"
-  purely for display, reusing `ScoreEntryForm`) and a live standings
-  table, both polling every 4s via `usePolling`. Each pool also has its
-  own page, `/pools/:id` (linked as "Open <pool>"), with just that pool's
-  courts, standings, and schedule — handy as a courtside display.
+  auto-assign, per-team pool picker) showing each pool's live standings
+  table. Scheduling and scoring live on each pool's own page,
+  `/pools/:id` (linked as "Open <pool>"): its courts, standings, and a
+  schedule list by slot (court, teams, score, idle teams split into
+  "observing"/"resting" purely for display, reusing `ScoreEntryForm`).
+  The generate form only shows while the pool has no schedule.
+- **Frontend API usage**: page data (tournaments, teams, players, pools) is
+  cached in `api.js`, in memory and in `sessionStorage`, so navigating
+  between pages or reloading the tab doesn't refetch it; any write clears
+  the whole cache. Live data (bracket, pool matches, standings) is never
+  cached. `usePolling` refreshes 10s after the last fetch, pauses while the
+  tab is hidden, and backs a "Refresh standings" button throttled to one
+  press per 3s. On a pool page the standings don't poll at all: they reload
+  only when the polled matches change (a match's id or version).
 - **Next**: [tickets/08-pool-to-playoff-advancement.md](tickets/08-pool-to-playoff-advancement.md)
   — not started.
 

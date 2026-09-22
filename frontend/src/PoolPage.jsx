@@ -10,11 +10,17 @@ function courtsLabel(courts) {
   return `${courts.length === 1 ? 'Court' : 'Courts'} ${courts.join(', ')}`
 }
 
+// Standings only change when a match is scored, which bumps its version.
+function matchesSignature(matches) {
+  return matches.map((match) => `${match.id}:${match.version}`).join(',')
+}
+
 export default function PoolPage() {
   const { poolId } = useParams()
   const [pool, setPool] = useState(null)
   const [teams, setTeams] = useState([])
   const [notFound, setNotFound] = useState(false)
+  const [matchesKey, setMatchesKey] = useState(null)
 
   useEffect(() => {
     getPool(poolId)
@@ -36,12 +42,16 @@ export default function PoolPage() {
 
       <section>
         <h3>Standings</h3>
-        <PoolStandings poolId={pool.id} />
+        {matchesKey !== null && <PoolStandings poolId={pool.id} refreshKey={matchesKey} />}
       </section>
 
       <section>
         <h3>Schedule</h3>
-        <PoolSchedule pool={pool} teams={teams} />
+        <PoolSchedule
+          pool={pool}
+          teams={teams}
+          onMatchesChange={(matches) => setMatchesKey(matchesSignature(matches))}
+        />
       </section>
     </>
   )

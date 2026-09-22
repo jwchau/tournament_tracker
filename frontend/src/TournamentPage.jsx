@@ -12,7 +12,6 @@ import {
   updateTournament,
 } from './api'
 import { useNotify } from './NotificationContext'
-import PoolSchedule from './PoolSchedule'
 import PoolsPanel from './PoolsPanel'
 import PoolStandings from './PoolStandings'
 import TeamForm from './TeamForm'
@@ -97,10 +96,13 @@ export default function TournamentPage() {
     const next = event.target.checked
     setShowRosters(next)
     if (next) {
+      // Rosters already fetched stay cached for the life of the page, so
+      // toggling again only asks the backend about teams it hasn't seen.
+      const uncached = teams.filter((team) => !(team.id in playersByTeam))
       const entries = await Promise.all(
-        teams.map((team) => listPlayers(team.id).then((players) => [team.id, players])),
+        uncached.map((team) => listPlayers(team.id).then((players) => [team.id, players])),
       )
-      setPlayersByTeam(Object.fromEntries(entries))
+      setPlayersByTeam((cached) => ({ ...cached, ...Object.fromEntries(entries) }))
     }
   }
 
@@ -174,12 +176,7 @@ export default function TournamentPage() {
           tournamentId={tournamentId}
           teams={teams}
           onTeamsChanged={setTeams}
-          renderPool={(pool) => (
-            <>
-              <PoolSchedule pool={pool} teams={teams} />
-              <PoolStandings poolId={pool.id} />
-            </>
-          )}
+          renderPool={(pool) => <PoolStandings poolId={pool.id} />}
         />
       </section>
 
