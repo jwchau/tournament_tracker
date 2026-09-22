@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { getBracket } from './api'
 import { createCircuitBreaker } from './circuitBreaker'
+import CorrectionForm from './CorrectionForm'
 import ScoreEntryForm from './ScoreEntryForm'
 import { withTimeout } from './withTimeout'
 
@@ -71,6 +72,13 @@ export default function BracketDiagram({ tournamentId, teams = [] }) {
     )
   }
 
+  function handleCorrected({ match: corrected, reset_matches: resetMatches }) {
+    const updatedById = Object.fromEntries(
+      [corrected, ...resetMatches].map((match) => [match.id, match]),
+    )
+    setMatches((current) => current.map((match) => updatedById[match.id] ?? match))
+  }
+
   const byId = Object.fromEntries(matches.map((match) => [match.id, match]))
   const teamsById = Object.fromEntries(teams.map((team) => [team.id, team]))
   const finalMatch = matches.find((match) => match.winner_next_match_id == null)
@@ -81,6 +89,10 @@ export default function BracketDiagram({ tournamentId, teams = [] }) {
   const scorable = matches.filter(
     (match) =>
       match.team1_id != null && match.team2_id != null && match.status !== 'complete',
+  )
+  const correctable = matches.filter(
+    (match) =>
+      match.team1_id != null && match.team2_id != null && match.status === 'complete',
   )
   const rounds = [...new Set(matches.map((match) => match.round))]
   const height = matches.length
@@ -157,6 +169,15 @@ export default function BracketDiagram({ tournamentId, teams = [] }) {
           team1Name={teamName(teamsById, match.team1_id)}
           team2Name={teamName(teamsById, match.team2_id)}
           onScored={handleScored}
+        />
+      ))}
+      {correctable.map((match) => (
+        <CorrectionForm
+          key={`${match.id}-${match.version}`}
+          match={match}
+          team1Name={teamName(teamsById, match.team1_id)}
+          team2Name={teamName(teamsById, match.team2_id)}
+          onCorrected={handleCorrected}
         />
       ))}
     </>

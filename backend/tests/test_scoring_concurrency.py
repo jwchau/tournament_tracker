@@ -4,7 +4,7 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from app.db import configure_sqlite_engine
 from app.models import Match, Team, Tournament
-from app.scoring import VersionConflict, submit_score
+from app.scoring import VersionConflict, correct_score, submit_score
 
 
 def _make_engine(tmp_path):
@@ -178,3 +178,57 @@ def test_concurrent_score_submissions_exactly_one_succeeds(tmp_path):
         assert final.version == 2
         assert final.status == "complete"
         assert final.winner_id == final.team1_id
+
+
+def test_correction_racing_a_downstream_score_submission_never_loses_a_write(tmp_path):
+    for attempt in range(20):
+        attempt_dir = tmp_path / str(attempt)
+        attempt_dir.mkdir()
+        engine = _make_engine(attempt_dir)
+        final_id, semifinal1_id, semifinal2_id, _, _ = _seed_two_semifinals_feeding_one_final(
+            engine
+        )
+        with Session(engine) as session:
+            submit_score(session, semifinal1_id, 21, 10, expected_version=1, complete=True)
+            submit_score(session, semifinal2_id, 21, 10, expected_version=1, complete=True)
+            final_version = session.get(Match, final_id).version
+            semifinal1 = session.get(Match, semifinal1_id)
+            semifinal1_version, corrected_winner = semifinal1.version, semifinal1.team2_id
+
+        outcomes = {}
+        barrier = threading.Barrier(2)
+
+        def submit_final():
+            with Session(engine) as session:
+                barrier.wait()
+                try:
+                    submit_score(
+                        session, final_id, 21, 10, expected_version=final_version, complete=True
+                    )
+                    outcomes["submission"] = "ok"
+                except VersionConflict:
+                    outcomes["submission"] = "conflict"
+
+        def correct_semifinal():
+            with Session(engine) as session:
+                barrier.wait()
+                outcomes["correction"] = correct_score(
+                    session, semifinal1_id, 10, 21, expected_version=semifinal1_version
+                )
+
+        threads = [threading.Thread(target=submit_final), threading.Thread(target=correct_semifinal)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert outcomes["submission"] in ("ok", "conflict")
+        assert outcomes["correction"].log.reset_match_ids == [final_id]
+        with Session(engine) as session:
+            final = session.get(Match, final_id)
+            assert final.team1_id == corrected_winner
+            assert final.team1_score is None
+            assert final.team2_score is None
+            assert final.winner_id is None
+            assert final.status == "ready"
+        engine.dispose()

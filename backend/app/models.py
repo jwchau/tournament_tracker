@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
 
 
@@ -89,3 +90,16 @@ class Match(SQLModel, table=True):
     loser_next_match_id: int | None = Field(default=None, foreign_key="match.id")
     loser_next_slot: int | None = None
     version: int = 1
+
+
+class CorrectionLog(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    match_id: int = Field(foreign_key="match.id")
+    old_team1_score: int | None
+    old_team2_score: int | None
+    old_winner_id: int | None = Field(default=None, foreign_key="team.id")
+    new_team1_score: int
+    new_team2_score: int
+    new_winner_id: int | None = Field(default=None, foreign_key="team.id")
+    reset_match_ids: list[int] = Field(default_factory=list, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
