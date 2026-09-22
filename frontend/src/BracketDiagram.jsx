@@ -3,13 +3,16 @@ import { useEffect, useState } from 'react'
 import { getBracket } from './api'
 import { createCircuitBreaker } from './circuitBreaker'
 import CorrectionForm from './CorrectionForm'
+import { matchName } from './matchName'
+import ScheduleForm from './ScheduleForm'
 import ScoreEntryForm from './ScoreEntryForm'
 import { withTimeout } from './withTimeout'
 
 const MATCH_WIDTH = 140
-const MATCH_HEIGHT = 40
+const LINE_HEIGHT = 17
+const MATCH_HEIGHT = LINE_HEIGHT * 3 + 5
 const ROUND_GAP = 60
-const ROW_UNIT = 60
+const ROW_UNIT = 70
 const POLL_INTERVAL_MS = 4000
 const REQUEST_TIMEOUT_MS = 5000
 const FAILURE_THRESHOLD = 3
@@ -23,6 +26,21 @@ function teamName(teamsById, teamId) {
 function slotLabel(teamsById, teamId, status) {
   if (teamId != null) return teamName(teamsById, teamId)
   return status === 'complete' ? 'BYE' : 'TBD'
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+// "Court 2 · Sat 10:30". Times are venue-local with no timezone: parsing an
+// ISO string without an offset yields that same wall-clock time everywhere.
+function scheduleLabel(match) {
+  const parts = []
+  if (match.court != null) parts.push(`Court ${match.court}`)
+  if (match.scheduled_time) {
+    const time = new Date(match.scheduled_time)
+    const clock = match.scheduled_time.slice(11, 16)
+    parts.push(`${WEEKDAYS[time.getDay()]} ${clock}`)
+  }
+  return parts.join(' · ')
 }
 
 function truncate(label) {
@@ -128,7 +146,7 @@ function matchTestId(match) {
   return `${prefix}-${match.round}-${match.position}`
 }
 
-export default function BracketDiagram({ tournamentId, teams = [] }) {
+export default function BracketDiagram({ tournamentId, teams = [], courtCount = 1 }) {
   const [matches, setMatches] = useState([])
   const [connectionLost, setConnectionLost] = useState(false)
 
@@ -160,7 +178,7 @@ export default function BracketDiagram({ tournamentId, teams = [] }) {
     }
   }, [tournamentId])
 
-  function handleScored(updated) {
+  function replaceMatch(updated) {
     setMatches((current) =>
       current.map((match) => (match.id === updated.id ? updated : match)),
     )
@@ -185,6 +203,7 @@ export default function BracketDiagram({ tournamentId, teams = [] }) {
     (match) =>
       match.team1_id != null && match.team2_id != null && match.status === 'complete',
   )
+  const schedulable = matches.filter((match) => match.status !== 'complete')
   const { positions, labels, width, height } = layoutBracket(matches)
 
   return (
@@ -241,22 +260,34 @@ export default function BracketDiagram({ tournamentId, teams = [] }) {
               const label = slotLabel(teamsById, teamId, match.status)
               const shown = truncate(label)
               return (
-                <text key={index} y={(MATCH_HEIGHT * (index + 1)) / 3}>
+                <text key={index} y={LINE_HEIGHT * (index + 1)}>
                   {shown !== label && <title>{label}</title>}
                   {shown}
                 </text>
               )
             })}
+            <text y={LINE_HEIGHT * 3} fontSize="11">
+              {scheduleLabel(match)}
+            </text>
           </g>
         ))}
       </svg>
+      {schedulable.map((match) => (
+        <ScheduleForm
+          key={`${match.id}-${match.court}-${match.scheduled_time}`}
+          match={match}
+          title={`${matchName(match)}: ${slotLabel(teamsById, match.team1_id, match.status)} vs ${slotLabel(teamsById, match.team2_id, match.status)}`}
+          courtCount={courtCount}
+          onSaved={replaceMatch}
+        />
+      ))}
       {scorable.map((match) => (
         <ScoreEntryForm
           key={match.id}
           match={match}
           team1Name={teamName(teamsById, match.team1_id)}
           team2Name={teamName(teamsById, match.team2_id)}
-          onScored={handleScored}
+          onScored={replaceMatch}
         />
       ))}
       {correctable.map((match) => (

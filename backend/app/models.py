@@ -90,6 +90,8 @@ class Match(SQLModel, table=True):
     winner_next_slot: int | None = None
     loser_next_match_id: int | None = Field(default=None, foreign_key="match.id")
     loser_next_slot: int | None = None
+    scheduled_time: datetime | None = None
+    court: int | None = None
     version: int = 1
 
 

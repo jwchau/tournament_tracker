@@ -118,3 +118,10 @@ export function correctScore(matchId, { team1Score, team2Score, version }) {
     version,
   })
 }
+
+export function scheduleMatch(matchId, { court, scheduledTime }) {
+  return patchJson(`/matches/${matchId}/schedule`, {
+    court,
+    scheduled_time: scheduledTime,
+  })
+}
