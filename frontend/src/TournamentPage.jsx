@@ -169,7 +169,7 @@ export default function TournamentPage() {
         <button type="button" onClick={handleGenerateBracket}>
           Generate bracket
         </button>
-        {bracketGenerated && <BracketDiagram tournamentId={tournamentId} />}
+        {bracketGenerated && <BracketDiagram tournamentId={tournamentId} teams={teams} />}
       </section>
 
       <section>

@@ -13,10 +13,19 @@ const POLL_INTERVAL_MS = 4000
 const REQUEST_TIMEOUT_MS = 5000
 const FAILURE_THRESHOLD = 3
 const COOLDOWN_MS = 30000
+const MAX_LABEL_LENGTH = 18
 
-function slotLabel(teamId, status) {
-  if (teamId != null) return `Team ${teamId}`
+function teamName(teamsById, teamId) {
+  return teamsById[teamId]?.name ?? `Team ${teamId}`
+}
+
+function slotLabel(teamsById, teamId, status) {
+  if (teamId != null) return teamName(teamsById, teamId)
   return status === 'complete' ? 'BYE' : 'TBD'
+}
+
+function truncate(label) {
+  return label.length > MAX_LABEL_LENGTH ? `${label.slice(0, MAX_LABEL_LENGTH - 1)}…` : label
 }
 
 function matchY(round, position) {
@@ -24,7 +33,7 @@ function matchY(round, position) {
   return spacing * (position - 1) + spacing / 2
 }
 
-export default function BracketDiagram({ tournamentId }) {
+export default function BracketDiagram({ tournamentId, teams = [] }) {
   const [matches, setMatches] = useState([])
   const [connectionLost, setConnectionLost] = useState(false)
 
@@ -63,6 +72,12 @@ export default function BracketDiagram({ tournamentId }) {
   }
 
   const byId = Object.fromEntries(matches.map((match) => [match.id, match]))
+  const teamsById = Object.fromEntries(teams.map((team) => [team.id, team]))
+  const finalMatch = matches.find((match) => match.winner_next_match_id == null)
+  const champion =
+    finalMatch?.status === 'complete' && finalMatch.winner_id != null
+      ? teamName(teamsById, finalMatch.winner_id)
+      : null
   const scorable = matches.filter(
     (match) =>
       match.team1_id != null && match.team2_id != null && match.status !== 'complete',
@@ -78,6 +93,12 @@ export default function BracketDiagram({ tournamentId }) {
         <p role="status">
           Connection lost — retrying automatically (checks again every {COOLDOWN_MS / 1000}s).
         </p>
+      )}
+      {champion && (
+        <section aria-label="Champion">
+          <h4>Champion</h4>
+          <p>🏆 {champion}</p>
+        </section>
       )}
       <svg
         role="img"
@@ -116,13 +137,27 @@ export default function BracketDiagram({ tournamentId }) {
             )})`}
           >
             <rect width={MATCH_WIDTH} height={MATCH_HEIGHT} fill="white" stroke="black" />
-            <text y={MATCH_HEIGHT / 3}>{slotLabel(match.team1_id, match.status)}</text>
-            <text y={(MATCH_HEIGHT * 2) / 3}>{slotLabel(match.team2_id, match.status)}</text>
+            {[match.team1_id, match.team2_id].map((teamId, index) => {
+              const label = slotLabel(teamsById, teamId, match.status)
+              const shown = truncate(label)
+              return (
+                <text key={index} y={(MATCH_HEIGHT * (index + 1)) / 3}>
+                  {shown !== label && <title>{label}</title>}
+                  {shown}
+                </text>
+              )
+            })}
           </g>
         ))}
       </svg>
       {scorable.map((match) => (
-        <ScoreEntryForm key={match.id} match={match} onScored={handleScored} />
+        <ScoreEntryForm
+          key={match.id}
+          match={match}
+          team1Name={teamName(teamsById, match.team1_id)}
+          team2Name={teamName(teamsById, match.team2_id)}
+          onScored={handleScored}
+        />
       ))}
     </>
   )

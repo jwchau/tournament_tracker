@@ -2,7 +2,12 @@ import { useState } from 'react'
 
 import { getMatch, submitScore } from './api'
 
-export default function ScoreEntryForm({ match, onScored }) {
+export default function ScoreEntryForm({
+  match,
+  team1Name = 'Team 1',
+  team2Name = 'Team 2',
+  onScored,
+}) {
   const [currentMatch, setCurrentMatch] = useState(match)
   const [seenVersion, setSeenVersion] = useState(match.version)
   const [team1Score, setTeam1Score] = useState('')
@@ -54,8 +59,10 @@ export default function ScoreEntryForm({ match, onScored }) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <p>Version: {currentMatch.version}</p>
-      <label htmlFor="team1-score">Team 1 score</label>
+      <p>
+        {team1Name} vs {team2Name}
+      </p>
+      <label htmlFor="team1-score">{team1Name} score</label>
       <input
         id="team1-score"
         type="number"
@@ -63,7 +70,7 @@ export default function ScoreEntryForm({ match, onScored }) {
         value={team1Score}
         onChange={(event) => setTeam1Score(event.target.value)}
       />
-      <label htmlFor="team2-score">Team 2 score</label>
+      <label htmlFor="team2-score">{team2Name} score</label>
       <input
         id="team2-score"
         type="number"

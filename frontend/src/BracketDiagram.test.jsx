@@ -50,6 +50,45 @@ test('renders byes as pre-completed matches for a 5-team bracket', async () => {
   expect(screen.getAllByText('BYE')).toHaveLength(3)
 })
 
+const teams = [
+  { id: 20, name: 'Spikers' },
+  { id: 30, name: 'Diggers' },
+]
+
+test('shows team names instead of team ids', async () => {
+  vi.spyOn(api, 'getBracket').mockResolvedValue(fiveTeamBracket)
+
+  render(<BracketDiagram tournamentId={1} teams={teams} />)
+
+  expect(await screen.findByLabelText('Diggers score')).toBeInTheDocument()
+  expect(screen.getAllByText('Spikers')).toHaveLength(2)
+  expect(screen.getByText('Team 40')).toBeInTheDocument()
+  expect(screen.queryByText('Team 20')).not.toBeInTheDocument()
+})
+
+test('shows the champion once the final match is complete', async () => {
+  const finished = fiveTeamBracket.map((match) =>
+    match.id === 17
+      ? { ...match, team1_id: 10, team2_id: 30, status: 'complete', winner_id: 30 }
+      : match,
+  )
+  vi.spyOn(api, 'getBracket').mockResolvedValue(finished)
+
+  render(<BracketDiagram tournamentId={1} teams={teams} />)
+
+  const champion = await screen.findByRole('region', { name: 'Champion' })
+  expect(champion).toHaveTextContent('Diggers')
+})
+
+test('does not show a champion while the final is unfinished', async () => {
+  vi.spyOn(api, 'getBracket').mockResolvedValue(fiveTeamBracket)
+
+  render(<BracketDiagram tournamentId={1} teams={teams} />)
+
+  await screen.findByTestId('match-3-1')
+  expect(screen.queryByRole('region', { name: 'Champion' })).not.toBeInTheDocument()
+})
+
 test('stops polling after 3 consecutive failures and resumes after the cooldown', async () => {
   vi.useFakeTimers()
   const getBracket = vi.spyOn(api, 'getBracket').mockRejectedValue(new Error('network down'))

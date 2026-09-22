@@ -46,11 +46,7 @@ test('picks up a newer match version when the match prop changes externally', as
 
   const { rerender } = render(<ScoreEntryForm match={match} />)
 
-  expect(screen.getByText('Version: 3')).toBeInTheDocument()
-
   rerender(<ScoreEntryForm match={{ ...match, version: 4 }} />)
-
-  expect(await screen.findByText('Version: 4')).toBeInTheDocument()
 
   fireEvent.change(screen.getByLabelText(/team 1 score/i), { target: { value: '21' } })
   fireEvent.change(screen.getByLabelText(/team 2 score/i), { target: { value: '15' } })
@@ -59,6 +55,15 @@ test('picks up a newer match version when the match prop changes externally', as
   await waitFor(() =>
     expect(api.submitScore).toHaveBeenCalledWith(7, expect.objectContaining({ version: 4 })),
   )
+})
+
+test('labels score fields with team names and does not display the version', () => {
+  render(<ScoreEntryForm match={match} team1Name="Spikers" team2Name="Diggers" />)
+
+  expect(screen.getByText('Spikers vs Diggers')).toBeInTheDocument()
+  expect(screen.getByLabelText('Spikers score')).toBeInTheDocument()
+  expect(screen.getByLabelText('Diggers score')).toBeInTheDocument()
+  expect(screen.queryByText(/version/i)).not.toBeInTheDocument()
 })
 
 test('does not submit while a score field is left blank', async () => {
