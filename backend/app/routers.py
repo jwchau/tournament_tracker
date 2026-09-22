@@ -12,6 +12,7 @@ from app.models import (
     Match,
     Player,
     PlayerCreate,
+    Pool,
     Team,
     TeamCreate,
     TeamSummary,
@@ -120,6 +121,9 @@ def delete_tournament(
     for team in teams:
         session.delete(team)
 
+    for pool in session.exec(select(Pool).where(Pool.tournament_id == tournament_id)).all():
+        session.delete(pool)
+
     session.delete(tournament)
     session.commit()
 
@@ -180,7 +184,14 @@ def update_team(
     if team is None:
         raise HTTPException(status_code=404, detail="Team not found")
 
-    team.name = data.name
+    changes = data.model_dump(exclude_unset=True)
+    pool_id = changes.get("pool_id")
+    if pool_id is not None:
+        pool = session.get(Pool, pool_id)
+        if pool is None or pool.tournament_id != team.tournament_id:
+            raise HTTPException(status_code=400, detail="Pool not found in this tournament")
+    for field, value in changes.items():
+        setattr(team, field, value)
     session.add(team)
     session.commit()
     session.refresh(team)
@@ -300,7 +311,9 @@ def get_bracket(
     tournament_id: int, session: Session = Depends(get_session)
 ) -> list[Match]:
     return list(
-        session.exec(select(Match).where(Match.tournament_id == tournament_id)).all()
+        session.exec(
+            select(Match).where(Match.tournament_id == tournament_id, Match.bracket != "pool")
+        ).all()
     )
 
 

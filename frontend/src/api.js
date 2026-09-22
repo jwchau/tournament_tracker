@@ -67,8 +67,11 @@ export function getTeam(teamId) {
   return getJson(`/teams/${teamId}`)
 }
 
-export function updateTeam(teamId, { name }) {
-  return patchJson(`/teams/${teamId}`, { name })
+export function updateTeam(teamId, { name, poolId }) {
+  const body = {}
+  if (name !== undefined) body.name = name
+  if (poolId !== undefined) body.pool_id = poolId
+  return patchJson(`/teams/${teamId}`, body)
 }
 
 export function createPlayer(teamId, { name }) {
@@ -117,6 +120,34 @@ export function correctScore(matchId, { team1Score, team2Score, version }) {
     team2_score: team2Score,
     version,
   })
+}
+
+export function listPools(tournamentId) {
+  return getJson(`/tournaments/${tournamentId}/pools`)
+}
+
+export function getPool(poolId) {
+  return getJson(`/pools/${poolId}`)
+}
+
+export function createPool(tournamentId, { name }) {
+  return postJson(`/tournaments/${tournamentId}/pools`, { name })
+}
+
+export function autoAssignPools(tournamentId) {
+  return postJson(`/tournaments/${tournamentId}/pools/auto-assign`, {})
+}
+
+export function generatePoolSchedule(poolId, { n }) {
+  return postJson(`/pools/${poolId}/generate-schedule`, { n })
+}
+
+export function getPoolMatches(poolId) {
+  return getJson(`/pools/${poolId}/matches`)
+}
+
+export function getPoolStandings(poolId) {
+  return getJson(`/pools/${poolId}/standings`)
 }
 
 export function scheduleMatch(matchId, { court, scheduledTime }) {

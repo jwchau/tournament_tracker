@@ -5,6 +5,7 @@ import MainPage from './MainPage'
 import NavBar from './NavBar'
 import { NavigationHistoryProvider } from './NavigationHistoryContext'
 import { NotificationProvider } from './NotificationContext'
+import PoolPage from './PoolPage'
 import TeamPage from './TeamPage'
 import TournamentPage from './TournamentPage'
 
@@ -21,6 +22,7 @@ function App() {
             <Route path="/" element={<MainPage />} />
             <Route path="/tournaments/:tournamentId" element={<TournamentPage />} />
             <Route path="/teams/:teamId" element={<TeamPage />} />
+            <Route path="/pools/:poolId" element={<PoolPage />} />
           </Routes>
         </NavigationHistoryProvider>
       </NotificationProvider>
