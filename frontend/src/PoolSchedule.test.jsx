@@ -71,7 +71,7 @@ test('generates the schedule with the chosen games per pairing', async () => {
 
   render(<PoolSchedule pool={pool} teams={teams} />)
 
-  fireEvent.change(screen.getByLabelText(/games per pairing/i), { target: { value: '2' } })
+  fireEvent.change(await screen.findByLabelText(/games per pairing/i), { target: { value: '2' } })
   fireEvent.click(screen.getByRole('button', { name: /generate schedule/i }))
 
   await waitFor(() => expect(generate).toHaveBeenCalledWith(1, { n: 2 }))
@@ -85,7 +85,17 @@ test('shows why generating the schedule was refused', async () => {
   })
 
   render(<PoolSchedule pool={pool} teams={teams} />)
-  fireEvent.click(screen.getByRole('button', { name: /generate schedule/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /generate schedule/i }))
 
   expect(await screen.findByText('a pool needs at least 2 teams')).toBeInTheDocument()
+})
+
+test('does not offer to generate a schedule once the pool has one', async () => {
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
+
+  render(<PoolSchedule pool={pool} teams={teams} />)
+
+  await screen.findByText('Slot 1')
+  expect(screen.queryByRole('button', { name: /generate schedule/i })).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/games per pairing/i)).not.toBeInTheDocument()
 })

@@ -76,3 +76,18 @@ test('does not submit while a score field is left blank', async () => {
 
   expect(api.submitScore).not.toHaveBeenCalled()
 })
+
+test('each form labels its own inputs when several are on the page', () => {
+  render(
+    <>
+      <ScoreEntryForm match={match} team1Name="Spikers" team2Name="Diggers" />
+      <ScoreEntryForm match={{ ...match, id: 8 }} team1Name="Blockers" team2Name="Setters" />
+    </>,
+  )
+
+  fireEvent.change(screen.getByLabelText('Blockers score'), { target: { value: '21' } })
+
+  expect(screen.getByLabelText('Blockers score')).toHaveValue(21)
+  expect(screen.getByLabelText('Spikers score')).toHaveValue(null)
+  expect(screen.getAllByLabelText(/complete match/i)).toHaveLength(2)
+})

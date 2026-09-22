@@ -15,6 +15,9 @@ export default function ScoreEntryForm({
   const [complete, setComplete] = useState(false)
   const [conflict, setConflict] = useState(false)
   const [submitError, setSubmitError] = useState(false)
+  const team1Id = `score-${match.id}-team1`
+  const team2Id = `score-${match.id}-team2`
+  const completeId = `score-${match.id}-complete`
 
   if (match.version > seenVersion) {
     setSeenVersion(match.version)
@@ -62,25 +65,25 @@ export default function ScoreEntryForm({
       <p>
         {team1Name} vs {team2Name}
       </p>
-      <label htmlFor="team1-score">{team1Name} score</label>
+      <label htmlFor={team1Id}>{team1Name} score</label>
       <input
-        id="team1-score"
+        id={team1Id}
         type="number"
         required
         value={team1Score}
         onChange={(event) => setTeam1Score(event.target.value)}
       />
-      <label htmlFor="team2-score">{team2Name} score</label>
+      <label htmlFor={team2Id}>{team2Name} score</label>
       <input
-        id="team2-score"
+        id={team2Id}
         type="number"
         required
         value={team2Score}
         onChange={(event) => setTeam2Score(event.target.value)}
       />
-      <label htmlFor="complete">
+      <label htmlFor={completeId}>
         <input
-          id="complete"
+          id={completeId}
           type="checkbox"
           checked={complete}
           onChange={(event) => setComplete(event.target.checked)}

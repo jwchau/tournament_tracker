@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { generatePoolSchedule, getPoolMatches } from './api'
 import ScoreEntryForm from './ScoreEntryForm'
@@ -24,12 +24,18 @@ function scoreText(match) {
   return match.team1_score != null ? ` — ${match.team1_score}–${match.team2_score}` : ''
 }
 
-export default function PoolSchedule({ pool, teams }) {
-  const [matches, setMatches] = useState([])
+export default function PoolSchedule({ pool, teams, onMatchesChange }) {
+  // null until the first load, so the generate form doesn't flash for pools
+  // that already have a schedule.
+  const [matches, setMatches] = useState(null)
   const [n, setN] = useState('1')
   const [error, setError] = useState(null)
 
   usePolling(() => getPoolMatches(pool.id), setMatches, pool.id)
+
+  useEffect(() => {
+    if (matches !== null) onMatchesChange?.(matches)
+  }, [matches, onMatchesChange])
 
   const poolTeams = teams.filter((team) => team.pool_id === pool.id)
   const nameOf = (teamId) => teams.find((team) => team.id === teamId)?.name ?? `Team ${teamId}`
@@ -46,26 +52,30 @@ export default function PoolSchedule({ pool, teams }) {
   }
 
   function handleScored(updated) {
-    setMatches((current) => current.map((match) => (match.id === updated.id ? updated : match)))
+    setMatches((current) =>
+      (current ?? []).map((match) => (match.id === updated.id ? updated : match)),
+    )
   }
 
   return (
     <>
-      <form onSubmit={handleGenerate}>
-        <label htmlFor={`games-per-pairing-${pool.id}`}>Games per pairing (n)</label>
-        <input
-          id={`games-per-pairing-${pool.id}`}
-          type="number"
-          min="1"
-          value={n}
-          onChange={(event) => setN(event.target.value)}
-        />
-        <button type="submit">Generate schedule</button>
-        {error && <p>{error}</p>}
-      </form>
+      {matches?.length === 0 && (
+        <form onSubmit={handleGenerate}>
+          <label htmlFor={`games-per-pairing-${pool.id}`}>Games per pairing (n)</label>
+          <input
+            id={`games-per-pairing-${pool.id}`}
+            type="number"
+            min="1"
+            value={n}
+            onChange={(event) => setN(event.target.value)}
+          />
+          <button type="submit">Generate schedule</button>
+          {error && <p>{error}</p>}
+        </form>
+      )}
 
       <ol>
-        {groupBySlot(matches).map(([slot, slotMatches]) => {
+        {groupBySlot(matches ?? []).map(([slot, slotMatches]) => {
           const playing = new Set(slotMatches.flatMap((m) => [m.team1_id, m.team2_id]))
           const [observing, resting] = splitIdle(poolTeams.filter((t) => !playing.has(t.id)))
           return (

@@ -189,6 +189,11 @@ export default function BracketDiagram({ tournamentId, teams = [], courtCount = 
       [corrected, ...resetMatches].map((match) => [match.id, match]),
     )
     setMatches((current) => current.map((match) => updatedById[match.id] ?? match))
+    // A correction can delete or create the grand final reset match, which
+    // the response can't express as an update, so reload the whole bracket.
+    getBracket(tournamentId)
+      .then(setMatches)
+      .catch(() => {})
   }
 
   const byId = Object.fromEntries(matches.map((match) => [match.id, match]))

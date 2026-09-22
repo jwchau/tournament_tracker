@@ -268,3 +268,33 @@ test('stops polling after 3 consecutive failures and resumes after the cooldown'
   expect(getBracket).toHaveBeenCalledTimes(4)
   expect(screen.queryByText(/connection lost/i)).not.toBeInTheDocument()
 })
+
+test('a correction that removes the reset match takes it off the bracket right away', async () => {
+  const grandFinal = doubleMatch(6, 'grand_final', 1, 1, {
+    team1_id: 20,
+    team2_id: 30,
+    team1_score: 10,
+    team2_score: 21,
+    status: 'complete',
+    winner_id: 30,
+  })
+  const resetMatch = doubleMatch(7, 'grand_final', 2, 1, { team1_id: 20, team2_id: 30, status: 'ready' })
+  const corrected = { ...grandFinal, team1_score: 21, team2_score: 10, winner_id: 20, version: 2 }
+  vi.spyOn(api, 'getBracket')
+    .mockResolvedValueOnce(withGrandFinals(grandFinal, resetMatch))
+    .mockResolvedValue(withGrandFinals(corrected))
+  vi.spyOn(api, 'previewCorrection').mockResolvedValue({ reset_matches: [resetMatch] })
+  vi.spyOn(api, 'correctScore').mockResolvedValue({ match: corrected, reset_matches: [resetMatch] })
+
+  render(<BracketDiagram tournamentId={1} teams={teams} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Correct Spikers vs Diggers' }))
+  const form = screen.getByText(/correcting spikers vs diggers/i).closest('form')
+  fireEvent.change(within(form).getByLabelText('Spikers score'), { target: { value: '21' } })
+  fireEvent.change(within(form).getByLabelText('Diggers score'), { target: { value: '10' } })
+  fireEvent.click(within(form).getByRole('button', { name: /review correction/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /apply correction/i }))
+
+  expect(await screen.findByRole('region', { name: 'Champion' })).toHaveTextContent('Spikers')
+  expect(screen.queryByTestId('match-grand_final-2-1')).not.toBeInTheDocument()
+})

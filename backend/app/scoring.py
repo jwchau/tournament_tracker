@@ -132,6 +132,7 @@ def correct_score(
         else None
     )
     if stale_reset is not None:
+        session.execute(delete(CorrectionLog).where(CorrectionLog.match_id == stale_reset.id))
         _delete_or_conflict(session, stale_reset)
         reset_matches.append(stale_reset)
     if winner_id != old_winner_id and _forces_bracket_reset(match, winner_id):

@@ -1,34 +1,80 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-const POLL_INTERVAL_MS = 4000
+const POLL_INTERVAL_MS = 10000
+const REFRESH_THROTTLE_MS = 3000
 
 /**
- * Call `load` now and every 4s while mounted, handing each result to
- * `onData`. Failed polls are ignored; the next tick simply tries again.
- * `key` restarts polling when it changes (e.g. a different pool); the
+ * Call `load` now and again 10s after each fetch while mounted, handing each
+ * result to `onData`. Failed polls are ignored; the next tick simply tries
+ * again. `key` restarts polling when it changes (e.g. a different pool); the
  * latest `load`/`onData` are always used without restarting.
+ *
+ * Returns `{ refresh }`: fetch right away, which also restarts the 10s wait
+ * so an automatic fetch doesn't follow right behind a manual one. Manual
+ * refreshes are throttled to one per 3s; `canRefresh` is false meanwhile.
+ *
+ * With `auto: false` nothing is scheduled: it loads when `key` changes or on
+ * a manual refresh, for data that only changes when something else does.
  */
-export function usePolling(load, onData, key) {
+export function usePolling(load, onData, key, { auto = true } = {}) {
   const latest = useRef({ load, onData })
   useEffect(() => {
     latest.current = { load, onData }
   })
+  const refreshRef = useRef(() => Promise.resolve())
 
   useEffect(() => {
     let cancelled = false
+    let timer = null
+
     function refresh() {
-      latest.current
+      clearTimeout(timer)
+      if (auto) {
+        timer = setTimeout(() => {
+          if (!document.hidden) refresh()
+        }, POLL_INTERVAL_MS)
+      }
+      return latest.current
         .load()
         .then((data) => {
           if (!cancelled) latest.current.onData(data)
         })
         .catch(() => {})
     }
+
+    // Nobody is looking at a hidden tab, so stop polling until it's shown.
+    function handleVisibilityChange() {
+      if (document.hidden) {
+        clearTimeout(timer)
+      } else {
+        refresh()
+      }
+    }
+
+    refreshRef.current = refresh
     refresh()
-    const interval = setInterval(refresh, POLL_INTERVAL_MS)
+    if (auto) document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
       cancelled = true
-      clearInterval(interval)
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [key])
+  }, [key, auto])
+
+  const [canRefresh, setCanRefresh] = useState(true)
+  const throttle = useRef({ blocked: false, timer: null })
+  useEffect(() => () => clearTimeout(throttle.current.timer), [])
+
+  const refresh = useCallback(() => {
+    if (throttle.current.blocked) return Promise.resolve()
+    throttle.current.blocked = true
+    setCanRefresh(false)
+    throttle.current.timer = setTimeout(() => {
+      throttle.current.blocked = false
+      setCanRefresh(true)
+    }, REFRESH_THROTTLE_MS)
+    return refreshRef.current()
+  }, [])
+
+  return { refresh, canRefresh }
 }
