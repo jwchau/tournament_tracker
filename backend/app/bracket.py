@@ -118,3 +118,143 @@ def generate_single_elimination(team_ids: list[int]) -> dict[tuple[int, int], Ge
                 next_match.status = "ready"
 
     return matches
+
+
+MatchKey = tuple[str, int, int]
+SlotRef = tuple[str, int, int, int]
+
+
+@dataclass
+class BracketMatch:
+    bracket: str
+    round: int
+    position: int
+    team1_id: int | None
+    team2_id: int | None
+    status: str
+    winner_id: int | None
+    winner_next: SlotRef | None
+    loser_next: SlotRef | None = None
+
+
+def _pending(bracket: str, round_: int, position: int) -> BracketMatch:
+    return BracketMatch(bracket, round_, position, None, None, "pending", None, None)
+
+
+def generate_bracket(team_ids: list[int], format: str) -> dict[MatchKey, BracketMatch]:
+    if format == "double":
+        return generate_double_elimination(team_ids)
+    return _as_winners_bracket(generate_single_elimination(team_ids), final_next=None)
+
+
+def _as_winners_bracket(
+    winners: dict[tuple[int, int], GeneratedMatch], final_next: SlotRef | None
+) -> dict[MatchKey, BracketMatch]:
+    return {
+        ("winners", round_, position): BracketMatch(
+            "winners",
+            round_,
+            position,
+            match.team1_id,
+            match.team2_id,
+            match.status,
+            match.winner_id,
+            ("winners", *match.winner_next) if match.winner_next is not None else final_next,
+        )
+        for (round_, position), match in winners.items()
+    }
+
+
+def generate_double_elimination(team_ids: list[int]) -> dict[MatchKey, BracketMatch]:
+    winners = generate_single_elimination(team_ids)
+    wr_rounds = max(round_ for round_, _ in winners)
+    grand_final_key = ("grand_final", 1, 1)
+
+    matches = _as_winners_bracket(winners, final_next=(*grand_final_key, 1))
+
+    if wr_rounds == 1:
+        # Two teams: no losers bracket, the final's loser is the losers champion.
+        matches[("winners", 1, 1)].loser_next = (*grand_final_key, 2)
+        matches[grand_final_key] = _pending(*grand_final_key)
+        return matches
+
+    def wr_round_size(round_: int) -> int:
+        return sum(1 for r, _ in winners if r == round_)
+
+    # Losers round 1 pairs off winners round 1's losers.
+    lb_round = 1
+    for position in range(1, wr_round_size(1) // 2 + 1):
+        matches[("losers", 1, position)] = _pending("losers", 1, position)
+    for position in range(1, wr_round_size(1) + 1):
+        matches[("winners", 1, position)].loser_next = (
+            "losers",
+            1,
+            (position + 1) // 2,
+            1 if position % 2 == 1 else 2,
+        )
+
+    for wr_round in range(2, wr_rounds + 1):
+        # Drop round: this winners round's losers face the losers-bracket
+        # survivors one-for-one. Every other drop reverses the order so
+        # teams that just met don't immediately meet again.
+        size = wr_round_size(wr_round)
+        drop_round = lb_round + 1
+        reverse = wr_round % 2 == 0
+        for position in range(1, size + 1):
+            matches[("losers", drop_round, position)] = _pending("losers", drop_round, position)
+            matches[("losers", lb_round, position)].winner_next = ("losers", drop_round, position, 1)
+            target = size + 1 - position if reverse else position
+            matches[("winners", wr_round, position)].loser_next = ("losers", drop_round, target, 2)
+        lb_round = drop_round
+
+        if wr_round == wr_rounds:
+            break
+
+        # Consolidation round: survivors play each other before the next drop.
+        consolidation_round = lb_round + 1
+        for position in range(1, size // 2 + 1):
+            matches[("losers", consolidation_round, position)] = _pending(
+                "losers", consolidation_round, position
+            )
+        for position in range(1, size + 1):
+            matches[("losers", lb_round, position)].winner_next = (
+                "losers",
+                consolidation_round,
+                (position + 1) // 2,
+                1 if position % 2 == 1 else 2,
+            )
+        lb_round = consolidation_round
+
+    matches[("losers", lb_round, 1)].winner_next = (*grand_final_key, 2)
+    matches[grand_final_key] = _pending(*grand_final_key)
+
+    _resolve_losers_bracket_byes(matches)
+    return matches
+
+
+def _resolve_losers_bracket_byes(matches: dict[MatchKey, BracketMatch]) -> None:
+    """A bye never produces a loser, so some losers-bracket slots can never fill.
+
+    A losers match with no incoming link on either side can never be played:
+    it's marked complete with no teams and feeds nothing, which in turn
+    leaves a dead slot in the round after it. A match with exactly one dead
+    side stays pending and auto-advances its one team once it arrives
+    (handled at scoring time).
+    """
+    for match in matches.values():
+        if match.bracket == "winners" and match.round == 1 and match.status == "complete":
+            match.loser_next = None
+
+    losers = sorted(
+        (match for match in matches.values() if match.bracket == "losers"),
+        key=lambda match: (match.round, match.position),
+    )
+    for match in losers:
+        fed = any(
+            ref is not None and ref[:3] == ("losers", match.round, match.position)
+            for other in matches.values()
+            for ref in (other.winner_next, other.loser_next)
+        )
+        if not fed:
+            match.status = "complete"
+            match.winner_next = None

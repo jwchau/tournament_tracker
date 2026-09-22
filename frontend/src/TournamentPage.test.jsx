@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
@@ -122,6 +122,29 @@ test('editing tournament config submits the update, reflects the new values, and
       court_count: 4,
     }),
   )
+})
+
+test('generates a bracket in the chosen format, single by default', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  vi.spyOn(api, 'getBracket').mockResolvedValue([])
+  const generateBracket = vi.spyOn(api, 'generateBracket').mockResolvedValue([])
+
+  renderAt(1)
+
+  const format = await screen.findByLabelText(/format/i)
+  expect(format).toHaveValue('single')
+
+  fireEvent.change(format, { target: { value: 'double' } })
+  fireEvent.click(screen.getByRole('button', { name: /generate bracket/i }))
+
+  await waitFor(() => expect(generateBracket).toHaveBeenCalledWith('1', { format: 'double' }))
 })
 
 test('shows a notification with the validation detail when generating a bracket is rejected', async () => {

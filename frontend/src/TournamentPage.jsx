@@ -79,6 +79,7 @@ export default function TournamentPage() {
   const [tournament, setTournament] = useState(null)
   const [teams, setTeams] = useState([])
   const [bracketGenerated, setBracketGenerated] = useState(false)
+  const [bracketFormat, setBracketFormat] = useState('single')
   const [showRosters, setShowRosters] = useState(false)
   const [playersByTeam, setPlayersByTeam] = useState({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -102,7 +103,7 @@ export default function TournamentPage() {
 
   async function handleGenerateBracket() {
     try {
-      await generateBracket(tournamentId)
+      await generateBracket(tournamentId, { format: bracketFormat })
       setBracketGenerated(true)
       notify('Bracket generated')
     } catch (error) {
@@ -166,6 +167,15 @@ export default function TournamentPage() {
 
       <section>
         <h3>Bracket</h3>
+        <label htmlFor="bracket-format">Format</label>
+        <select
+          id="bracket-format"
+          value={bracketFormat}
+          onChange={(event) => setBracketFormat(event.target.value)}
+        >
+          <option value="single">Single elimination</option>
+          <option value="double">Double elimination</option>
+        </select>
         <button type="button" onClick={handleGenerateBracket}>
           Generate bracket
         </button>

@@ -27,6 +27,7 @@ test('renders all rounds, matches, and connecting lines for an 8-team bracket', 
   expect(await screen.findByTestId('match-3-1')).toBeInTheDocument()
   expect(screen.getAllByTestId(/^match-/)).toHaveLength(7)
   expect(screen.getAllByTestId(/^line-/)).toHaveLength(6)
+  expect(screen.queryByText('Losers bracket')).not.toBeInTheDocument()
 })
 
 const fiveTeamBracket = [
@@ -103,6 +104,110 @@ test('does not show a champion while the final is unfinished', async () => {
 
   await screen.findByTestId('match-3-1')
   expect(screen.queryByRole('region', { name: 'Champion' })).not.toBeInTheDocument()
+})
+
+function doubleMatch(id, bracket, round, position, fields = {}) {
+  return {
+    id,
+    bracket,
+    round,
+    position,
+    team1_id: null,
+    team2_id: null,
+    status: 'pending',
+    winner_id: null,
+    winner_next_match_id: null,
+    winner_next_slot: null,
+    loser_next_match_id: null,
+    loser_next_slot: null,
+    version: 1,
+    ...fields,
+  }
+}
+
+const fourTeamDouble = [
+  doubleMatch(1, 'winners', 1, 1, { team1_id: 10, team2_id: 40, status: 'ready', winner_next_match_id: 3, winner_next_slot: 1, loser_next_match_id: 4, loser_next_slot: 1 }),
+  doubleMatch(2, 'winners', 1, 2, { team1_id: 20, team2_id: 30, status: 'ready', winner_next_match_id: 3, winner_next_slot: 2, loser_next_match_id: 4, loser_next_slot: 2 }),
+  doubleMatch(3, 'winners', 2, 1, { winner_next_match_id: 6, winner_next_slot: 1, loser_next_match_id: 5, loser_next_slot: 2 }),
+  doubleMatch(4, 'losers', 1, 1, { winner_next_match_id: 5, winner_next_slot: 1 }),
+  doubleMatch(5, 'losers', 2, 1, { winner_next_match_id: 6, winner_next_slot: 2 }),
+  doubleMatch(6, 'grand_final', 1, 1),
+]
+
+test('lays out a double-elimination bracket in winners, losers, and grand final sections', async () => {
+  vi.spyOn(api, 'getBracket').mockResolvedValue(fourTeamDouble)
+
+  render(<BracketDiagram tournamentId={1} />)
+
+  expect(await screen.findByText('Winners bracket')).toBeInTheDocument()
+  expect(screen.getByText('Losers bracket')).toBeInTheDocument()
+  expect(screen.getByText('Grand final')).toBeInTheDocument()
+  for (const testId of [
+    'match-1-1',
+    'match-1-2',
+    'match-2-1',
+    'match-losers-1-1',
+    'match-losers-2-1',
+    'match-grand_final-1-1',
+  ]) {
+    expect(screen.getByTestId(testId)).toBeInTheDocument()
+  }
+  expect(screen.queryByTestId('match-grand_final-2-1')).not.toBeInTheDocument()
+  // Only winner links are drawn: 1→3, 2→3, 3→GF, L1→L2, L2→GF.
+  expect(screen.getAllByTestId(/^line-/)).toHaveLength(5)
+})
+
+test('shows the grand final reset match once it exists', async () => {
+  vi.spyOn(api, 'getBracket').mockResolvedValue([
+    ...fourTeamDouble,
+    doubleMatch(7, 'grand_final', 2, 1, { team1_id: 10, team2_id: 20, status: 'ready' }),
+  ])
+
+  render(<BracketDiagram tournamentId={1} />)
+
+  expect(await screen.findByTestId('match-grand_final-2-1')).toBeInTheDocument()
+})
+
+function withGrandFinals(...grandFinals) {
+  return [...fourTeamDouble.filter((match) => match.bracket !== 'grand_final'), ...grandFinals]
+}
+
+test('the winners champion taking grand final one is the champion', async () => {
+  vi.spyOn(api, 'getBracket').mockResolvedValue(
+    withGrandFinals(
+      doubleMatch(6, 'grand_final', 1, 1, { team1_id: 20, team2_id: 30, status: 'complete', winner_id: 20 }),
+    ),
+  )
+
+  render(<BracketDiagram tournamentId={1} teams={teams} />)
+
+  expect(await screen.findByRole('region', { name: 'Champion' })).toHaveTextContent('Spikers')
+})
+
+test('no champion yet when the losers champion takes grand final one', async () => {
+  vi.spyOn(api, 'getBracket').mockResolvedValue(
+    withGrandFinals(
+      doubleMatch(6, 'grand_final', 1, 1, { team1_id: 20, team2_id: 30, status: 'complete', winner_id: 30 }),
+    ),
+  )
+
+  render(<BracketDiagram tournamentId={1} teams={teams} />)
+
+  await screen.findByTestId('match-grand_final-1-1')
+  expect(screen.queryByRole('region', { name: 'Champion' })).not.toBeInTheDocument()
+})
+
+test('the reset match decides the champion', async () => {
+  vi.spyOn(api, 'getBracket').mockResolvedValue(
+    withGrandFinals(
+      doubleMatch(6, 'grand_final', 1, 1, { team1_id: 20, team2_id: 30, status: 'complete', winner_id: 30 }),
+      doubleMatch(7, 'grand_final', 2, 1, { team1_id: 20, team2_id: 30, status: 'complete', winner_id: 20 }),
+    ),
+  )
+
+  render(<BracketDiagram tournamentId={1} teams={teams} />)
+
+  expect(await screen.findByRole('region', { name: 'Champion' })).toHaveTextContent('Spikers')
 })
 
 test('stops polling after 3 consecutive failures and resumes after the cooldown', async () => {
