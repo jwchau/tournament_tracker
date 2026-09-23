@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
@@ -39,6 +39,7 @@ test('loads the tournament and lists its teams with player counts, linking to th
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
+    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -59,6 +60,7 @@ test('toggling "show players" fetches and displays each team\'s roster', async (
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
+    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -87,6 +89,7 @@ test('toggling "show players" again reuses the cached rosters instead of refetch
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
+    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -120,6 +123,7 @@ test('a team added after rosters were cached is fetched while cached teams are n
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
+    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -157,6 +161,7 @@ test('editing tournament config submits the update, reflects the new values, and
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
+    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -198,6 +203,7 @@ test('games per pairing and target pool size are tournament settings', async () 
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
+    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -232,6 +238,7 @@ test('shows each pool with its standings, leaving the schedule to the pool page'
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
+    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -256,6 +263,7 @@ test('has a playoffs section showing the tier brackets once the tournament has a
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
+    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -273,10 +281,78 @@ test('has a playoffs section showing the tier brackets once the tournament has a
   expect(await screen.findByRole('heading', { name: 'Bracket 1' })).toBeInTheDocument()
 })
 
+const unconfirmed = {
+  id: 1,
+  name: 'Fall Open',
+  advance_per_pool: 2,
+  playoff_bracket_count: 2,
+  court_count: 3,
+  games_per_pairing: 1,
+  target_pool_size: 4,
+  settings_confirmed: false,
+  settings_locked: false,
+}
+
+test('a new tournament shows only its settings until they are confirmed', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue(unconfirmed)
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  const listPools = vi.spyOn(api, 'listPools').mockResolvedValue([])
+  const updateTournament = vi
+    .spyOn(api, 'updateTournament')
+    .mockImplementation(async (id, values) => ({ ...unconfirmed, ...values }))
+  const confirmSettings = vi
+    .spyOn(api, 'confirmSettings')
+    .mockImplementation(async () => ({ ...unconfirmed, court_count: 4, settings_confirmed: true }))
+
+  renderAt(1)
+
+  expect(
+    await screen.findByText('Confirm the tournament settings to add teams, pools, and brackets.'),
+  ).toBeInTheDocument()
+  expect(screen.queryByLabelText(/team name/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /add pool/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /generate bracket|advance to playoffs/i })).not.toBeInTheDocument()
+  expect(listPools).not.toHaveBeenCalled()
+
+  fireEvent.change(screen.getByLabelText(/court count/i), { target: { value: '4' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save and confirm settings' }))
+  const dialog = screen.getByRole('dialog', { name: /confirm settings/i })
+  expect(dialog).toHaveTextContent('Court count: 4')
+  expect(dialog).toHaveTextContent('Advance per pool: 2')
+  expect(updateTournament).not.toHaveBeenCalled()
+  fireEvent.click(within(dialog).getByRole('button', { name: /^confirm$/i }))
+
+  expect(await screen.findByLabelText(/team name/i)).toBeInTheDocument()
+  expect(updateTournament).toHaveBeenCalledWith('1', expect.objectContaining({ court_count: 4 }))
+  expect(confirmSettings).toHaveBeenCalledWith('1')
+  expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
+})
+
+test('once play has started only the tournament name can be edited', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    ...unconfirmed,
+    settings_confirmed: true,
+    settings_locked: true,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  vi.spyOn(api, 'listPools').mockResolvedValue([])
+  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([])
+  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'x' })
+
+  renderAt(1)
+
+  expect(await screen.findByLabelText(/tournament name/i)).toBeEnabled()
+  for (const label of [/advance per pool/i, /playoff bracket count/i, /court count/i, /games per pairing/i, /target pool size/i]) {
+    expect(screen.getByLabelText(label)).toBeDisabled()
+  }
+  expect(screen.getByText(/settings are locked once play has started/i)).toBeInTheDocument()
+})
+
 function mockPlayoffsNotStarted() {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
+    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -333,6 +409,7 @@ test('clicking delete tournament shows a confirmation modal that does nothing un
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
+    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -355,6 +432,7 @@ test('confirming delete tournament removes it and redirects to the home page', a
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
+    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,

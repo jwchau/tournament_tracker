@@ -1,5 +1,8 @@
+from tests.helpers import create_tournament
+
+
 def test_create_player_returns_it_under_the_team(client):
-    tournament = client.post("/tournaments", json={"name": "Spring Classic"}).json()
+    tournament = create_tournament(client, "Spring Classic")
     team = client.post(
         f"/tournaments/{tournament['id']}/teams", json={"name": "Ice Wolves"}
     ).json()
@@ -20,7 +23,7 @@ def test_create_player_for_missing_team_returns_404(client):
 
 
 def test_list_players_returns_players_for_the_team(client):
-    tournament = client.post("/tournaments", json={"name": "Spring Classic"}).json()
+    tournament = create_tournament(client, "Spring Classic")
     team = client.post(
         f"/tournaments/{tournament['id']}/teams", json={"name": "Ice Wolves"}
     ).json()
@@ -39,7 +42,7 @@ def test_list_players_returns_players_for_the_team(client):
 
 
 def test_delete_player_removes_them_from_the_roster(client):
-    tournament = client.post("/tournaments", json={"name": "Spring Classic"}).json()
+    tournament = create_tournament(client, "Spring Classic")
     team = client.post(
         f"/tournaments/{tournament['id']}/teams", json={"name": "Ice Wolves"}
     ).json()
@@ -60,7 +63,7 @@ def test_delete_player_returns_404_for_missing_team(client):
 
 
 def test_delete_player_returns_404_when_player_belongs_to_a_different_team(client):
-    tournament = client.post("/tournaments", json={"name": "Spring Classic"}).json()
+    tournament = create_tournament(client, "Spring Classic")
     team = client.post(
         f"/tournaments/{tournament['id']}/teams", json={"name": "Ice Wolves"}
     ).json()

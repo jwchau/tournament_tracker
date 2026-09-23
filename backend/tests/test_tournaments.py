@@ -1,3 +1,6 @@
+from tests.helpers import create_tournament
+
+
 def test_create_tournament_returns_it_with_defaults(client):
     response = client.post("/tournaments", json={"name": "Spring Classic"})
 
@@ -20,8 +23,8 @@ def test_list_tournaments_returns_created_tournaments(client):
 
 
 def test_list_tournaments_includes_team_count(client):
-    tournament = client.post("/tournaments", json={"name": "Spring Classic"}).json()
-    empty_tournament = client.post("/tournaments", json={"name": "Fall Invitational"}).json()
+    tournament = create_tournament(client, "Spring Classic")
+    empty_tournament = create_tournament(client, "Fall Invitational")
     client.post(f"/tournaments/{tournament['id']}/teams", json={"name": "Ice Wolves"})
     client.post(f"/tournaments/{tournament['id']}/teams", json={"name": "Fire Hawks"})
 
@@ -34,7 +37,7 @@ def test_list_tournaments_includes_team_count(client):
 
 
 def test_get_tournament_returns_it_by_id(client):
-    tournament = client.post("/tournaments", json={"name": "Spring Classic"}).json()
+    tournament = create_tournament(client, "Spring Classic")
 
     response = client.get(f"/tournaments/{tournament['id']}")
 
@@ -49,7 +52,7 @@ def test_get_tournament_returns_404_for_missing_tournament(client):
 
 
 def test_patch_tournament_updates_provided_fields(client):
-    tournament = client.post("/tournaments", json={"name": "Spring Classic"}).json()
+    tournament = create_tournament(client, "Spring Classic")
 
     response = client.patch(
         f"/tournaments/{tournament['id']}",
@@ -71,7 +74,7 @@ def test_patch_tournament_returns_404_for_missing_tournament(client):
 
 
 def test_delete_tournament_removes_it(client):
-    tournament = client.post("/tournaments", json={"name": "Spring Classic"}).json()
+    tournament = create_tournament(client, "Spring Classic")
 
     response = client.delete(f"/tournaments/{tournament['id']}")
 
@@ -86,7 +89,7 @@ def test_delete_tournament_returns_404_for_missing_tournament(client):
 
 
 def test_delete_tournament_cascades_to_teams_and_players(client):
-    tournament = client.post("/tournaments", json={"name": "Spring Classic"}).json()
+    tournament = create_tournament(client, "Spring Classic")
     team = client.post(
         f"/tournaments/{tournament['id']}/teams", json={"name": "Ice Wolves"}
     ).json()
@@ -103,7 +106,7 @@ def test_delete_tournament_cascades_to_teams_and_players(client):
 
 
 def test_delete_tournament_cascades_to_the_bracket(client):
-    tournament = client.post("/tournaments", json={"name": "Spring Classic"}).json()
+    tournament = create_tournament(client, "Spring Classic")
     team_a = client.post(
         f"/tournaments/{tournament['id']}/teams", json={"name": "Ice Wolves"}
     ).json()

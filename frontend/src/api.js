@@ -112,6 +112,10 @@ export function updateTournament(tournamentId, updates) {
   return patchJson(`/tournaments/${tournamentId}`, updates)
 }
 
+export function confirmSettings(tournamentId) {
+  return postJson(`/tournaments/${tournamentId}/confirm-settings`, {})
+}
+
 export function deleteTournament(tournamentId) {
   return deleteRequest(`/tournaments/${tournamentId}`)
 }

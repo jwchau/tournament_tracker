@@ -17,9 +17,11 @@ from app.models import (
     TeamUpdate,
     Tournament,
     TournamentCreate,
+    TournamentDetail,
     TournamentSummary,
     TournamentUpdate,
 )
+from app.settings import require_confirmed_settings
 from app.scoring import (
     InvalidScore,
     MatchNotFound,
@@ -57,33 +59,78 @@ def list_tournaments(session: Session = Depends(get_session)) -> list[Tournament
     ]
 
 
-@router.get("/tournaments/{tournament_id}", response_model=Tournament)
-def get_tournament(
-    tournament_id: int, session: Session = Depends(get_session)
-) -> Tournament:
+def _play_has_started(session: Session, tournament_id: int) -> bool:
+    """Whether any of the tournament's matches, pool or playoff, has a score."""
+    return (
+        session.exec(
+            select(Match.id).where(
+                Match.tournament_id == tournament_id,
+                Match.team1_score.is_not(None) | Match.team2_score.is_not(None),
+            )
+        ).first()
+        is not None
+    )
+
+
+def _detail(session: Session, tournament: Tournament) -> TournamentDetail:
+    return TournamentDetail(
+        **tournament.model_dump(), settings_locked=_play_has_started(session, tournament.id)
+    )
+
+
+def _tournament_or_404(session: Session, tournament_id: int) -> Tournament:
     tournament = session.get(Tournament, tournament_id)
     if tournament is None:
         raise HTTPException(status_code=404, detail="Tournament not found")
     return tournament
 
 
-@router.patch("/tournaments/{tournament_id}", response_model=Tournament)
+@router.get("/tournaments/{tournament_id}", response_model=TournamentDetail)
+def get_tournament(
+    tournament_id: int, session: Session = Depends(get_session)
+) -> TournamentDetail:
+    return _detail(session, _tournament_or_404(session, tournament_id))
+
+
+@router.patch("/tournaments/{tournament_id}", response_model=TournamentDetail)
 def update_tournament(
     tournament_id: int,
     data: TournamentUpdate,
     session: Session = Depends(get_session),
-) -> Tournament:
-    tournament = session.get(Tournament, tournament_id)
-    if tournament is None:
-        raise HTTPException(status_code=404, detail="Tournament not found")
+) -> TournamentDetail:
+    """Change the name any time; the other settings only until play starts."""
+    tournament = _tournament_or_404(session, tournament_id)
+    changes = data.model_dump(exclude_unset=True)
+    changed_settings = {
+        field for field, value in changes.items()
+        if field != "name" and value != getattr(tournament, field)
+    }
+    if changed_settings and _play_has_started(session, tournament_id):
+        raise HTTPException(
+            status_code=400,
+            detail="play has started, so only the tournament name can still be changed",
+        )
 
-    for field, value in data.model_dump(exclude_unset=True).items():
+    for field, value in changes.items():
         setattr(tournament, field, value)
 
     session.add(tournament)
     session.commit()
     session.refresh(tournament)
-    return tournament
+    return _detail(session, tournament)
+
+
+@router.post("/tournaments/{tournament_id}/confirm-settings", response_model=TournamentDetail)
+def confirm_settings(
+    tournament_id: int, session: Session = Depends(get_session)
+) -> TournamentDetail:
+    """Unlocks teams, pools, and brackets. There's no un-confirming."""
+    tournament = _tournament_or_404(session, tournament_id)
+    tournament.settings_confirmed = True
+    session.add(tournament)
+    session.commit()
+    session.refresh(tournament)
+    return _detail(session, tournament)
 
 
 @router.delete("/tournaments/{tournament_id}", status_code=204)
@@ -137,8 +184,10 @@ def delete_tournament(
 def create_team(
     tournament_id: int, data: TeamCreate, session: Session = Depends(get_session)
 ) -> Team:
-    if session.get(Tournament, tournament_id) is None:
+    tournament = session.get(Tournament, tournament_id)
+    if tournament is None:
         raise HTTPException(status_code=404, detail="Tournament not found")
+    require_confirmed_settings(tournament)
 
     team = Team(tournament_id=tournament_id, name=data.name, seed=data.seed)
     session.add(team)

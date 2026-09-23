@@ -4,10 +4,11 @@ import pytest
 from sqlmodel import select
 
 from app.models import CorrectionLog
+from tests.helpers import create_tournament
 
 
 def _generate(client, team_count, format="double"):
-    tournament = client.post("/tournaments", json={"name": "Double Cup"}).json()
+    tournament = create_tournament(client, "Double Cup")
     for seed in range(1, team_count + 1):
         team = client.post(
             f"/tournaments/{tournament['id']}/teams",
@@ -297,7 +298,7 @@ def test_generating_double_elimination_persists_all_three_sections_with_links(cl
 
 
 def test_generating_without_a_format_is_still_single_elimination(client):
-    tournament = client.post("/tournaments", json={"name": "Single Cup"}).json()
+    tournament = create_tournament(client, "Single Cup")
     for seed in (1, 2):
         team = client.post(
             f"/tournaments/{tournament['id']}/teams", json={"name": f"T{seed}", "seed": seed}
