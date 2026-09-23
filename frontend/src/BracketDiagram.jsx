@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { getBracket } from './api'
+import { getBracket, getPlayoffBracketMatches } from './api'
 import { createCircuitBreaker } from './circuitBreaker'
 import CorrectionForm from './CorrectionForm'
 import { matchName } from './matchName'
@@ -146,7 +146,20 @@ function matchTestId(match) {
   return `${prefix}-${match.round}-${match.position}`
 }
 
-export default function BracketDiagram({ tournamentId, teams = [], courtCount = 1 }) {
+// A playoff tier's matches, or the tournament's single bracket when there are
+// no tiers.
+function loadMatches(tournamentId, playoffBracketId) {
+  return playoffBracketId != null
+    ? getPlayoffBracketMatches(playoffBracketId)
+    : getBracket(tournamentId)
+}
+
+export default function BracketDiagram({
+  tournamentId,
+  playoffBracketId,
+  teams = [],
+  courtCount = 1,
+}) {
   const [matches, setMatches] = useState([])
   const [connectionLost, setConnectionLost] = useState(false)
 
@@ -159,7 +172,9 @@ export default function BracketDiagram({ tournamentId, teams = [], courtCount = 
 
     function refresh() {
       breaker
-        .execute(() => withTimeout(getBracket(tournamentId), REQUEST_TIMEOUT_MS))
+        .execute(() =>
+          withTimeout(loadMatches(tournamentId, playoffBracketId), REQUEST_TIMEOUT_MS),
+        )
         .then((data) => {
           if (!cancelled) setMatches(data)
         })
@@ -176,7 +191,7 @@ export default function BracketDiagram({ tournamentId, teams = [], courtCount = 
       cancelled = true
       clearInterval(interval)
     }
-  }, [tournamentId])
+  }, [tournamentId, playoffBracketId])
 
   function replaceMatch(updated) {
     setMatches((current) =>
@@ -191,7 +206,7 @@ export default function BracketDiagram({ tournamentId, teams = [], courtCount = 
     setMatches((current) => current.map((match) => updatedById[match.id] ?? match))
     // A correction can delete or create the grand final reset match, which
     // the response can't express as an update, so reload the whole bracket.
-    getBracket(tournamentId)
+    loadMatches(tournamentId, playoffBracketId)
       .then(setMatches)
       .catch(() => {})
   }

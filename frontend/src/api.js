@@ -211,6 +211,22 @@ export function getPoolStandings(poolId) {
   return getJson(`/pools/${poolId}/standings`)
 }
 
+export function advanceToPlayoffs(tournamentId, { format }) {
+  return postJson(`/tournaments/${tournamentId}/advance-to-playoffs`, { format })
+}
+
+export function getPlayoffReadiness(tournamentId) {
+  return getJson(`/tournaments/${tournamentId}/playoff-readiness`)
+}
+
+export function listPlayoffBrackets(tournamentId) {
+  return getCachedJson(`/tournaments/${tournamentId}/playoff-brackets`)
+}
+
+export function getPlayoffBracketMatches(bracketId) {
+  return getJson(`/playoff-brackets/${bracketId}/matches`)
+}
+
 export function scheduleMatch(matchId, { court, scheduledTime }) {
   return patchJson(`/matches/${matchId}/schedule`, {
     court,

@@ -218,6 +218,27 @@ test('shows each pool with its standings, leaving the schedule to the pool page'
   expect(api.getPoolMatches).not.toHaveBeenCalled()
 })
 
+test('has a playoffs section showing the tier brackets once the tournament has advanced', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([
+    { id: 30, tournament_id: 1, tier: 1, format: 'single' },
+  ])
+  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'advanced' })
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([])
+
+  renderAt(1)
+
+  expect(await screen.findByRole('heading', { name: 'Playoffs' })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Bracket 1' })).toBeInTheDocument()
+})
+
 test('generates a bracket in the chosen format, single by default', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
@@ -232,7 +253,7 @@ test('generates a bracket in the chosen format, single by default', async () => 
 
   renderAt(1)
 
-  const format = await screen.findByLabelText(/format/i)
+  const format = await screen.findByLabelText(/^format$/i)
   expect(format).toHaveValue('single')
 
   fireEvent.change(format, { target: { value: 'double' } })
