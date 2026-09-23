@@ -156,6 +156,16 @@ p {
   text-align: left;
 }
 
+/* HTML controls laid over the bracket SVG, e.g. a "Correct" button under its match box. */
+.bracket-canvas {
+  position: relative;
+  margin: 0 auto;
+}
+
+.bracket-match-actions {
+  position: absolute;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;

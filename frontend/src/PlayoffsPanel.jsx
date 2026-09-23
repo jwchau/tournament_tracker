@@ -1,13 +1,25 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 
-import { advanceToPlayoffs, getPlayoffReadiness, listPlayoffBrackets } from './api'
+import {
+  advanceToPlayoffs,
+  generateBracket,
+  getPlayoffReadiness,
+  listPlayoffBrackets,
+  resetPlayoffBrackets,
+} from './api'
 import BracketDiagram from './BracketDiagram'
+import ConfirmModal from './ConfirmModal'
 import { useNotify } from './NotificationContext'
 
-export default function PlayoffsPanel({ tournamentId, teams, courtCount }) {
+// A tournament with pools advances from pool play into tiered brackets; one
+// without pools generates a single bracket of every team. Either happens once,
+// and can be undone until the first playoff score.
+export default function PlayoffsPanel({ tournamentId, teams, hasPools }) {
   const [brackets, setBrackets] = useState(null)
   const [blocker, setBlocker] = useState('Checking pool play…')
   const [format, setFormat] = useState('single')
+  const [confirmingReset, setConfirmingReset] = useState(false)
   const notify = useNotify()
 
   useEffect(() => {
@@ -29,25 +41,64 @@ export default function PlayoffsPanel({ tournamentId, teams, courtCount }) {
     }
   }
 
+  async function handleGenerate() {
+    try {
+      await generateBracket(tournamentId, { format })
+      setBrackets(await listPlayoffBrackets(tournamentId))
+      notify('Bracket generated')
+    } catch (error) {
+      const body = await error?.json?.().catch(() => null)
+      notify(body?.detail ?? 'Failed to generate bracket', { type: 'error' })
+    }
+  }
+
+  async function handleReset() {
+    setConfirmingReset(false)
+    try {
+      await resetPlayoffBrackets(tournamentId)
+      setBrackets([])
+      setBlocker((await getPlayoffReadiness(tournamentId)).reason)
+      notify('Brackets reset')
+    } catch (error) {
+      const body = await error?.json?.().catch(() => null)
+      notify(body?.detail ?? 'Failed to reset brackets', { type: 'error' })
+    }
+  }
+
   if (brackets === null) return null
 
   if (brackets.length > 0) {
-    return brackets.map((bracket) => (
-      <section key={bracket.id}>
-        <h4>Bracket {bracket.tier}</h4>
-        <BracketDiagram
-          tournamentId={tournamentId}
-          playoffBracketId={bracket.id}
-          teams={teams}
-          courtCount={courtCount}
+    const resettable = brackets.every((bracket) => !bracket.has_scores)
+    return (
+      <>
+        {brackets.map((bracket) => (
+          <section key={bracket.id}>
+            <h4>Bracket {bracket.tier}</h4>
+            <Link to={`/brackets/${bracket.id}`}>Open Bracket {bracket.tier}</Link>
+            <BracketDiagram playoffBracketId={bracket.id} teams={teams} readOnly />
+          </section>
+        ))}
+        {resettable && (
+          <button type="button" onClick={() => setConfirmingReset(true)}>
+            Reset brackets
+          </button>
+        )}
+        <ConfirmModal
+          open={confirmingReset}
+          title="Reset brackets"
+          message="Delete every playoff bracket so they can be generated again? This is only possible until the first playoff score."
+          confirmLabel="Reset"
+          cancelLabel="Cancel"
+          onConfirm={handleReset}
+          onCancel={() => setConfirmingReset(false)}
         />
-      </section>
-    ))
+      </>
+    )
   }
 
   return (
     <>
-      {blocker && <p>{blocker}</p>}
+      {hasPools && blocker && <p>{blocker}</p>}
       <label htmlFor="playoff-format">Playoff format</label>
       <select
         id="playoff-format"
@@ -57,9 +108,15 @@ export default function PlayoffsPanel({ tournamentId, teams, courtCount }) {
         <option value="single">Single elimination</option>
         <option value="double">Double elimination</option>
       </select>
-      <button type="button" disabled={blocker !== null} onClick={handleAdvance}>
-        Advance to playoffs
-      </button>
+      {hasPools ? (
+        <button type="button" disabled={blocker !== null} onClick={handleAdvance}>
+          Advance to playoffs
+        </button>
+      ) : (
+        <button type="button" onClick={handleGenerate}>
+          Generate bracket
+        </button>
+      )}
     </>
   )
 }

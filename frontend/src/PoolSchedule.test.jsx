@@ -65,17 +65,17 @@ test('splits idle teams evenly between observing and resting', async () => {
   expect(screen.getByText('Resting: T14')).toBeInTheDocument()
 })
 
-test('generates the schedule with the chosen games per pairing', async () => {
+test('generates the schedule using the tournament setting for games per pairing', async () => {
   vi.spyOn(api, 'getPoolMatches').mockResolvedValue([])
   const generate = vi.spyOn(api, 'generatePoolSchedule').mockResolvedValue(schedule)
 
   render(<PoolSchedule pool={pool} teams={teams} />)
 
-  fireEvent.change(await screen.findByLabelText(/games per pairing/i), { target: { value: '2' } })
-  fireEvent.click(screen.getByRole('button', { name: /generate schedule/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /generate schedule/i }))
 
-  await waitFor(() => expect(generate).toHaveBeenCalledWith(1, { n: 2 }))
+  await waitFor(() => expect(generate).toHaveBeenCalledWith(1))
   expect(await screen.findByText('Slot 3')).toBeInTheDocument()
+  expect(screen.queryByLabelText(/games per pairing/i)).not.toBeInTheDocument()
 })
 
 test('shows why generating the schedule was refused', async () => {

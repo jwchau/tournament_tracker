@@ -37,6 +37,7 @@ def _build(client, settings: Settings) -> tuple[int, list[dict]]:
             "advance_per_pool": settings.advance_per_pool,
             "playoff_bracket_count": settings.bracket_count,
             "court_count": settings.court_count,
+            "games_per_pairing": settings.games_per_pairing,
         },
     )
     pools, seed = [], 1
@@ -49,9 +50,7 @@ def _build(client, settings: Settings) -> tuple[int, list[dict]]:
             client.patch(f"/teams/{team['id']}", json={"pool_id": pool["id"]})
             seed += 1
         if size >= 2:
-            client.post(
-                f"/pools/{pool['id']}/generate-schedule", json={"n": settings.games_per_pairing}
-            )
+            client.post(f"/pools/{pool['id']}/generate-schedule")
         pools.append(pool)
     return tournament_id, pools
 

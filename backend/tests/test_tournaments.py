@@ -112,9 +112,12 @@ def test_delete_tournament_cascades_to_the_bracket(client):
     ).json()
     for team in (team_a, team_b):
         client.post(f"/teams/{team['id']}/players", json={"name": "Player"})
-    client.post(f"/tournaments/{tournament['id']}/bracket/generate")
+    matches = client.post(f"/tournaments/{tournament['id']}/bracket/generate").json()
 
     response = client.delete(f"/tournaments/{tournament['id']}")
 
     assert response.status_code == 204
-    assert client.get(f"/tournaments/{tournament['id']}/bracket").json() == []
+    for match in matches:
+        assert client.get(f"/matches/{match['id']}").status_code == 404
+    bracket_id = matches[0]["playoff_bracket_id"]
+    assert client.get(f"/playoff-brackets/{bracket_id}/matches").status_code == 404

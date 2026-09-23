@@ -8,14 +8,30 @@ function courtsLabel(courts) {
   return `${courts.length === 1 ? 'court' : 'courts'} ${courts.join(', ')}`
 }
 
-export default function PoolsPanel({ tournamentId, teams, onTeamsChanged, renderPool }) {
-  const [pools, setPools] = useState([])
+export default function PoolsPanel({
+  tournamentId,
+  teams,
+  onTeamsChanged,
+  onPoolsChanged,
+  renderPool,
+}) {
+  const [pools, setPoolsState] = useState([])
   const [newPoolName, setNewPoolName] = useState('')
+
+  function setPools(next) {
+    setPoolsState(next)
+    onPoolsChanged?.(next)
+  }
 
   useEffect(() => {
     listPools(tournamentId)
-      .then(setPools)
+      .then((loaded) => {
+        setPoolsState(loaded)
+        onPoolsChanged?.(loaded)
+      })
       .catch(() => {})
+    // Only reload when the tournament changes, not when the parent re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tournamentId])
 
   async function handleAddPool(event) {
@@ -25,8 +41,11 @@ export default function PoolsPanel({ tournamentId, teams, onTeamsChanged, render
     setPools(await listPools(tournamentId))
   }
 
+  // Auto-assign also picks how many pools there should be, creating or
+  // removing pools, so the pool list is reloaded too.
   async function handleAutoAssign() {
     onTeamsChanged?.(await autoAssignPools(tournamentId))
+    setPools(await listPools(tournamentId))
   }
 
   async function handleMoveTeam(team, value) {
@@ -59,11 +78,11 @@ export default function PoolsPanel({ tournamentId, teams, onTeamsChanged, render
         <button type="submit">Add pool</button>
       </form>
 
+      <button type="button" onClick={handleAutoAssign}>
+        Auto-assign teams (snake seeding)
+      </button>
       {pools.length > 0 && (
         <>
-          <button type="button" onClick={handleAutoAssign}>
-            Auto-assign teams (snake seeding)
-          </button>
           <ul>
             {teams.map((team) => (
               <li key={team.id}>

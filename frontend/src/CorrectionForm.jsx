@@ -53,18 +53,22 @@ export default function CorrectionForm({
     }
   }
 
-  if (!open) {
-    return (
-      <button type="button" onClick={() => setOpen(true)}>
-        Correct {team1Name} vs {team2Name}
-      </button>
-    )
-  }
+  const title = `Correct ${team1Name} vs ${team2Name}`
+  const button = (
+    <button type="button" aria-label={title} onClick={() => setOpen(true)}>
+      Correct
+    </button>
+  )
+  if (!open) return button
 
   const team1Id = `correct-${match.id}-team1`
   const team2Id = `correct-${match.id}-team2`
 
   return (
+    <>
+      {button}
+      <div className="modal-overlay">
+        <div className="modal" role="dialog" aria-modal="true" aria-label={title}>
     <form onSubmit={handleReview}>
       <p>
         Correcting {team1Name} vs {team2Name}
@@ -100,5 +104,8 @@ export default function CorrectionForm({
         onCancel={() => setPreview(null)}
       />
     </form>
+        </div>
+      </div>
+    </>
   )
 }

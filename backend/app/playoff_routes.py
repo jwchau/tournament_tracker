@@ -3,19 +3,32 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, SQLModel, select, update
 
-from app.bracket import generate_bracket
+from app.bracket import (
+    BracketMatch,
+    BracketNotReady,
+    MatchKey,
+    generate_bracket,
+    validate_teams_for_bracket,
+)
 from app.db import get_session
-from app.models import Match, PlayoffBracket, Team, Tournament
+from app.models import CorrectionLog, Match, Player, PlayoffBracket, Team, Tournament
 from app.pool_routes import _pool_matches, _pools_in_order, _tournament_or_404
 from app.playoffs import playoff_tiers
 from app.pools import pool_standings
-from app.routers import save_bracket
 
 router = APIRouter()
 
 
 class AdvanceRequest(SQLModel):
     format: Literal["single", "double"] = "single"
+
+
+class PlayoffBracketSummary(SQLModel):
+    id: int
+    tournament_id: int
+    tier: int
+    format: str
+    has_scores: bool
 
 
 class NotReady(Exception):
@@ -66,55 +79,190 @@ def playoff_readiness(
 
 @router.post(
     "/tournaments/{tournament_id}/advance-to-playoffs",
-    response_model=list[PlayoffBracket],
+    response_model=list[PlayoffBracketSummary],
     status_code=201,
 )
 def advance_to_playoffs(
     tournament_id: int, data: AdvanceRequest, session: Session = Depends(get_session)
-) -> list[PlayoffBracket]:
+) -> list[PlayoffBracketSummary]:
     tournament = _tournament_or_404(session, tournament_id)
     try:
         tiers = _plan_tiers(session, tournament)
     except NotReady as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    created = _create_playoffs(session, tournament_id, tiers, data.format)
+    return _summaries(session, [bracket for bracket, _ in created])
 
-    # Planning only read, so a simultaneous request may have planned too. The
-    # first write takes the database's write lock; a request that claims the
-    # stage second finds it already taken and stops before adding brackets.
+
+@router.post(
+    "/tournaments/{tournament_id}/bracket/generate",
+    response_model=list[Match],
+    status_code=201,
+)
+def generate_single_bracket(
+    tournament_id: int,
+    data: AdvanceRequest | None = None,
+    session: Session = Depends(get_session),
+) -> list[Match]:
+    """A tournament without pools: every team in one tier-1 bracket, seeded by seed."""
+    _tournament_or_404(session, tournament_id)
+    if _pools_in_order(session, tournament_id):
+        raise HTTPException(
+            status_code=400,
+            detail="this tournament has pools; advance to playoffs once pool play is done",
+        )
+    format = data.format if data is not None else "single"
+    teams = session.exec(select(Team).where(Team.tournament_id == tournament_id)).all()
+    players = session.exec(
+        select(Player).where(Player.team_id.in_([team.id for team in teams]))
+    ).all()
+    try:
+        validate_teams_for_bracket(teams, players)
+    except BracketNotReady as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    seeded = [team.id for team in sorted(teams, key=lambda team: (team.seed is None, team.seed))]
+    [(_, matches)] = _create_playoffs(session, tournament_id, [seeded], format)
+    return matches
+
+
+@router.delete("/tournaments/{tournament_id}/playoff-brackets", status_code=204)
+def reset_playoff_brackets(tournament_id: int, session: Session = Depends(get_session)) -> None:
+    """Undo generating or advancing, e.g. after picking the wrong format, until play starts."""
+    tournament = _tournament_or_404(session, tournament_id)
+    brackets = session.exec(
+        select(PlayoffBracket).where(PlayoffBracket.tournament_id == tournament_id)
+    ).all()
+    matches = session.exec(
+        select(Match).where(Match.playoff_bracket_id.in_([b.id for b in brackets]))
+    ).all()
+    if any(m.team1_score is not None or m.team2_score is not None for m in matches):
+        raise HTTPException(
+            status_code=400, detail="a playoff match has been scored; brackets can't be reset"
+        )
+    for log in session.exec(
+        select(CorrectionLog).where(CorrectionLog.match_id.in_([m.id for m in matches]))
+    ).all():
+        session.delete(log)
+    for match in matches:
+        session.delete(match)
+    session.flush()
+    for bracket in brackets:
+        session.delete(bracket)
+    tournament.stage = "draft"
+    session.add(tournament)
+    session.commit()
+
+
+def _create_playoffs(
+    session: Session, tournament_id: int, tiers: list[list[int]], format: str
+) -> list[tuple[PlayoffBracket, list[Match]]]:
+    """One bracket per tier of seeded team ids; a tournament gets playoffs only once.
+
+    Planning only read, so a simultaneous request may have planned too. The
+    first write takes the database's write lock; a request that claims the
+    stage second finds it already taken and stops before adding brackets.
+    """
     claimed = session.execute(
         update(Tournament)
         .where(Tournament.id == tournament_id, Tournament.stage != "playoffs")
-        .values(stage="playoffs", format=data.format)
+        .values(stage="playoffs", format=format)
     )
     if claimed.rowcount == 0:
         session.rollback()
         raise HTTPException(status_code=400, detail="this tournament has already advanced to playoffs")
 
-    brackets = []
+    created = []
     for tier, team_ids in enumerate(tiers, start=1):
-        bracket = PlayoffBracket(tournament_id=tournament_id, tier=tier, format=data.format)
+        bracket = PlayoffBracket(tournament_id=tournament_id, tier=tier, format=format)
         session.add(bracket)
         session.flush()
-        save_bracket(session, tournament_id, generate_bracket(team_ids, data.format), bracket.id)
-        brackets.append(bracket)
+        matches = _save_matches(session, tournament_id, generate_bracket(team_ids, format), bracket.id)
+        created.append((bracket, matches))
     session.commit()
-    for bracket in brackets:
-        session.refresh(bracket)
-    return brackets
+    for bracket, matches in created:
+        for row in [bracket, *matches]:
+            session.refresh(row)
+    return created
 
 
-@router.get("/tournaments/{tournament_id}/playoff-brackets", response_model=list[PlayoffBracket])
-def list_playoff_brackets(
-    tournament_id: int, session: Session = Depends(get_session)
-) -> list[PlayoffBracket]:
-    _tournament_or_404(session, tournament_id)
-    return list(
+def _save_matches(
+    session: Session,
+    tournament_id: int,
+    generated: dict[MatchKey, BracketMatch],
+    playoff_bracket_id: int,
+) -> list[Match]:
+    """Add a generated bracket's matches, with their advancement links, uncommitted."""
+    rows_by_key = {}
+    for key, generated_match in generated.items():
+        row = Match(
+            tournament_id=tournament_id,
+            playoff_bracket_id=playoff_bracket_id,
+            bracket=generated_match.bracket,
+            round=generated_match.round,
+            position=generated_match.position,
+            team1_id=generated_match.team1_id,
+            team2_id=generated_match.team2_id,
+            status=generated_match.status,
+            winner_id=generated_match.winner_id,
+        )
+        session.add(row)
+        rows_by_key[key] = row
+    session.flush()
+
+    for key, generated_match in generated.items():
+        row = rows_by_key[key]
+        if generated_match.winner_next is not None:
+            *next_key, slot = generated_match.winner_next
+            row.winner_next_match_id = rows_by_key[tuple(next_key)].id
+            row.winner_next_slot = slot
+        if generated_match.loser_next is not None:
+            *next_key, slot = generated_match.loser_next
+            row.loser_next_match_id = rows_by_key[tuple(next_key)].id
+            row.loser_next_slot = slot
+    return list(rows_by_key.values())
+
+
+def _summaries(session: Session, brackets: list[PlayoffBracket]) -> list[PlayoffBracketSummary]:
+    """Brackets with whether any of their matches has a score (so they can't be reset)."""
+    scored = set(
         session.exec(
-            select(PlayoffBracket)
-            .where(PlayoffBracket.tournament_id == tournament_id)
-            .order_by(PlayoffBracket.tier)
+            select(Match.playoff_bracket_id)
+            .where(
+                Match.playoff_bracket_id.in_([b.id for b in brackets]),
+                (Match.team1_score.is_not(None)) | (Match.team2_score.is_not(None)),
+            )
+            .distinct()
         ).all()
     )
+    return [
+        PlayoffBracketSummary(**bracket.model_dump(), has_scores=bracket.id in scored)
+        for bracket in brackets
+    ]
+
+
+@router.get(
+    "/tournaments/{tournament_id}/playoff-brackets", response_model=list[PlayoffBracketSummary]
+)
+def list_playoff_brackets(
+    tournament_id: int, session: Session = Depends(get_session)
+) -> list[PlayoffBracketSummary]:
+    _tournament_or_404(session, tournament_id)
+    brackets = session.exec(
+        select(PlayoffBracket)
+        .where(PlayoffBracket.tournament_id == tournament_id)
+        .order_by(PlayoffBracket.tier)
+    ).all()
+    return _summaries(session, list(brackets))
+
+
+@router.get("/playoff-brackets/{bracket_id}", response_model=PlayoffBracketSummary)
+def get_playoff_bracket(
+    bracket_id: int, session: Session = Depends(get_session)
+) -> PlayoffBracketSummary:
+    bracket = session.get(PlayoffBracket, bracket_id)
+    if bracket is None:
+        raise HTTPException(status_code=404, detail="Playoff bracket not found")
+    return _summaries(session, [bracket])[0]
 
 
 @router.get("/playoff-brackets/{bracket_id}/matches", response_model=list[Match])

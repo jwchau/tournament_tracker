@@ -101,9 +101,11 @@ test('cancelling the confirmation does not submit the correction', async () => {
   render(<CorrectionForm match={match} team1Name="Spikers" team2Name="Diggers" />)
   enterCorrection('10', '21')
 
-  fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: /cancel/i }))
+  const confirmation = await screen.findByRole('dialog', { name: 'Confirm score correction' })
+  fireEvent.click(within(confirmation).getByRole('button', { name: /cancel/i }))
 
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: 'Confirm score correction' })).not.toBeInTheDocument()
+  expect(screen.getByRole('dialog', { name: 'Correct Spikers vs Diggers' })).toBeInTheDocument()
   expect(correctScore).not.toHaveBeenCalled()
 })
 

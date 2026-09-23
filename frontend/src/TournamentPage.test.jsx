@@ -194,6 +194,40 @@ test('editing tournament config submits the update, reflects the new values, and
   )
 })
 
+test('games per pairing and target pool size are tournament settings', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+    games_per_pairing: 1,
+    target_pool_size: 4,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  const updateTournament = vi
+    .spyOn(api, 'updateTournament')
+    .mockImplementation(async (id, values) => ({ id: 1, ...values }))
+
+  renderAt(1)
+
+  const games = await screen.findByLabelText(/games per pairing/i)
+  const target = screen.getByLabelText(/target pool size/i)
+  expect([games.value, target.value]).toEqual(['1', '4'])
+  expect(games).toHaveAttribute('min', '1')
+  expect(target).toHaveAttribute('min', '2')
+  fireEvent.change(games, { target: { value: '2' } })
+  fireEvent.change(target, { target: { value: '5' } })
+  fireEvent.click(screen.getByRole('button', { name: /save/i }))
+
+  await waitFor(() =>
+    expect(updateTournament).toHaveBeenCalledWith(
+      '1',
+      expect.objectContaining({ games_per_pairing: 2, target_pool_size: 5 }),
+    ),
+  )
+})
+
 test('shows each pool with its standings, leaving the schedule to the pool page', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
@@ -239,7 +273,7 @@ test('has a playoffs section showing the tier brackets once the tournament has a
   expect(await screen.findByRole('heading', { name: 'Bracket 1' })).toBeInTheDocument()
 })
 
-test('generates a bracket in the chosen format, single by default', async () => {
+function mockPlayoffsNotStarted() {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
@@ -248,29 +282,42 @@ test('generates a bracket in the chosen format, single by default', async () => 
     court_count: 2,
   })
   vi.spyOn(api, 'listTeams').mockResolvedValue([])
-  vi.spyOn(api, 'getBracket').mockResolvedValue([])
+  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([])
+  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'not yet' })
+}
+
+test('without pools the playoffs section generates a bracket in the chosen format', async () => {
+  mockPlayoffsNotStarted()
+  vi.spyOn(api, 'listPools').mockResolvedValue([])
   const generateBracket = vi.spyOn(api, 'generateBracket').mockResolvedValue([])
 
   renderAt(1)
 
-  const format = await screen.findByLabelText(/^format$/i)
+  const format = await screen.findByLabelText(/playoff format/i)
   expect(format).toHaveValue('single')
-
   fireEvent.change(format, { target: { value: 'double' } })
   fireEvent.click(screen.getByRole('button', { name: /generate bracket/i }))
 
   await waitFor(() => expect(generateBracket).toHaveBeenCalledWith('1', { format: 'double' }))
+  expect(screen.queryByRole('heading', { name: /^bracket$/i })).not.toBeInTheDocument()
+})
+
+test('once a pool exists the playoffs section advances instead of generating', async () => {
+  mockPlayoffsNotStarted()
+  vi.spyOn(api, 'listPools').mockResolvedValue([
+    { id: 7, tournament_id: 1, name: 'Pool A', courts: [1, 2] },
+  ])
+  vi.spyOn(api, 'getPoolStandings').mockResolvedValue([])
+
+  renderAt(1)
+
+  expect(await screen.findByRole('button', { name: /advance to playoffs/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /generate bracket/i })).not.toBeInTheDocument()
 })
 
 test('shows a notification with the validation detail when generating a bracket is rejected', async () => {
-  vi.spyOn(api, 'getTournament').mockResolvedValue({
-    id: 1,
-    name: 'Spring Classic',
-    advance_per_pool: 1,
-    playoff_bracket_count: 1,
-    court_count: 2,
-  })
-  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  mockPlayoffsNotStarted()
+  vi.spyOn(api, 'listPools').mockResolvedValue([])
   vi.spyOn(api, 'generateBracket').mockRejectedValue({
     json: () => Promise.resolve({ detail: 'at least 2 teams are required to generate a bracket' }),
   })

@@ -127,6 +127,20 @@ def pool_courts(court_count: int, pool_count: int) -> list[list[int]]:
     return courts
 
 
+def balanced_pool_count(team_count: int, target_size: int, court_count: int) -> int:
+    """How many pools make their average size closest to the target.
+
+    Ties go to more, smaller pools. There are never more pools than courts
+    (a pool without a court can't be scheduled) or than would leave a pool
+    with fewer than 2 teams, and always at least one pool.
+    """
+    most = max(1, min(court_count, team_count // 2))
+    return min(
+        range(1, most + 1),
+        key=lambda count: (abs(team_count / count - target_size), -count),
+    )
+
+
 def snake_assign(team_ids: list[int], pool_ids: list[int]) -> dict[int, int]:
     """Deal teams (best seed first) into pools in a snake: 1..P, then P..1, ...
 

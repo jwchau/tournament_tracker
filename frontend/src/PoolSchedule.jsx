@@ -28,7 +28,6 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
   // null until the first load, so the generate form doesn't flash for pools
   // that already have a schedule.
   const [matches, setMatches] = useState(null)
-  const [n, setN] = useState('1')
   const [error, setError] = useState(null)
 
   usePolling(() => getPoolMatches(pool.id), setMatches, pool.id)
@@ -44,7 +43,7 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
     event.preventDefault()
     setError(null)
     try {
-      setMatches(await generatePoolSchedule(pool.id, { n: Number(n) }))
+      setMatches(await generatePoolSchedule(pool.id))
     } catch (failure) {
       const body = await failure?.json?.().catch(() => null)
       setError(body?.detail ?? "Couldn't generate the schedule.")
@@ -61,14 +60,6 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
     <>
       {matches?.length === 0 && (
         <form onSubmit={handleGenerate}>
-          <label htmlFor={`games-per-pairing-${pool.id}`}>Games per pairing (n)</label>
-          <input
-            id={`games-per-pairing-${pool.id}`}
-            type="number"
-            min="1"
-            value={n}
-            onChange={(event) => setN(event.target.value)}
-          />
           <button type="submit">Generate schedule</button>
           {error && <p>{error}</p>}
         </form>
