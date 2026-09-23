@@ -16,3 +16,5 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+addopts = "-m 'not stress'"
+markers = ["stress: slow, many-scenario tests; run with `pytest -m stress`"]

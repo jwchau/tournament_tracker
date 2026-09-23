@@ -1,7 +1,7 @@
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session, SQLModel, select, update
 
 from app.bracket import generate_bracket
 from app.db import get_session
@@ -40,8 +40,9 @@ def _plan_tiers(session: Session, tournament: Tournament) -> list[list[int]]:
     tiers = playoff_tiers(standings, tournament.advance_per_pool, tournament.playoff_bracket_count)
     for tier, team_ids in enumerate(tiers, start=1):
         if len(team_ids) < 2:
+            teams = "team" if len(team_ids) == 1 else "teams"
             raise NotReady(
-                f"Bracket {tier} would have {len(team_ids)} teams; every playoff bracket "
+                f"Bracket {tier} would have {len(team_ids)} {teams}; every playoff bracket "
                 "needs at least 2. Lower advance per pool or the playoff bracket count."
             )
     return tiers
@@ -77,6 +78,18 @@ def advance_to_playoffs(
     except NotReady as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
+    # Planning only read, so a simultaneous request may have planned too. The
+    # first write takes the database's write lock; a request that claims the
+    # stage second finds it already taken and stops before adding brackets.
+    claimed = session.execute(
+        update(Tournament)
+        .where(Tournament.id == tournament_id, Tournament.stage != "playoffs")
+        .values(stage="playoffs", format=data.format)
+    )
+    if claimed.rowcount == 0:
+        session.rollback()
+        raise HTTPException(status_code=400, detail="this tournament has already advanced to playoffs")
+
     brackets = []
     for tier, team_ids in enumerate(tiers, start=1):
         bracket = PlayoffBracket(tournament_id=tournament_id, tier=tier, format=data.format)
@@ -84,9 +97,6 @@ def advance_to_playoffs(
         session.flush()
         save_bracket(session, tournament_id, generate_bracket(team_ids, data.format), bracket.id)
         brackets.append(bracket)
-    tournament.format = data.format
-    tournament.stage = "playoffs"
-    session.add(tournament)
     session.commit()
     for bracket in brackets:
         session.refresh(bracket)

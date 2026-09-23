@@ -77,6 +77,8 @@ cd backend && uv run pytest
 cd frontend && npm test && npm run lint
 ```
 
+Slow stress tests are skipped by default; run them with `uv run pytest -m stress`.
+
 Inside running containers: `docker compose exec backend uv run pytest` and
 `docker compose exec frontend node ./node_modules/vitest/vitest.mjs run`.
 
