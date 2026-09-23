@@ -4,7 +4,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, SQLModel, func, select, update
 
-from app.bracket import BracketNotReady, validate_teams_for_bracket
+from app.bracket import BracketMatch, BracketNotReady, MatchKey, validate_teams_for_bracket
 from app.bracket import generate_bracket as build_bracket
 from app.db import get_session
 from app.models import (
@@ -12,6 +12,7 @@ from app.models import (
     Match,
     Player,
     PlayerCreate,
+    PlayoffBracket,
     Pool,
     Team,
     TeamCreate,
@@ -117,6 +118,11 @@ def delete_tournament(
         session.delete(correction)
     for match in matches:
         session.delete(match)
+    session.flush()
+    for bracket in session.exec(
+        select(PlayoffBracket).where(PlayoffBracket.tournament_id == tournament_id)
+    ).all():
+        session.delete(bracket)
 
     for team in teams:
         session.delete(team)
@@ -268,14 +274,27 @@ def generate_bracket(
         team.id for team in sorted(teams, key=lambda team: (team.seed is None, team.seed))
     ]
 
-    generated = build_bracket(ordered_team_ids, format)
     tournament.format = format
     session.add(tournament)
+    rows = save_bracket(session, tournament_id, build_bracket(ordered_team_ids, format))
+    session.commit()
+    for row in rows:
+        session.refresh(row)
+    return rows
 
+
+def save_bracket(
+    session: Session,
+    tournament_id: int,
+    generated: dict[MatchKey, BracketMatch],
+    playoff_bracket_id: int | None = None,
+) -> list[Match]:
+    """Add a generated bracket's matches, with their advancement links, uncommitted."""
     rows_by_key = {}
     for key, generated_match in generated.items():
         row = Match(
             tournament_id=tournament_id,
+            playoff_bracket_id=playoff_bracket_id,
             bracket=generated_match.bracket,
             round=generated_match.round,
             position=generated_match.position,
@@ -298,11 +317,6 @@ def generate_bracket(
             *next_key, slot = generated_match.loser_next
             row.loser_next_match_id = rows_by_key[tuple(next_key)].id
             row.loser_next_slot = slot
-
-    session.commit()
-    for row in rows_by_key.values():
-        session.refresh(row)
-
     return list(rows_by_key.values())
 
 

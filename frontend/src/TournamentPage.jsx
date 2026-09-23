@@ -12,6 +12,7 @@ import {
   updateTournament,
 } from './api'
 import { useNotify } from './NotificationContext'
+import PlayoffsPanel from './PlayoffsPanel'
 import PoolsPanel from './PoolsPanel'
 import PoolStandings from './PoolStandings'
 import TeamForm from './TeamForm'
@@ -177,6 +178,15 @@ export default function TournamentPage() {
           teams={teams}
           onTeamsChanged={setTeams}
           renderPool={(pool) => <PoolStandings poolId={pool.id} />}
+        />
+      </section>
+
+      <section>
+        <h3>Playoffs</h3>
+        <PlayoffsPanel
+          tournamentId={tournamentId}
+          teams={teams}
+          courtCount={tournament.court_count}
         />
       </section>
 

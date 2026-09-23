@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import init_db
+from app.playoff_routes import router as playoff_router
 from app.pool_routes import router as pool_router
 from app.routers import router
 
@@ -31,5 +32,6 @@ def create_app() -> FastAPI:
 
     app.include_router(router)
     app.include_router(pool_router)
+    app.include_router(playoff_router)
 
     return app

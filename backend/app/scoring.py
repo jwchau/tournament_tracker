@@ -248,6 +248,7 @@ def _stale_bracket_reset(
     return session.exec(
         select(Match).where(
             Match.tournament_id == grand_final.tournament_id,
+            Match.playoff_bracket_id == grand_final.playoff_bracket_id,
             Match.bracket == "grand_final",
             Match.round == 2,
         )
@@ -295,6 +296,7 @@ def _create_bracket_reset(session: Session, grand_final: Match) -> None:
     session.add(
         Match(
             tournament_id=grand_final.tournament_id,
+            playoff_bracket_id=grand_final.playoff_bracket_id,
             bracket="grand_final",
             round=2,
             position=1,

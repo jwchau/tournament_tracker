@@ -32,8 +32,8 @@ Details for each slice live in its ticket under [tickets/](tickets).
 | 05 | Double elimination | Done |
 | 06 | Manual match scheduling | Done |
 | 07 | Pools and round-robin scheduling | Done |
-| 08 | Pool-to-playoff advancement | Next |
-| 09 | Playoff court auto-dispatch | Not started |
+| 08 | Pool-to-playoff advancement | Done |
+| 09 | Playoff court auto-dispatch | Next |
 | 10 | Frontend on Cloudflare Workers | Done |
 
 Unticketed work also done: client-side routing, a nav bar with back/forward,
@@ -50,6 +50,7 @@ Full interactive reference at http://localhost:8000/docs when the backend is run
 | Players | `GET/POST /teams/{id}/players`, `DELETE /teams/{id}/players/{playerId}` |
 | Pools | `GET/POST /tournaments/{id}/pools`, `POST /tournaments/{id}/pools/auto-assign`, `GET/PATCH/DELETE /pools/{id}`, `POST /pools/{id}/generate-schedule`, `GET /pools/{id}/matches`, `GET /pools/{id}/standings` |
 | Bracket | `POST /tournaments/{id}/bracket/generate`, `GET /tournaments/{id}/bracket` |
+| Playoffs | `GET /tournaments/{id}/playoff-readiness`, `POST /tournaments/{id}/advance-to-playoffs`, `GET /tournaments/{id}/playoff-brackets`, `GET /playoff-brackets/{id}/matches` |
 | Matches | `GET /matches/{id}`, `PATCH /matches/{id}/score`, `POST /matches/{id}/correct/preview`, `PATCH /matches/{id}/correct`, `PATCH /matches/{id}/schedule` |
 | Health | `GET /health` |
 
