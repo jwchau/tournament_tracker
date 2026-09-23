@@ -20,9 +20,9 @@ const eightTeamBracket = [
 ]
 
 test('renders all rounds, matches, and connecting lines for an 8-team bracket', async () => {
-  vi.spyOn(api, 'getBracket').mockResolvedValue(eightTeamBracket)
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(eightTeamBracket)
 
-  render(<BracketDiagram tournamentId={1} />)
+  render(<BracketDiagram playoffBracketId={1} />)
 
   expect(await screen.findByTestId('match-3-1')).toBeInTheDocument()
   expect(screen.getAllByTestId(/^match-/)).toHaveLength(7)
@@ -41,9 +41,9 @@ const fiveTeamBracket = [
 ]
 
 test('renders byes as pre-completed matches for a 5-team bracket', async () => {
-  vi.spyOn(api, 'getBracket').mockResolvedValue(fiveTeamBracket)
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
 
-  render(<BracketDiagram tournamentId={1} />)
+  render(<BracketDiagram playoffBracketId={1} />)
 
   expect(await screen.findByTestId('match-3-1')).toBeInTheDocument()
   expect(screen.getAllByTestId(/^match-/)).toHaveLength(7)
@@ -57,9 +57,9 @@ const teams = [
 ]
 
 test('shows team names instead of team ids', async () => {
-  vi.spyOn(api, 'getBracket').mockResolvedValue(fiveTeamBracket)
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
 
-  render(<BracketDiagram tournamentId={1} teams={teams} />)
+  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
 
   expect(await screen.findByLabelText('Diggers score')).toBeInTheDocument()
   expect(screen.getAllByText('Spikers')).toHaveLength(2)
@@ -73,9 +73,9 @@ test('shows the champion once the final match is complete', async () => {
       ? { ...match, team1_id: 10, team2_id: 30, status: 'complete', winner_id: 30 }
       : match,
   )
-  vi.spyOn(api, 'getBracket').mockResolvedValue(finished)
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(finished)
 
-  render(<BracketDiagram tournamentId={1} teams={teams} />)
+  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
 
   const champion = await screen.findByRole('region', { name: 'Champion' })
   expect(champion).toHaveTextContent('Diggers')
@@ -87,9 +87,9 @@ test('offers a correction for completed matches between two teams but not for by
       ? { ...match, status: 'complete', team1_score: 21, team2_score: 10, winner_id: 20 }
       : match,
   )
-  vi.spyOn(api, 'getBracket').mockResolvedValue(played)
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(played)
 
-  render(<BracketDiagram tournamentId={1} teams={teams} />)
+  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
 
   expect(
     await screen.findByRole('button', { name: 'Correct Spikers vs Diggers' }),
@@ -97,10 +97,34 @@ test('offers a correction for completed matches between two teams but not for by
   expect(screen.getAllByRole('button', { name: /^correct/i })).toHaveLength(1)
 })
 
-test('does not show a champion while the final is unfinished', async () => {
-  vi.spyOn(api, 'getBracket').mockResolvedValue(fiveTeamBracket)
+test('each correction button sits under its match box and opens the form in a dialog', async () => {
+  const played = fiveTeamBracket.map((match) =>
+    match.id === 16
+      ? { ...match, status: 'complete', team1_score: 21, team2_score: 10, winner_id: 20 }
+      : match,
+  )
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(played)
 
-  render(<BracketDiagram tournamentId={1} teams={teams} />)
+  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
+
+  const under = await screen.findByTestId('match-2-2-actions')
+  const box = screen.getByTestId('match-2-2')
+  expect(under.style.left).toBe(`${box.getAttribute('data-x')}px`)
+  expect(Number.parseFloat(under.style.top)).toBeGreaterThan(Number(box.getAttribute('data-y')))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+  fireEvent.click(within(under).getByRole('button', { name: 'Correct Spikers vs Diggers' }))
+
+  const dialog = screen.getByRole('dialog', { name: 'Correct Spikers vs Diggers' })
+  expect(within(dialog).getByLabelText('Spikers score')).toHaveValue(21)
+  fireEvent.click(within(dialog).getByRole('button', { name: /close/i }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})
+
+test('does not show a champion while the final is unfinished', async () => {
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
+
+  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
 
   await screen.findByTestId('match-3-1')
   expect(screen.queryByRole('region', { name: 'Champion' })).not.toBeInTheDocument()
@@ -135,9 +159,9 @@ const fourTeamDouble = [
 ]
 
 test('lays out a double-elimination bracket in winners, losers, and grand final sections', async () => {
-  vi.spyOn(api, 'getBracket').mockResolvedValue(fourTeamDouble)
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fourTeamDouble)
 
-  render(<BracketDiagram tournamentId={1} />)
+  render(<BracketDiagram playoffBracketId={1} />)
 
   expect(await screen.findByText('Winners bracket')).toBeInTheDocument()
   expect(screen.getByText('Losers bracket')).toBeInTheDocument()
@@ -158,12 +182,12 @@ test('lays out a double-elimination bracket in winners, losers, and grand final 
 })
 
 test('shows the grand final reset match once it exists', async () => {
-  vi.spyOn(api, 'getBracket').mockResolvedValue([
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([
     ...fourTeamDouble,
     doubleMatch(7, 'grand_final', 2, 1, { team1_id: 10, team2_id: 20, status: 'ready' }),
   ])
 
-  render(<BracketDiagram tournamentId={1} />)
+  render(<BracketDiagram playoffBracketId={1} />)
 
   expect(await screen.findByTestId('match-grand_final-2-1')).toBeInTheDocument()
 })
@@ -173,60 +197,63 @@ function withGrandFinals(...grandFinals) {
 }
 
 test('the winners champion taking grand final one is the champion', async () => {
-  vi.spyOn(api, 'getBracket').mockResolvedValue(
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(
     withGrandFinals(
       doubleMatch(6, 'grand_final', 1, 1, { team1_id: 20, team2_id: 30, status: 'complete', winner_id: 20 }),
     ),
   )
 
-  render(<BracketDiagram tournamentId={1} teams={teams} />)
+  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
 
   expect(await screen.findByRole('region', { name: 'Champion' })).toHaveTextContent('Spikers')
 })
 
 test('no champion yet when the losers champion takes grand final one', async () => {
-  vi.spyOn(api, 'getBracket').mockResolvedValue(
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(
     withGrandFinals(
       doubleMatch(6, 'grand_final', 1, 1, { team1_id: 20, team2_id: 30, status: 'complete', winner_id: 30 }),
     ),
   )
 
-  render(<BracketDiagram tournamentId={1} teams={teams} />)
+  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
 
   await screen.findByTestId('match-grand_final-1-1')
   expect(screen.queryByRole('region', { name: 'Champion' })).not.toBeInTheDocument()
 })
 
 test('the reset match decides the champion', async () => {
-  vi.spyOn(api, 'getBracket').mockResolvedValue(
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(
     withGrandFinals(
       doubleMatch(6, 'grand_final', 1, 1, { team1_id: 20, team2_id: 30, status: 'complete', winner_id: 30 }),
       doubleMatch(7, 'grand_final', 2, 1, { team1_id: 20, team2_id: 30, status: 'complete', winner_id: 20 }),
     ),
   )
 
-  render(<BracketDiagram tournamentId={1} teams={teams} />)
+  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
 
   expect(await screen.findByRole('region', { name: 'Champion' })).toHaveTextContent('Spikers')
 })
 
-test('shows each match court and time and offers a schedule editor for unfinished matches', async () => {
+test('shows each match court and time and offers a schedule editor only once both teams are known', async () => {
   const scheduled = fiveTeamBracket.map((match) =>
     match.id === 16 ? { ...match, court: 2, scheduled_time: '2026-10-03T10:30:00' } : match,
   )
-  vi.spyOn(api, 'getBracket').mockResolvedValue(scheduled)
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(scheduled)
 
-  render(<BracketDiagram tournamentId={1} teams={teams} courtCount={3} />)
+  render(<BracketDiagram playoffBracketId={1} teams={teams} courtCount={3} />)
 
   const box = await screen.findByTestId('match-2-2')
   expect(box).toHaveTextContent('Court 2 · Sat 10:30')
-  // Matches 12, 15, 16 and 17 are unfinished; 11, 13 and 14 are byes.
-  expect(screen.getAllByRole('button', { name: /save schedule/i })).toHaveLength(4)
+  // Only 12 and 16 have both teams and are unfinished: 11, 13 and 14 are
+  // byes, 15 is waiting on an opponent, and 17 has no teams yet.
+  expect(screen.getAllByRole('button', { name: /save schedule/i })).toHaveLength(2)
+  expect(screen.getAllByRole('button', { name: /submit score/i })).toHaveLength(2)
   expect(screen.getByText('Round 2 match 2: Spikers vs Diggers')).toBeInTheDocument()
+  expect(screen.queryByText(/TBD/, { selector: 'p, h4, legend, span' })).not.toBeInTheDocument()
 })
 
 test('a saved schedule shows up in the bracket right away', async () => {
-  vi.spyOn(api, 'getBracket').mockResolvedValue(fiveTeamBracket)
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
   vi.spyOn(api, 'scheduleMatch').mockImplementation((id, { court, scheduledTime }) =>
     Promise.resolve({
       ...fiveTeamBracket.find((match) => match.id === id),
@@ -235,7 +262,7 @@ test('a saved schedule shows up in the bracket right away', async () => {
     }),
   )
 
-  render(<BracketDiagram tournamentId={1} teams={teams} courtCount={3} />)
+  render(<BracketDiagram playoffBracketId={1} teams={teams} courtCount={3} />)
 
   const [firstForm] = await screen.findAllByRole('button', { name: /save schedule/i })
   const form = firstForm.closest('form')
@@ -250,22 +277,22 @@ test('a saved schedule shows up in the bracket right away', async () => {
 
 test('stops polling after 3 consecutive failures and resumes after the cooldown', async () => {
   vi.useFakeTimers()
-  const getBracket = vi.spyOn(api, 'getBracket').mockRejectedValue(new Error('network down'))
+  const loadMatches = vi.spyOn(api, 'getPlayoffBracketMatches').mockRejectedValue(new Error('network down'))
 
-  render(<BracketDiagram tournamentId={1} />)
+  render(<BracketDiagram playoffBracketId={1} />)
 
   await act(() => vi.advanceTimersByTimeAsync(0))
   await act(() => vi.advanceTimersByTimeAsync(4000))
   await act(() => vi.advanceTimersByTimeAsync(4000))
-  expect(getBracket).toHaveBeenCalledTimes(3)
+  expect(loadMatches).toHaveBeenCalledTimes(3)
   expect(screen.getByText(/connection lost/i)).toBeInTheDocument()
 
   await act(() => vi.advanceTimersByTimeAsync(28000))
-  expect(getBracket).toHaveBeenCalledTimes(3)
+  expect(loadMatches).toHaveBeenCalledTimes(3)
 
-  getBracket.mockResolvedValue(eightTeamBracket)
+  loadMatches.mockResolvedValue(eightTeamBracket)
   await act(() => vi.advanceTimersByTimeAsync(4000))
-  expect(getBracket).toHaveBeenCalledTimes(4)
+  expect(loadMatches).toHaveBeenCalledTimes(4)
   expect(screen.queryByText(/connection lost/i)).not.toBeInTheDocument()
 })
 
@@ -280,13 +307,13 @@ test('a correction that removes the reset match takes it off the bracket right a
   })
   const resetMatch = doubleMatch(7, 'grand_final', 2, 1, { team1_id: 20, team2_id: 30, status: 'ready' })
   const corrected = { ...grandFinal, team1_score: 21, team2_score: 10, winner_id: 20, version: 2 }
-  vi.spyOn(api, 'getBracket')
+  vi.spyOn(api, 'getPlayoffBracketMatches')
     .mockResolvedValueOnce(withGrandFinals(grandFinal, resetMatch))
     .mockResolvedValue(withGrandFinals(corrected))
   vi.spyOn(api, 'previewCorrection').mockResolvedValue({ reset_matches: [resetMatch] })
   vi.spyOn(api, 'correctScore').mockResolvedValue({ match: corrected, reset_matches: [resetMatch] })
 
-  render(<BracketDiagram tournamentId={1} teams={teams} />)
+  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
 
   fireEvent.click(await screen.findByRole('button', { name: 'Correct Spikers vs Diggers' }))
   const form = screen.getByText(/correcting spikers vs diggers/i).closest('form')

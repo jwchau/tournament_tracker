@@ -26,7 +26,8 @@ def _pool_of_each_seed(client, tournament_id, pools):
 
 
 def test_auto_assign_snake_seeds_teams_across_pools_of_different_sizes(client):
-    tournament_id, _ = _tournament_with_teams(client, 7)
+    tournament_id, _ = _tournament_with_teams(client, 7, court_count=3)
+    client.patch(f"/tournaments/{tournament_id}", json={"target_pool_size": 2})
     pools = _create_pools(client, tournament_id, 3)
 
     response = client.post(f"/tournaments/{tournament_id}/pools/auto-assign")
@@ -64,7 +65,7 @@ def test_pools_beyond_the_court_count_get_no_court(client):
 def test_a_team_can_be_moved_to_another_pool_by_hand(client):
     tournament_id, teams = _tournament_with_teams(client, 4)
     pools = _create_pools(client, tournament_id, 2)
-    client.post(f"/tournaments/{tournament_id}/pools/auto-assign")
+    client.patch(f"/teams/{teams[0]['id']}", json={"pool_id": pools[0]["id"]})
 
     response = client.patch(f"/teams/{teams[0]['id']}", json={"pool_id": pools[1]["id"]})
 
@@ -86,21 +87,111 @@ def test_a_team_cannot_join_another_tournaments_pool(client):
     assert response.status_code == 400
 
 
-def test_auto_assign_needs_at_least_one_pool(client):
-    tournament_id, _ = _tournament_with_teams(client, 3)
+def _pool_sizes(client, tournament_id):
+    pools = client.get(f"/tournaments/{tournament_id}/pools").json()
+    teams = client.get(f"/tournaments/{tournament_id}/teams").json()
+    return {pool["name"]: sum(t["pool_id"] == pool["id"] for t in teams) for pool in pools}
 
-    assert client.post(f"/tournaments/{tournament_id}/pools/auto-assign").status_code == 400
+
+def test_auto_assign_creates_the_pool_count_closest_to_the_target_size(client):
+    tournament_id, _ = _tournament_with_teams(client, 13, court_count=4)
+    assert client.get(f"/tournaments/{tournament_id}").json()["target_pool_size"] == 4
+
+    response = client.post(f"/tournaments/{tournament_id}/pools/auto-assign")
+
+    assert response.status_code == 200
+    # 3 pools average 4.3 teams, closer to 4 than 4 pools' 3.25.
+    assert _pool_sizes(client, tournament_id) == {"Pool A": 5, "Pool B": 4, "Pool C": 4}
+
+
+def test_auto_assign_never_makes_more_pools_than_courts(client):
+    tournament_id, _ = _tournament_with_teams(client, 13, court_count=2)
+
+    client.post(f"/tournaments/{tournament_id}/pools/auto-assign")
+
+    assert _pool_sizes(client, tournament_id) == {"Pool A": 7, "Pool B": 6}
+
+
+def test_auto_assign_keeps_the_earliest_pools_and_drops_the_newest_extras(client):
+    tournament_id, _ = _tournament_with_teams(client, 8, court_count=8)
+    client.post(f"/tournaments/{tournament_id}/pools", json={"name": "Gold"})
+    for name in ("Silver", "Bronze", "Iron"):
+        client.post(f"/tournaments/{tournament_id}/pools", json={"name": name})
+
+    client.post(f"/tournaments/{tournament_id}/pools/auto-assign")
+
+    assert _pool_sizes(client, tournament_id) == {"Gold": 4, "Silver": 4}
+
+
+def test_auto_assign_fills_in_missing_pools_after_ones_already_named(client):
+    tournament_id, _ = _tournament_with_teams(client, 12, court_count=3)
+    client.post(f"/tournaments/{tournament_id}/pools", json={"name": "Pool B"})
+
+    client.post(f"/tournaments/{tournament_id}/pools/auto-assign")
+
+    assert _pool_sizes(client, tournament_id) == {"Pool B": 4, "Pool A": 4, "Pool C": 4}
+
+
+def test_auto_assign_is_refused_once_pool_play_has_started(client):
+    tournament_id, [pool], _ = _pool_with_teams(client, 4)
+    _generate_schedule(client, pool["id"])
+    match = _pool_matches(client, pool["id"])[0]
+    client.patch(
+        f"/matches/{match['id']}/score",
+        json={"team1_score": 5, "team2_score": 3, "version": match["version"], "complete": False},
+    )
+
+    response = client.post(f"/tournaments/{tournament_id}/pools/auto-assign")
+
+    assert response.status_code == 400
+    assert len(_pool_matches(client, pool["id"])) == 6
+
+
+def test_target_pool_size_must_be_at_least_two(client):
+    tournament_id, _ = _tournament_with_teams(client, 0)
+
+    assert client.patch(
+        f"/tournaments/{tournament_id}", json={"target_pool_size": 1}
+    ).status_code == 422
 
 
 def _pool_with_teams(client, team_count, court_count=2, pool_count=1):
+    """`pool_count` pools holding the teams in a snake (1..P, P..1, ...), assigned by hand."""
     tournament_id, teams = _tournament_with_teams(client, team_count, court_count=court_count)
     pools = _create_pools(client, tournament_id, pool_count)
-    client.post(f"/tournaments/{tournament_id}/pools/auto-assign")
+    for index, team in enumerate(teams):
+        lap, offset = divmod(index, pool_count)
+        pool = pools[offset if lap % 2 == 0 else pool_count - 1 - offset]
+        client.patch(f"/teams/{team['id']}", json={"pool_id": pool["id"]})
     return tournament_id, pools, teams
 
 
-def _generate_schedule(client, pool_id, n=1):
-    return client.post(f"/pools/{pool_id}/generate-schedule", json={"n": n})
+def _generate_schedule(client, pool_id, n=None):
+    """Generate a pool's schedule, first setting the tournament's games per pairing to `n` if given."""
+    if n is not None:
+        tournament_id = client.get(f"/pools/{pool_id}").json()["tournament_id"]
+        client.patch(f"/tournaments/{tournament_id}", json={"games_per_pairing": n})
+    return client.post(f"/pools/{pool_id}/generate-schedule")
+
+
+def test_games_per_pairing_is_a_tournament_setting_defaulting_to_one(client):
+    tournament_id, [pool], _ = _pool_with_teams(client, 3)
+    assert client.get(f"/tournaments/{tournament_id}").json()["games_per_pairing"] == 1
+
+    client.patch(f"/tournaments/{tournament_id}", json={"games_per_pairing": 3})
+    response = client.post(f"/pools/{pool['id']}/generate-schedule")
+
+    assert response.status_code == 201
+    pairings = [frozenset((m["team1_id"], m["team2_id"])) for m in response.json()]
+    assert len(pairings) == 3 * 3 and all(pairings.count(p) == 3 for p in pairings)
+
+
+def test_games_per_pairing_must_be_at_least_one(client):
+    tournament_id, _ = _tournament_with_teams(client, 0)
+
+    response = client.patch(f"/tournaments/{tournament_id}", json={"games_per_pairing": 0})
+
+    assert response.status_code == 422
 
 
 def _pool_matches(client, pool_id):
@@ -169,11 +260,12 @@ def _score_first_match(client, pool_id, complete=True):
     return match
 
 
-def test_pool_matches_are_not_part_of_the_bracket(client):
+def test_pool_matches_are_not_part_of_any_playoff_bracket(client):
     tournament_id, [pool], _ = _pool_with_teams(client, 4)
-    _generate_schedule(client, pool["id"])
+    matches = _generate_schedule(client, pool["id"]).json()
 
-    assert client.get(f"/tournaments/{tournament_id}/bracket").json() == []
+    assert client.get(f"/tournaments/{tournament_id}/playoff-brackets").json() == []
+    assert {m["playoff_bracket_id"] for m in matches} == {None}
 
 
 def test_deleting_the_tournament_removes_its_pools_and_their_matches(client):

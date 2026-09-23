@@ -151,10 +151,6 @@ export function generateBracket(tournamentId, { format } = {}) {
   return postJson(`/tournaments/${tournamentId}/bracket/generate`, format ? { format } : {})
 }
 
-export function getBracket(tournamentId) {
-  return getJson(`/tournaments/${tournamentId}/bracket`)
-}
-
 export function getMatch(matchId) {
   return getJson(`/matches/${matchId}`)
 }
@@ -199,8 +195,13 @@ export function autoAssignPools(tournamentId) {
   return postJson(`/tournaments/${tournamentId}/pools/auto-assign`, {})
 }
 
-export function generatePoolSchedule(poolId, { n }) {
-  return postJson(`/pools/${poolId}/generate-schedule`, { n })
+// Games per pairing comes from the tournament's settings.
+export function generatePoolSchedule(poolId) {
+  return postJson(`/pools/${poolId}/generate-schedule`, {})
+}
+
+export function deletePool(poolId) {
+  return deleteRequest(`/pools/${poolId}`)
 }
 
 export function getPoolMatches(poolId) {
@@ -213,6 +214,14 @@ export function getPoolStandings(poolId) {
 
 export function advanceToPlayoffs(tournamentId, { format }) {
   return postJson(`/tournaments/${tournamentId}/advance-to-playoffs`, { format })
+}
+
+export function resetPlayoffBrackets(tournamentId) {
+  return deleteRequest(`/tournaments/${tournamentId}/playoff-brackets`)
+}
+
+export function getPlayoffBracket(bracketId) {
+  return getJson(`/playoff-brackets/${bracketId}`)
 }
 
 export function getPlayoffReadiness(tournamentId) {

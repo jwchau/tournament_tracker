@@ -1,9 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Field, Session, SQLModel, select
+from sqlmodel import Session, SQLModel, select
 
 from app.db import get_session
 from app.models import Match, Pool, PoolCreate, PoolSummary, Team, Tournament
-from app.pools import generate_round_robin, pool_courts, pool_standings, snake_assign
+from app.pools import (
+    balanced_pool_count,
+    generate_round_robin,
+    pool_courts,
+    pool_standings,
+    snake_assign,
+)
 
 router = APIRouter()
 
@@ -55,14 +61,39 @@ def _pool_summaries(session: Session, tournament: Tournament) -> list[PoolSummar
 def auto_assign_pools(
     tournament_id: int, session: Session = Depends(get_session)
 ) -> list[Team]:
-    _tournament_or_404(session, tournament_id)
+    """Split every team into balanced pools sized near the tournament's target, snake-seeded.
+
+    Keeps the earliest pools, creates any more that are needed ("Pool A",
+    "Pool B", ...), and deletes the newest extras. Pool schedules are
+    dropped since their teams change, so this is refused once any pool
+    match has a score.
+    """
+    tournament = _tournament_or_404(session, tournament_id)
     pools = _pools_in_order(session, tournament_id)
-    if not pools:
-        raise HTTPException(status_code=400, detail="create at least one pool first")
+    schedules = [match for pool in pools for match in _pool_matches(session, pool.id)]
+    if _any_scored(schedules):
+        raise HTTPException(
+            status_code=400, detail="pool play has started; teams can't be reassigned"
+        )
     teams = sorted(
         session.exec(select(Team).where(Team.tournament_id == tournament_id)).all(),
         key=lambda team: (team.seed is None, team.seed, team.id),
     )
+    for match in schedules:
+        session.delete(match)
+
+    count = balanced_pool_count(len(teams), tournament.target_pool_size, tournament.court_count)
+    for extra in pools[count:]:
+        session.delete(extra)
+    pools = pools[:count]
+    taken = {pool.name for pool in pools}
+    letters = (f"Pool {chr(ord('A') + i)}" for i in range(26))
+    while len(pools) < count:
+        name = next(letter for letter in letters if letter not in taken)
+        pool = Pool(tournament_id=tournament_id, name=name)
+        session.add(pool)
+        pools.append(pool)
+    session.flush()
 
     assignment = snake_assign([team.id for team in teams], [pool.id for pool in pools])
     for team in teams:
@@ -72,10 +103,6 @@ def auto_assign_pools(
     for team in teams:
         session.refresh(team)
     return teams
-
-
-class ScheduleRequest(SQLModel):
-    n: int = Field(default=1, ge=1)
 
 
 def _pool_or_404(session: Session, pool_id: int) -> Pool:
@@ -99,9 +126,7 @@ def _any_scored(matches: list[Match]) -> bool:
 
 
 @router.post("/pools/{pool_id}/generate-schedule", response_model=list[Match], status_code=201)
-def generate_pool_schedule(
-    pool_id: int, data: ScheduleRequest, session: Session = Depends(get_session)
-) -> list[Match]:
+def generate_pool_schedule(pool_id: int, session: Session = Depends(get_session)) -> list[Match]:
     pool = _pool_or_404(session, pool_id)
     tournament = session.get(Tournament, pool.tournament_id)
     pools = _pools_in_order(session, pool.tournament_id)
@@ -131,7 +156,7 @@ def generate_pool_schedule(
     for match in existing:
         session.delete(match)
 
-    slots = generate_round_robin(team_ids, courts, data.n)
+    slots = generate_round_robin(team_ids, courts, tournament.games_per_pairing)
     for slot_number, slot in enumerate(slots, start=1):
         for position, scheduled in enumerate(slot, start=1):
             session.add(

@@ -67,6 +67,19 @@ test('auto-assign snake-seeds teams and reports the new assignments', async () =
   expect(onTeamsChanged).toHaveBeenCalledWith(assigned)
 })
 
+test('auto-assign works with no pools yet and shows the pools it created', async () => {
+  const listPools = vi.spyOn(api, 'listPools').mockResolvedValueOnce([]).mockResolvedValue(pools)
+  vi.spyOn(api, 'autoAssignPools').mockResolvedValue(teams)
+  const onPoolsChanged = vi.fn()
+
+  render(<PoolsPanel tournamentId={5} teams={teams} onPoolsChanged={onPoolsChanged} />)
+  fireEvent.click(await screen.findByRole('button', { name: /auto-assign/i }))
+
+  expect(await screen.findByText('Pool A — courts 1, 2')).toBeInTheDocument()
+  expect(listPools).toHaveBeenCalledTimes(2)
+  expect(onPoolsChanged).toHaveBeenLastCalledWith(pools)
+})
+
 test('moves a team to another pool by hand', async () => {
   vi.spyOn(api, 'listPools').mockResolvedValue(pools)
   const updateTeam = vi

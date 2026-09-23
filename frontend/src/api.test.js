@@ -53,13 +53,13 @@ test('a failed load is not cached, so the next visit retries the API', async () 
 
 test('live data that pages poll always hits the API', async () => {
   for (let i = 0; i < 2; i++) {
-    await api.getBracket(1)
+    await api.getPlayoffBracketMatches(1)
     await api.getPoolMatches(3)
     await api.getPoolStandings(3)
     await api.getMatch(9)
   }
 
-  expect(networkHits('/tournaments/1/bracket')).toBe(2)
+  expect(networkHits('/playoff-brackets/1/matches')).toBe(2)
   expect(networkHits('/pools/3/matches')).toBe(2)
   expect(networkHits('/pools/3/standings')).toBe(2)
   expect(networkHits('/matches/9')).toBe(2)

@@ -1,8 +1,42 @@
 import sqlite3
 
 from sqlalchemy import create_engine
+from sqlmodel import Session, select
 
-from app.db import init_db
+from app.db import drop_tierless_bracket_matches, init_db
+from app.models import CorrectionLog, Match, PlayoffBracket
+
+
+def test_startup_cleanup_drops_bracket_matches_that_belong_to_no_tier(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'old.db'}")
+    init_db(engine)
+    with Session(engine) as session:
+        tier = PlayoffBracket(tournament_id=1, tier=1, format="single")
+        session.add(tier)
+        session.flush()
+        old = Match(tournament_id=1, bracket="winners", round=1, position=1, status="ready")
+        old_final = Match(tournament_id=1, bracket="grand_final", round=1, position=1, status="pending")
+        tiered = Match(
+            tournament_id=1, bracket="winners", playoff_bracket_id=tier.id,
+            round=1, position=1, status="ready",
+        )
+        pool = Match(tournament_id=1, bracket="pool", pool_id=None, round=1, position=1, status="ready")
+        session.add_all([old, old_final, tiered, pool])
+        session.flush()
+        session.add(CorrectionLog(match_id=old.id, old_team1_score=1, old_team2_score=2,
+                                  new_team1_score=2, new_team2_score=1))
+        session.add(CorrectionLog(match_id=tiered.id, old_team1_score=1, old_team2_score=2,
+                                  new_team1_score=2, new_team2_score=1))
+        session.commit()
+        kept = {tiered.id, pool.id}
+
+    drop_tierless_bracket_matches(engine)
+
+    with Session(engine) as session:
+        assert {m.id for m in session.exec(select(Match)).all()} == kept
+        assert [log.match_id for log in session.exec(select(CorrectionLog)).all()] == [
+            next(iter(kept - {pool.id}))
+        ]
 
 
 def test_init_db_adds_columns_missing_from_an_existing_table(tmp_path):

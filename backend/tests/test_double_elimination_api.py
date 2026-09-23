@@ -83,7 +83,8 @@ def test_a_loser_dropping_into_a_bye_losers_match_advances_automatically(client)
 
 
 def _bracket(client, tournament_id):
-    return client.get(f"/tournaments/{tournament_id}/bracket").json()
+    [bracket] = client.get(f"/tournaments/{tournament_id}/playoff-brackets").json()
+    return client.get(f"/playoff-brackets/{bracket['id']}/matches").json()
 
 
 def _play_until_grand_final(client, tournament_id):

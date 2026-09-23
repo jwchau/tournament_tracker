@@ -35,6 +35,8 @@ Details for each slice live in its ticket under [tickets/](tickets).
 | 08 | Pool-to-playoff advancement | Done |
 | 09 | Playoff court auto-dispatch | Next |
 | 10 | Frontend on Cloudflare Workers | Done |
+| 11 | Bracket pages and pool settings | Done |
+| 12 | Playoff best-of series | Not started |
 
 Unticketed work also done: client-side routing, a nav bar with back/forward,
 toast notifications, tournament deletion, and page-data caching.
@@ -49,8 +51,7 @@ Full interactive reference at http://localhost:8000/docs when the backend is run
 | Teams | `GET/POST /tournaments/{id}/teams`, `GET/PATCH /teams/{id}` |
 | Players | `GET/POST /teams/{id}/players`, `DELETE /teams/{id}/players/{playerId}` |
 | Pools | `GET/POST /tournaments/{id}/pools`, `POST /tournaments/{id}/pools/auto-assign`, `GET/PATCH/DELETE /pools/{id}`, `POST /pools/{id}/generate-schedule`, `GET /pools/{id}/matches`, `GET /pools/{id}/standings` |
-| Bracket | `POST /tournaments/{id}/bracket/generate`, `GET /tournaments/{id}/bracket` |
-| Playoffs | `GET /tournaments/{id}/playoff-readiness`, `POST /tournaments/{id}/advance-to-playoffs`, `GET /tournaments/{id}/playoff-brackets`, `GET /playoff-brackets/{id}/matches` |
+| Playoffs | `POST /tournaments/{id}/bracket/generate` (no pools), `GET /tournaments/{id}/playoff-readiness`, `POST /tournaments/{id}/advance-to-playoffs`, `GET/DELETE /tournaments/{id}/playoff-brackets`, `GET /playoff-brackets/{id}`, `GET /playoff-brackets/{id}/matches` |
 | Matches | `GET /matches/{id}`, `PATCH /matches/{id}/score`, `POST /matches/{id}/correct/preview`, `PATCH /matches/{id}/correct`, `PATCH /matches/{id}/schedule` |
 | Health | `GET /health` |
 

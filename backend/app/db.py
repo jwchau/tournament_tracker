@@ -64,6 +64,23 @@ def init_db(bind: Engine = engine) -> None:
     _add_missing_columns(bind)
 
 
+TIERLESS_BRACKET_MATCHES = "SELECT id FROM match WHERE bracket != 'pool' AND playoff_bracket_id IS NULL"
+
+
+def drop_tierless_bracket_matches(bind: Engine = engine) -> None:
+    """Delete bracket matches from before every bracket belonged to a playoff tier.
+
+    The old "Generate bracket" added a new set of tierless matches on every
+    click, so these can be duplicated and aren't reachable from the UI; the
+    tournament can generate a fresh bracket instead.
+    """
+    with bind.begin() as connection:
+        connection.exec_driver_sql(
+            f"DELETE FROM correctionlog WHERE match_id IN ({TIERLESS_BRACKET_MATCHES})"
+        )
+        connection.exec_driver_sql(f"DELETE FROM match WHERE id IN ({TIERLESS_BRACKET_MATCHES})")
+
+
 def get_session() -> Iterator[Session]:
     with Session(engine) as session:
         yield session

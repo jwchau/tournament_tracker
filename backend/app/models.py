@@ -12,6 +12,8 @@ class Tournament(SQLModel, table=True):
     advance_per_pool: int = 1
     playoff_bracket_count: int = 1
     court_count: int = 1
+    games_per_pairing: int = Field(default=1, sa_column_kwargs={"server_default": "1"})
+    target_pool_size: int = Field(default=4, sa_column_kwargs={"server_default": "4"})
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -24,6 +26,8 @@ class TournamentUpdate(SQLModel):
     advance_per_pool: int | None = None
     playoff_bracket_count: int | None = None
     court_count: int | None = None
+    games_per_pairing: int | None = Field(default=None, ge=1)
+    target_pool_size: int | None = Field(default=None, ge=2)
 
 
 class TournamentSummary(SQLModel):
@@ -34,6 +38,8 @@ class TournamentSummary(SQLModel):
     advance_per_pool: int
     playoff_bracket_count: int
     court_count: int
+    games_per_pairing: int
+    target_pool_size: int
     created_at: datetime
     team_count: int
 

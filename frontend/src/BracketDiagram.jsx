@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { getBracket, getPlayoffBracketMatches } from './api'
+import { getPlayoffBracketMatches } from './api'
 import { createCircuitBreaker } from './circuitBreaker'
 import CorrectionForm from './CorrectionForm'
 import { matchName } from './matchName'
@@ -12,7 +12,9 @@ const MATCH_WIDTH = 140
 const LINE_HEIGHT = 17
 const MATCH_HEIGHT = LINE_HEIGHT * 3 + 5
 const ROUND_GAP = 60
-const ROW_UNIT = 70
+// Leaves room under each box for its "Correct" button.
+const ROW_UNIT = 90
+const ACTIONS_GAP = 4
 const POLL_INTERVAL_MS = 4000
 const REQUEST_TIMEOUT_MS = 5000
 const FAILURE_THRESHOLD = 3
@@ -146,19 +148,11 @@ function matchTestId(match) {
   return `${prefix}-${match.round}-${match.position}`
 }
 
-// A playoff tier's matches, or the tournament's single bracket when there are
-// no tiers.
-function loadMatches(tournamentId, playoffBracketId) {
-  return playoffBracketId != null
-    ? getPlayoffBracketMatches(playoffBracketId)
-    : getBracket(tournamentId)
-}
-
 export default function BracketDiagram({
-  tournamentId,
   playoffBracketId,
   teams = [],
   courtCount = 1,
+  readOnly = false,
 }) {
   const [matches, setMatches] = useState([])
   const [connectionLost, setConnectionLost] = useState(false)
@@ -172,9 +166,7 @@ export default function BracketDiagram({
 
     function refresh() {
       breaker
-        .execute(() =>
-          withTimeout(loadMatches(tournamentId, playoffBracketId), REQUEST_TIMEOUT_MS),
-        )
+        .execute(() => withTimeout(getPlayoffBracketMatches(playoffBracketId), REQUEST_TIMEOUT_MS))
         .then((data) => {
           if (!cancelled) setMatches(data)
         })
@@ -191,7 +183,7 @@ export default function BracketDiagram({
       cancelled = true
       clearInterval(interval)
     }
-  }, [tournamentId, playoffBracketId])
+  }, [playoffBracketId])
 
   function replaceMatch(updated) {
     setMatches((current) =>
@@ -206,7 +198,7 @@ export default function BracketDiagram({
     setMatches((current) => current.map((match) => updatedById[match.id] ?? match))
     // A correction can delete or create the grand final reset match, which
     // the response can't express as an update, so reload the whole bracket.
-    loadMatches(tournamentId, playoffBracketId)
+    getPlayoffBracketMatches(playoffBracketId)
       .then(setMatches)
       .catch(() => {})
   }
@@ -215,15 +207,13 @@ export default function BracketDiagram({
   const teamsById = Object.fromEntries(teams.map((team) => [team.id, team]))
   const championId = findChampionId(matches)
   const champion = championId != null ? teamName(teamsById, championId) : null
-  const scorable = matches.filter(
-    (match) =>
-      match.team1_id != null && match.team2_id != null && match.status !== 'complete',
+  // Only matches with both teams known get controls: a TBD slot, a team still
+  // waiting on its opponent, or a bye has nothing to score or schedule yet.
+  const bothTeams = (readOnly ? [] : matches).filter(
+    (match) => match.team1_id != null && match.team2_id != null,
   )
-  const correctable = matches.filter(
-    (match) =>
-      match.team1_id != null && match.team2_id != null && match.status === 'complete',
-  )
-  const schedulable = matches.filter((match) => match.status !== 'complete')
+  const playable = bothTeams.filter((match) => match.status !== 'complete')
+  const correctable = bothTeams.filter((match) => match.status === 'complete')
   const { positions, labels, width, height } = layoutBracket(matches)
 
   return (
@@ -239,6 +229,7 @@ export default function BracketDiagram({
           <p>🏆 {champion}</p>
         </section>
       )}
+      <div className="bracket-canvas" style={{ width, height }}>
       <svg
         role="img"
         aria-label="Bracket"
@@ -273,6 +264,8 @@ export default function BracketDiagram({
           <g
             key={match.id}
             data-testid={matchTestId(match)}
+            data-x={positions[match.id].x}
+            data-y={positions[match.id].y}
             transform={`translate(${positions[match.id].x}, ${positions[match.id].y})`}
           >
             <rect width={MATCH_WIDTH} height={MATCH_HEIGHT} fill="white" stroke="black" />
@@ -292,7 +285,26 @@ export default function BracketDiagram({
           </g>
         ))}
       </svg>
-      {schedulable.map((match) => (
+      {correctable.map((match) => (
+        <div
+          key={`${match.id}-${match.version}`}
+          className="bracket-match-actions"
+          data-testid={`${matchTestId(match)}-actions`}
+          style={{
+            left: `${positions[match.id].x}px`,
+            top: `${positions[match.id].y + MATCH_HEIGHT + ACTIONS_GAP}px`,
+          }}
+        >
+          <CorrectionForm
+            match={match}
+            team1Name={teamName(teamsById, match.team1_id)}
+            team2Name={teamName(teamsById, match.team2_id)}
+            onCorrected={handleCorrected}
+          />
+        </div>
+      ))}
+      </div>
+      {playable.map((match) => (
         <ScheduleForm
           key={`${match.id}-${match.court}-${match.scheduled_time}`}
           match={match}
@@ -301,22 +313,13 @@ export default function BracketDiagram({
           onSaved={replaceMatch}
         />
       ))}
-      {scorable.map((match) => (
+      {playable.map((match) => (
         <ScoreEntryForm
           key={match.id}
           match={match}
           team1Name={teamName(teamsById, match.team1_id)}
           team2Name={teamName(teamsById, match.team2_id)}
           onScored={replaceMatch}
-        />
-      ))}
-      {correctable.map((match) => (
-        <CorrectionForm
-          key={`${match.id}-${match.version}`}
-          match={match}
-          team1Name={teamName(teamsById, match.team1_id)}
-          team2Name={teamName(teamsById, match.team2_id)}
-          onCorrected={handleCorrected}
         />
       ))}
     </>

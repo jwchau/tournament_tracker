@@ -46,17 +46,108 @@ def test_generate_bracket_persists_matches_with_resolved_winner_next(client):
     assert final["status"] == "pending"
 
 
-def test_get_bracket_returns_the_generated_matches(client):
+def test_a_generated_bracket_is_the_tournaments_single_tier_one_playoff_bracket(client):
     tournament, _ = _create_tournament_with_teams(
         client, [(1, "Ice Wolves"), (2, "Fire Hawks"), (3, "Sand Sharks")]
     )
-    generated = client.post(f"/tournaments/{tournament['id']}/bracket/generate").json()
+    generated = client.post(
+        f"/tournaments/{tournament['id']}/bracket/generate", json={"format": "double"}
+    ).json()
 
-    response = client.get(f"/tournaments/{tournament['id']}/bracket")
+    [bracket] = client.get(f"/tournaments/{tournament['id']}/playoff-brackets").json()
 
-    assert response.status_code == 200
-    ids = {m["id"] for m in response.json()}
-    assert ids == {m["id"] for m in generated}
+    assert (bracket["tier"], bracket["format"]) == (1, "double")
+    matches = client.get(f"/playoff-brackets/{bracket['id']}/matches").json()
+    assert {m["id"] for m in matches} == {m["id"] for m in generated}
+    assert client.get(f"/tournaments/{tournament['id']}").json()["stage"] == "playoffs"
+
+
+def _three_team_tournament(client):
+    tournament, _ = _create_tournament_with_teams(
+        client, [(1, "Ice Wolves"), (2, "Fire Hawks"), (3, "Sand Sharks")]
+    )
+    return tournament["id"]
+
+
+def test_a_tournament_gets_only_one_bracket(client):
+    tournament_id = _three_team_tournament(client)
+    first = client.post(f"/tournaments/{tournament_id}/bracket/generate").json()
+
+    again = client.post(f"/tournaments/{tournament_id}/bracket/generate", json={"format": "double"})
+    advance = client.post(f"/tournaments/{tournament_id}/advance-to-playoffs", json={"format": "double"})
+
+    assert (again.status_code, advance.status_code) == (400, 400)
+    [bracket] = client.get(f"/tournaments/{tournament_id}/playoff-brackets").json()
+    assert bracket["format"] == "single"
+    matches = client.get(f"/playoff-brackets/{bracket['id']}/matches").json()
+    assert {m["id"] for m in matches} == {m["id"] for m in first}
+
+
+def test_resetting_unscored_brackets_lets_the_tournament_generate_again(client):
+    tournament_id = _three_team_tournament(client)
+    first = client.post(f"/tournaments/{tournament_id}/bracket/generate").json()
+
+    response = client.delete(f"/tournaments/{tournament_id}/playoff-brackets")
+
+    assert response.status_code == 204
+    assert client.get(f"/tournaments/{tournament_id}/playoff-brackets").json() == []
+    assert client.get(f"/matches/{first[0]['id']}").status_code == 404
+    assert client.get(f"/tournaments/{tournament_id}").json()["stage"] == "draft"
+    again = client.post(f"/tournaments/{tournament_id}/bracket/generate", json={"format": "double"})
+    assert again.status_code == 201
+
+
+def test_brackets_cant_be_reset_once_a_playoff_match_has_a_score(client):
+    tournament_id = _three_team_tournament(client)
+    matches = client.post(f"/tournaments/{tournament_id}/bracket/generate").json()
+    ready = next(m for m in matches if m["status"] == "ready")
+    client.patch(
+        f"/matches/{ready['id']}/score",
+        json={"team1_score": 5, "team2_score": 3, "version": ready["version"], "complete": False},
+    )
+
+    response = client.delete(f"/tournaments/{tournament_id}/playoff-brackets")
+
+    assert response.status_code == 400
+    assert "scored" in response.json()["detail"]
+    assert len(client.get(f"/tournaments/{tournament_id}/playoff-brackets").json()) == 1
+
+
+def test_a_single_playoff_bracket_reports_whether_play_has_started(client):
+    tournament_id = _three_team_tournament(client)
+    matches = client.post(f"/tournaments/{tournament_id}/bracket/generate").json()
+    bracket_id = matches[0]["playoff_bracket_id"]
+
+    before = client.get(f"/playoff-brackets/{bracket_id}").json()
+    ready = next(m for m in matches if m["status"] == "ready")
+    client.patch(
+        f"/matches/{ready['id']}/score",
+        json={"team1_score": 5, "team2_score": 3, "version": ready["version"], "complete": False},
+    )
+    after = client.get(f"/playoff-brackets/{bracket_id}").json()
+
+    assert (before["tournament_id"], before["tier"], before["has_scores"]) == (tournament_id, 1, False)
+    assert after["has_scores"] is True
+    assert client.get(f"/tournaments/{tournament_id}/playoff-brackets").json()[0]["has_scores"] is True
+    assert client.get("/playoff-brackets/9999").status_code == 404
+
+
+def test_the_old_tournament_wide_bracket_endpoint_is_gone(client):
+    tournament_id = _three_team_tournament(client)
+    client.post(f"/tournaments/{tournament_id}/bracket/generate")
+
+    assert client.get(f"/tournaments/{tournament_id}/bracket").status_code in (404, 405)
+
+
+def test_a_tournament_with_pools_advances_instead_of_generating(client):
+    tournament_id = _three_team_tournament(client)
+    client.post(f"/tournaments/{tournament_id}/pools", json={"name": "Pool A"})
+
+    response = client.post(f"/tournaments/{tournament_id}/bracket/generate")
+
+    assert response.status_code == 400
+    assert "advance" in response.json()["detail"]
+    assert client.get(f"/tournaments/{tournament_id}/playoff-brackets").json() == []
 
 
 def test_generate_bracket_rejects_fewer_than_two_teams(client):
