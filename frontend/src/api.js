@@ -200,6 +200,10 @@ export function generatePoolSchedule(poolId) {
   return postJson(`/pools/${poolId}/generate-schedule`, {})
 }
 
+export function deletePool(poolId) {
+  return deleteRequest(`/pools/${poolId}`)
+}
+
 export function getPoolMatches(poolId) {
   return getJson(`/pools/${poolId}/matches`)
 }

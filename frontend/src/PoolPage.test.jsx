@@ -1,8 +1,9 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
+import { NotificationProvider } from './NotificationContext'
 import PoolPage from './PoolPage'
 
 afterEach(() => {
@@ -13,12 +14,52 @@ afterEach(() => {
 function renderAt(poolId) {
   return render(
     <MemoryRouter initialEntries={[`/pools/${poolId}`]}>
-      <Routes>
-        <Route path="/pools/:poolId" element={<PoolPage />} />
-      </Routes>
+      <NotificationProvider>
+        <Routes>
+          <Route path="/pools/:poolId" element={<PoolPage />} />
+          <Route path="/tournaments/:tournamentId" element={<h2>Tournament page</h2>} />
+        </Routes>
+      </NotificationProvider>
     </MemoryRouter>,
   )
 }
+
+function mockPoolA() {
+  vi.spyOn(api, 'getPool').mockResolvedValue({ id: 7, tournament_id: 3, name: 'Pool A', courts: [1] })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue([])
+  vi.spyOn(api, 'getPoolStandings').mockResolvedValue([])
+}
+
+test('deleting the pool asks first, then returns to the tournament', async () => {
+  mockPoolA()
+  const deletePool = vi.spyOn(api, 'deletePool').mockResolvedValue(undefined)
+
+  renderAt(7)
+
+  fireEvent.click(await screen.findByRole('button', { name: /delete pool/i }))
+  expect(screen.getByRole('dialog', { name: /delete pool/i })).toHaveTextContent(/Pool A/)
+  expect(deletePool).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+
+  expect(await screen.findByText('Tournament page')).toBeInTheDocument()
+  expect(deletePool).toHaveBeenCalledWith(7)
+})
+
+test('a pool that cannot be deleted says why and stays open', async () => {
+  mockPoolA()
+  vi.spyOn(api, 'deletePool').mockRejectedValue({
+    json: () => Promise.resolve({ detail: "this pool has scored matches and can't be deleted" }),
+  })
+
+  renderAt(7)
+
+  fireEvent.click(await screen.findByRole('button', { name: /delete pool/i }))
+  fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/scored matches/)
+  expect(screen.getByRole('heading', { name: 'Pool A' })).toBeInTheDocument()
+})
 
 test('shows the pool with its courts, schedule, standings, and a link back', async () => {
   vi.spyOn(api, 'getPool').mockResolvedValue({

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 
-import { getPool, listTeams } from './api'
+import { deletePool, getPool, listTeams } from './api'
+import ConfirmModal from './ConfirmModal'
+import { useNotify } from './NotificationContext'
 import PoolSchedule from './PoolSchedule'
 import PoolStandings from './PoolStandings'
 
@@ -21,6 +23,9 @@ export default function PoolPage() {
   const [teams, setTeams] = useState([])
   const [notFound, setNotFound] = useState(false)
   const [matchesKey, setMatchesKey] = useState(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const navigate = useNavigate()
+  const notify = useNotify()
 
   useEffect(() => {
     getPool(poolId)
@@ -30,6 +35,18 @@ export default function PoolPage() {
       })
       .catch(() => setNotFound(true))
   }, [poolId])
+
+  async function handleDelete() {
+    setConfirmingDelete(false)
+    try {
+      await deletePool(pool.id)
+      notify(`${pool.name} deleted`)
+      navigate(`/tournaments/${pool.tournament_id}`)
+    } catch (error) {
+      const body = await error?.json?.().catch(() => null)
+      notify(body?.detail ?? 'Failed to delete pool', { type: 'error' })
+    }
+  }
 
   if (notFound) return <p>Pool not found.</p>
   if (!pool) return null
@@ -53,6 +70,22 @@ export default function PoolPage() {
           onMatchesChange={(matches) => setMatchesKey(matchesSignature(matches))}
         />
       </section>
+
+      <section>
+        <button type="button" onClick={() => setConfirmingDelete(true)}>
+          Delete pool
+        </button>
+      </section>
+
+      <ConfirmModal
+        open={confirmingDelete}
+        title="Delete pool"
+        message={`Delete "${pool.name}"? Its teams become unassigned and its unplayed schedule is removed. A pool with scored matches can't be deleted.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </>
   )
 }
