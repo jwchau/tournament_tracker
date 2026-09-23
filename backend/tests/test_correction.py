@@ -9,10 +9,11 @@ from app.scoring import (
     correct_score,
     preview_correction,
 )
+from tests.helpers import create_tournament
 
 
 def _generate_bracket(client, team_count):
-    tournament = client.post("/tournaments", json={"name": "Correction Cup"}).json()
+    tournament = create_tournament(client, "Correction Cup")
     for seed in range(1, team_count + 1):
         team = client.post(
             f"/tournaments/{tournament['id']}/teams",

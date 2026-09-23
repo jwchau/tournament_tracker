@@ -1,5 +1,8 @@
+from tests.helpers import create_tournament
+
+
 def _create_tournament_with_teams(client, seeds_and_names):
-    tournament = client.post("/tournaments", json={"name": "Spring Classic"}).json()
+    tournament = create_tournament(client, "Spring Classic")
     teams = [
         client.post(
             f"/tournaments/{tournament['id']}/teams",
@@ -160,7 +163,7 @@ def test_generate_bracket_rejects_fewer_than_two_teams(client):
 
 
 def test_generate_bracket_rejects_a_team_with_no_players(client):
-    tournament = client.post("/tournaments", json={"name": "Spring Classic"}).json()
+    tournament = create_tournament(client, "Spring Classic")
     client.post(
         f"/tournaments/{tournament['id']}/teams", json={"name": "Ice Wolves", "seed": 1}
     )

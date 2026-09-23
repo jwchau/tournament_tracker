@@ -1,5 +1,8 @@
+from tests.helpers import create_tournament
+
+
 def _create_ready_match(client):
-    tournament = client.post("/tournaments", json={"name": "API Cup"}).json()
+    tournament = create_tournament(client, "API Cup")
     teams = [
         client.post(
             f"/tournaments/{tournament['id']}/teams",

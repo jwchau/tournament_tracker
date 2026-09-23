@@ -37,6 +37,7 @@ Details for each slice live in its ticket under [tickets/](tickets).
 | 10 | Frontend on Cloudflare Workers | Done |
 | 11 | Bracket pages and pool settings | Done |
 | 12 | Playoff best-of series | Not started |
+| 13 | Confirm tournament settings | Not started |
 
 Unticketed work also done: client-side routing, a nav bar with back/forward,
 toast notifications, tournament deletion, and page-data caching.

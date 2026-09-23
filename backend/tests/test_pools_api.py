@@ -1,5 +1,8 @@
+from tests.helpers import create_tournament
+
+
 def _tournament_with_teams(client, team_count, court_count=None):
-    tournament = client.post("/tournaments", json={"name": "Pool Cup"}).json()
+    tournament = create_tournament(client, "Pool Cup")
     if court_count is not None:
         client.patch(f"/tournaments/{tournament['id']}", json={"court_count": court_count})
     teams = [

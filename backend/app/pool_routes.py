@@ -3,6 +3,7 @@ from sqlmodel import Session, SQLModel, select
 
 from app.db import get_session
 from app.models import Match, Pool, PoolCreate, PoolSummary, Team, Tournament
+from app.settings import require_confirmed_settings
 from app.pools import (
     balanced_pool_count,
     generate_round_robin,
@@ -33,7 +34,7 @@ def _pools_in_order(session: Session, tournament_id: int) -> list[Pool]:
 def create_pool(
     tournament_id: int, data: PoolCreate, session: Session = Depends(get_session)
 ) -> Pool:
-    _tournament_or_404(session, tournament_id)
+    require_confirmed_settings(_tournament_or_404(session, tournament_id))
     pool = Pool(tournament_id=tournament_id, name=data.name)
     session.add(pool)
     session.commit()
@@ -69,8 +70,9 @@ def auto_assign_pools(
     match has a score.
     """
     tournament = _tournament_or_404(session, tournament_id)
+    require_confirmed_settings(tournament)
     pools = _pools_in_order(session, tournament_id)
-    schedules = [match for pool in pools for match in _pool_matches(session, pool.id)]
+    schedules =[match for pool in pools for match in _pool_matches(session, pool.id)]
     if _any_scored(schedules):
         raise HTTPException(
             status_code=400, detail="pool play has started; teams can't be reassigned"

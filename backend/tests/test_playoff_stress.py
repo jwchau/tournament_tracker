@@ -13,6 +13,7 @@ import random
 from dataclasses import dataclass
 
 import pytest
+from tests.helpers import create_tournament
 
 pytestmark = pytest.mark.stress
 
@@ -30,7 +31,7 @@ class Settings:
 
 
 def _build(client, settings: Settings) -> tuple[int, list[dict]]:
-    tournament_id = client.post("/tournaments", json={"name": "Stress Cup"}).json()["id"]
+    tournament_id = create_tournament(client, "Stress Cup")["id"]
     client.patch(
         f"/tournaments/{tournament_id}",
         json={

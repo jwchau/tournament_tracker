@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import ConfirmModal from './ConfirmModal'
 import {
+  confirmSettings,
   deleteTournament,
   getTournament,
   listPlayers,
@@ -15,6 +16,9 @@ import PoolsPanel from './PoolsPanel'
 import PoolStandings from './PoolStandings'
 import TeamForm from './TeamForm'
 
+// The settings everything else is built on. A new tournament confirms them
+// once (after reviewing them in a dialog) before teams, pools, and brackets
+// can be added; after the first score only the name can still change.
 function ConfigForm({ tournamentId, tournament, onSaved }) {
   const [name, setName] = useState(tournament.name)
   const [advancePerPool, setAdvancePerPool] = useState(tournament.advance_per_pool)
@@ -24,10 +28,20 @@ function ConfigForm({ tournamentId, tournament, onSaved }) {
   const [courtCount, setCourtCount] = useState(tournament.court_count)
   const [gamesPerPairing, setGamesPerPairing] = useState(tournament.games_per_pairing ?? 1)
   const [targetPoolSize, setTargetPoolSize] = useState(tournament.target_pool_size ?? 4)
+  const [reviewing, setReviewing] = useState(false)
   const notify = useNotify()
+  const locked = tournament.settings_locked
+  const confirmed = tournament.settings_confirmed
 
-  async function handleSubmit(event) {
-    event.preventDefault()
+  const settings = [
+    ['Advance per pool', 'advance-per-pool', advancePerPool, setAdvancePerPool, undefined],
+    ['Playoff bracket count', 'playoff-bracket-count', playoffBracketCount, setPlayoffBracketCount, undefined],
+    ['Court count', 'court-count', courtCount, setCourtCount, undefined],
+    ['Games per pairing', 'games-per-pairing', gamesPerPairing, setGamesPerPairing, '1'],
+    ['Target pool size', 'target-pool-size', targetPoolSize, setTargetPoolSize, '2'],
+  ]
+
+  async function save() {
     const updated = await updateTournament(tournamentId, {
       name,
       advance_per_pool: Number(advancePerPool),
@@ -36,8 +50,32 @@ function ConfigForm({ tournamentId, tournament, onSaved }) {
       games_per_pairing: Number(gamesPerPairing),
       target_pool_size: Number(targetPoolSize),
     })
-    notify('Tournament settings saved')
-    onSaved(updated)
+    if (confirmed) {
+      notify('Tournament settings saved')
+      onSaved(updated)
+      return
+    }
+    onSaved(await confirmSettings(tournamentId))
+    notify('Tournament settings confirmed')
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    if (confirmed) {
+      await save()
+    } else {
+      setReviewing(true)
+    }
+  }
+
+  async function handleConfirm() {
+    setReviewing(false)
+    try {
+      await save()
+    } catch (error) {
+      const body = await error?.json?.().catch(() => null)
+      notify(body?.detail ?? 'Failed to confirm settings', { type: 'error' })
+    }
   }
 
   return (
@@ -49,49 +87,42 @@ function ConfigForm({ tournamentId, tournament, onSaved }) {
         onChange={(event) => setName(event.target.value)}
       />
 
-      <label htmlFor="advance-per-pool">Advance per pool</label>
-      <input
-        id="advance-per-pool"
-        type="number"
-        value={advancePerPool}
-        onChange={(event) => setAdvancePerPool(event.target.value)}
-      />
+      {settings.map(([label, id, value, setValue, min]) => (
+        <span key={id}>
+          <label htmlFor={id}>{label}</label>
+          <input
+            id={id}
+            type="number"
+            min={min}
+            value={value}
+            disabled={locked}
+            onChange={(event) => setValue(event.target.value)}
+          />
+        </span>
+      ))}
 
-      <label htmlFor="playoff-bracket-count">Playoff bracket count</label>
-      <input
-        id="playoff-bracket-count"
-        type="number"
-        value={playoffBracketCount}
-        onChange={(event) => setPlayoffBracketCount(event.target.value)}
-      />
+      <button type="submit">{confirmed ? 'Save' : 'Save and confirm settings'}</button>
+      {locked && <p>Settings are locked once play has started; only the name can change.</p>}
 
-      <label htmlFor="court-count">Court count</label>
-      <input
-        id="court-count"
-        type="number"
-        value={courtCount}
-        onChange={(event) => setCourtCount(event.target.value)}
+      <ConfirmModal
+        open={reviewing}
+        title="Confirm settings"
+        message={
+          <>
+            Teams, pools, and brackets are built on these settings:
+            {settings.map(([label, id, value]) => (
+              <span key={id}>
+                <br />
+                {label}: {value}
+              </span>
+            ))}
+          </>
+        }
+        confirmLabel="Confirm"
+        cancelLabel="Keep editing"
+        onConfirm={handleConfirm}
+        onCancel={() => setReviewing(false)}
       />
-
-      <label htmlFor="games-per-pairing">Games per pairing</label>
-      <input
-        id="games-per-pairing"
-        type="number"
-        min="1"
-        value={gamesPerPairing}
-        onChange={(event) => setGamesPerPairing(event.target.value)}
-      />
-
-      <label htmlFor="target-pool-size">Target pool size</label>
-      <input
-        id="target-pool-size"
-        type="number"
-        min="2"
-        value={targetPoolSize}
-        onChange={(event) => setTargetPoolSize(event.target.value)}
-      />
-
-      <button type="submit">Save</button>
     </form>
   )
 }
@@ -148,52 +179,58 @@ export default function TournamentPage() {
         <ConfigForm tournamentId={tournamentId} tournament={tournament} onSaved={setTournament} />
       </section>
 
-      <section>
-        <h3>Teams</h3>
-        <label htmlFor="show-rosters">
-          <input
-            id="show-rosters"
-            type="checkbox"
-            checked={showRosters}
-            onChange={handleToggleRosters}
-          />
-          Show players
-        </label>
-        <ul>
-          {teams.map((team) => (
-            <li key={team.id}>
-              <Link to={`/teams/${team.id}`}>{team.name}</Link> ({team.player_count} players)
-              {showRosters && (
-                <ul>
-                  {(playersByTeam[team.id] ?? []).map((player) => (
-                    <li key={player.id}>{player.name}</li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ul>
-        <TeamForm
-          tournamentId={tournamentId}
-          onCreated={(team) => setTeams((current) => [...current, { ...team, player_count: 0 }])}
-        />
-      </section>
+      {!tournament.settings_confirmed ? (
+        <p>Confirm the tournament settings to add teams, pools, and brackets.</p>
+      ) : (
+        <>
+          <section>
+            <h3>Teams</h3>
+            <label htmlFor="show-rosters">
+              <input
+                id="show-rosters"
+                type="checkbox"
+                checked={showRosters}
+                onChange={handleToggleRosters}
+              />
+              Show players
+            </label>
+            <ul>
+              {teams.map((team) => (
+                <li key={team.id}>
+                  <Link to={`/teams/${team.id}`}>{team.name}</Link> ({team.player_count} players)
+                  {showRosters && (
+                    <ul>
+                      {(playersByTeam[team.id] ?? []).map((player) => (
+                        <li key={player.id}>{player.name}</li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <TeamForm
+              tournamentId={tournamentId}
+              onCreated={(team) => setTeams((current) => [...current, { ...team, player_count: 0 }])}
+            />
+          </section>
 
-      <section>
-        <h3>Pools</h3>
-        <PoolsPanel
-          tournamentId={tournamentId}
-          teams={teams}
-          onTeamsChanged={setTeams}
-          onPoolsChanged={(pools) => setHasPools(pools.length > 0)}
-          renderPool={(pool) => <PoolStandings poolId={pool.id} />}
-        />
-      </section>
+          <section>
+            <h3>Pools</h3>
+            <PoolsPanel
+              tournamentId={tournamentId}
+              teams={teams}
+              onTeamsChanged={setTeams}
+              onPoolsChanged={(pools) => setHasPools(pools.length > 0)}
+              renderPool={(pool) => <PoolStandings poolId={pool.id} />}
+            />
+          </section>
 
-      <section>
-        <h3>Playoffs</h3>
-        <PlayoffsPanel tournamentId={tournamentId} teams={teams} hasPools={hasPools} />
-      </section>
+          <section>
+            <h3>Playoffs</h3>
+            <PlayoffsPanel tournamentId={tournamentId} teams={teams} hasPools={hasPools} />
+          </section>
+        </>
+      )}
 
       <section>
         <button type="button" onClick={() => setShowDeleteConfirm(true)}>
