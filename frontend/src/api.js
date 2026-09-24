@@ -263,6 +263,11 @@ export function getPlayoffBracketMatches(bracketId) {
   return getJson(`/playoff-brackets/${bracketId}/matches`)
 }
 
+// Every court with its current match and what's next; live, so never cached.
+export function listCourts(tournamentId) {
+  return getJson(`/tournaments/${tournamentId}/courts`)
+}
+
 export function scheduleMatch(matchId, { court, scheduledTime }) {
   return patchJson(`/matches/${matchId}/schedule`, {
     court,

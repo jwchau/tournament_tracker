@@ -1,6 +1,8 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
 import BracketPage from './BracketPage'
+import CourtPage from './CourtPage'
+import CourtsPage from './CourtsPage'
 import HealthCheck from './HealthCheck'
 import MainPage from './MainPage'
 import NavBar from './NavBar'
@@ -25,6 +27,8 @@ function App() {
             <Route path="/teams/:teamId" element={<TeamPage />} />
             <Route path="/pools/:poolId" element={<PoolPage />} />
             <Route path="/brackets/:bracketId" element={<BracketPage />} />
+            <Route path="/tournaments/:tournamentId/courts" element={<CourtsPage />} />
+            <Route path="/tournaments/:tournamentId/courts/:court" element={<CourtPage />} />
           </Routes>
         </NavigationHistoryProvider>
       </NotificationProvider>

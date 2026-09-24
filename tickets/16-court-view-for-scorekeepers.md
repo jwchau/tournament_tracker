@@ -17,7 +17,9 @@ see what's up next, without navigating through pools or brackets.
   - the next few queued matches;
   - whether the court is used for pools or for a playoff bracket.
 - Pool courts use the round-robin schedule order. Playoff courts use
-  ticket 09's dispatch.
+  ticket 09's dispatch. A playoff court's queue is its bracket's shared
+  queue: the next match goes to whichever of the bracket's courts frees up
+  first, and the court page says so.
 - Each match in the response includes its team names, best-of count, and
   version, so the page needs no extra requests.
 

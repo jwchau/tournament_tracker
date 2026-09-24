@@ -56,6 +56,25 @@ test('loads the tournament and lists its teams with player counts, linking to th
   expect(screen.getByText(/2 players/i)).toBeInTheDocument()
 })
 
+test('links to the court list for scorekeepers', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    settings_confirmed: true,
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+
+  renderAt(1)
+
+  expect(await screen.findByRole('link', { name: /courts/i })).toHaveAttribute(
+    'href',
+    '/tournaments/1/courts',
+  )
+})
+
 test('toggling "show players" fetches and displays each team\'s roster', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,

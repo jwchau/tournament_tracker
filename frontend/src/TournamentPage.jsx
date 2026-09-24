@@ -196,6 +196,9 @@ export default function TournamentPage() {
   return (
     <>
       <h2>{tournament.name}</h2>
+      <p>
+        <Link to={`/tournaments/${tournamentId}/courts`}>Courts (scorekeeper view)</Link>
+      </p>
 
       <section>
         <h3>Settings</h3>
