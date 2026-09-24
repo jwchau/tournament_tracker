@@ -42,6 +42,8 @@ def submit_score(
         raise InvalidScore(
             "match is already complete; use the correction endpoint to change its result"
         )
+    if match.on_hold:
+        raise InvalidScore("this match is on hold; release it before scoring it")
 
     values = {"team1_score": team1_score, "team2_score": team2_score}
 
@@ -74,7 +76,7 @@ def submit_score(
     if complete and _forces_bracket_reset(match, winner_id):
         _create_bracket_reset(session, match)
     if match.playoff_bracket_id is not None:
-        dispatch(session, match.playoff_bracket_id)
+        dispatch(session, match.tournament_id)
 
     session.commit()
     session.refresh(match)
@@ -143,7 +145,7 @@ def correct_score(
         _create_bracket_reset(session, match)
 
     if match.playoff_bracket_id is not None:
-        dispatch(session, match.playoff_bracket_id)
+        dispatch(session, match.tournament_id)
 
     log.reset_match_ids = [reset.id for reset in reset_matches]
     session.add(log)

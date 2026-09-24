@@ -62,6 +62,7 @@ def test_matches_queue_in_the_order_they_became_ready_and_take_courts_as_they_fr
     assert _dispatch(client, r1[0]) == {
         "courts": [{"court": 1, "match_id": r1[0]}, {"court": 2, "match_id": r1[1]}],
         "queue": [r1[2], r1[3]],
+        "overflow": False,
     }
 
     _complete(client, r1[1])
@@ -76,6 +77,7 @@ def test_matches_queue_in_the_order_they_became_ready_and_take_courts_as_they_fr
     assert _dispatch(client, r1[0]) == {
         "courts": [{"court": 1, "match_id": r1[3]}, {"court": 2, "match_id": semifinal}],
         "queue": [],
+        "overflow": False,
     }
     # A finished match remembers where it was played.
     assert _court(client, r1[1]) == 2
@@ -96,6 +98,7 @@ def test_each_bracket_dispatches_only_to_its_own_courts(client):
     assert tier_two_before == {
         "courts": [{"court": 3, "match_id": second_r1[0]}],
         "queue": [second_r1[1]],
+        "overflow": False,
     }
 
     # Bracket 1 frees courts 1 and 2, but bracket 2's waiting match stays put.
@@ -144,6 +147,7 @@ def test_a_grand_final_reset_is_dispatched_and_frees_its_court_when_corrected_aw
     assert _dispatch(client, grand_final["id"]) == {
         "courts": [{"court": 1, "match_id": None}],
         "queue": [],
+        "overflow": False,
     }
 
 
@@ -195,3 +199,122 @@ def test_clearing_a_ready_matchs_court_by_hand_puts_it_back_in_the_queue(client)
 
 def test_dispatch_of_a_missing_bracket_is_404(client):
     assert client.get("/playoff-brackets/999/dispatch").status_code == 404
+
+
+def _tier_round_one(client, bracket_id):
+    matches = client.get(f"/playoff-brackets/{bracket_id}/matches").json()
+    return [m["id"] for m in sorted(matches, key=lambda m: m["id"]) if m["round"] == 1]
+
+
+def test_a_bracket_without_courts_takes_freed_courts_in_turn_with_the_brackets_that_have_them(
+    client,
+):
+    # One court for two brackets: bracket 1 owns it, bracket 2 has none of its own.
+    tournament_id, [pool], _ = _setup(
+        client, [8], advance_per_pool=4, playoff_bracket_count=2, court_count=1
+    )
+    _play(client, pool["id"])
+    tier_one, tier_two = _advance(client, tournament_id).json()
+    first = _tier_round_one(client, tier_one["id"])
+    second = _tier_round_one(client, tier_two["id"])
+    tier_one_final = next(
+        m["id"]
+        for m in client.get(f"/playoff-brackets/{tier_one['id']}/matches").json()
+        if m["round"] == 2
+    )
+
+    _complete(client, first[0])
+    assert _court(client, first[1]) == 1
+    # Bracket 2's first match became ready before bracket 1's final, so it goes first.
+    _complete(client, first[1])
+
+    assert _court(client, second[0]) == 1
+    assert client.get(f"/playoff-brackets/{tier_two['id']}/dispatch").json() == {
+        "courts": [{"court": 1, "match_id": second[0]}],
+        "queue": [second[1]],
+        "overflow": True,
+    }
+    assert client.get(f"/playoff-brackets/{tier_one['id']}/dispatch").json() == {
+        "courts": [{"court": 1, "match_id": second[0]}],
+        "queue": [second[1], tier_one_final],
+        "overflow": False,
+    }
+
+
+def _hold(client, match_id, on_hold=True, version=None):
+    if version is None:
+        version = _get(client, match_id)["version"]
+    return client.patch(f"/matches/{match_id}/hold", json={"on_hold": on_hold, "version": version})
+
+
+def test_holding_a_match_on_court_hands_the_court_to_the_next_waiting_match(client):
+    ids = _bracket(client, 8, court_count=1)
+    r1 = [ids[("winners", 1, position)] for position in range(1, 5)]
+
+    response = _hold(client, r1[0])
+
+    assert response.status_code == 200
+    assert (response.json()["on_hold"], response.json()["court"]) == (True, None)
+    assert _court(client, r1[1]) == 1
+    assert _dispatch(client, r1[0])["queue"] == r1[2:]
+
+
+def test_releasing_a_hold_returns_the_match_to_its_place_in_the_queue(client):
+    ids = _bracket(client, 8, court_count=1)
+    r1 = [ids[("winners", 1, position)] for position in range(1, 5)]
+    _hold(client, r1[0])
+
+    _hold(client, r1[0], on_hold=False)
+
+    assert _dispatch(client, r1[0])["queue"] == [r1[0], r1[2], r1[3]]
+    _complete(client, r1[1])
+    assert _court(client, r1[0]) == 1
+
+
+def test_a_match_with_a_score_cannot_be_held(client):
+    ids = _bracket(client, 4, court_count=1)
+    started = ids[("winners", 1, 1)]
+    match = _get(client, started)
+    client.patch(
+        f"/matches/{started}/score",
+        json={"team1_score": 5, "team2_score": 3, "version": match["version"], "complete": False},
+    )
+
+    response = _hold(client, started)
+
+    assert response.status_code == 400
+    assert "has a score" in response.json()["detail"]
+    assert _get(client, started)["on_hold"] is False
+
+
+def test_a_pool_match_cannot_be_held(client):
+    tournament_id, [pool], _ = _setup(client, [2], advance_per_pool=1, playoff_bracket_count=1)
+    [pool_match] = client.get(f"/pools/{pool['id']}/matches").json()
+
+    response = _hold(client, pool_match["id"])
+
+    assert response.status_code == 400
+    assert "playoff" in response.json()["detail"]
+
+
+def test_holding_with_a_stale_version_is_a_conflict(client):
+    ids = _bracket(client, 4, court_count=1)
+    match = _get(client, ids[("winners", 1, 1)])
+
+    assert _hold(client, match["id"], version=match["version"] + 1).status_code == 409
+    assert _hold(client, match["id"], version=match["version"]).json()["version"] == match["version"] + 1
+
+
+def test_a_held_match_cannot_be_scored_or_put_on_a_court_by_hand(client):
+    ids = _bracket(client, 4, court_count=2)
+    held = _hold(client, ids[("winners", 1, 1)]).json()
+
+    scored = client.patch(
+        f"/matches/{held['id']}/score",
+        json={"team1_score": 5, "team2_score": 3, "version": held["version"], "complete": False},
+    )
+    placed = client.patch(f"/matches/{held['id']}/schedule", json={"court": 1})
+
+    assert scored.status_code == 400 and "on hold" in scored.json()["detail"]
+    assert placed.status_code == 400 and "on hold" in placed.json()["detail"]
+    assert _court(client, held["id"]) is None
