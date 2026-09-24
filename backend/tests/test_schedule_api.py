@@ -19,7 +19,8 @@ def test_setting_a_court_and_time_persists_on_the_match(client):
 
 def test_only_the_fields_sent_change_and_null_clears_one(client):
     ids = _generate_bracket(client, 4)
-    match_id = ids[(1, 1)]
+    # The final: not ready yet, so court dispatch leaves it alone.
+    match_id = ids[(2, 1)]
     _schedule(client, match_id, court=1, scheduled_time="2026-10-03T10:30:00")
 
     _schedule(client, match_id, scheduled_time="2026-10-03T11:00:00")
@@ -37,7 +38,8 @@ def test_court_must_be_one_of_the_tournaments_courts(client):
 
     assert _schedule(client, match["id"], court=0).status_code == 400
     assert _schedule(client, match["id"], court=2).status_code == 400
-    assert _get(client, match["id"])["court"] is None
+    # Still on the court dispatch gave it.
+    assert _get(client, match["id"])["court"] == match["court"]
 
     client.patch(f"/tournaments/{match['tournament_id']}", json={"court_count": 3})
     assert _schedule(client, match["id"], court=3).status_code == 200

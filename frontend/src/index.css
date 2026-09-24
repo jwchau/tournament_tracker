@@ -186,6 +186,63 @@ p {
   width: 4.5em;
 }
 
+/* Court pages are used on a phone at the court: stacked, full-width, big tap targets. */
+.court-page {
+  padding: 0 16px 24px;
+  overflow-wrap: anywhere;
+}
+
+.court-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.court-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 20px;
+  text-decoration: none;
+}
+
+.court-page form,
+.court-page .game-scores,
+.court-page .score-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  white-space: normal;
+}
+
+.court-page input,
+.court-page button {
+  min-height: 44px;
+  font-size: 18px;
+  box-sizing: border-box;
+}
+
+.court-page input[type='number'],
+.court-page .score-field input {
+  width: 100%;
+}
+
+.court-page input[type='checkbox'] {
+  min-height: 0;
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+}
+
+.court-page ol {
+  text-align: left;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;

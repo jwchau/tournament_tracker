@@ -252,6 +252,87 @@ test('shows each match court and time and offers a schedule editor only once bot
   expect(screen.queryByText(/TBD/, { selector: 'p, h4, legend, span' })).not.toBeInTheDocument()
 })
 
+const dispatched = eightTeamBracket.map((match) => ({
+  ...match,
+  on_hold: false,
+  version: 1,
+  ...{
+    1: { court: 1 },
+    2: { court: 2, status: 'in_progress', team1_score: 5, team2_score: 3 },
+    3: { court: null },
+    4: { court: null },
+  }[match.id],
+}))
+
+test('shows the court each match was dispatched to and the queue position of those waiting', async () => {
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(dispatched)
+  // Match 4 is first in line; 99 is an overflow bracket's match sharing these courts.
+  vi.spyOn(api, 'getBracketDispatch').mockResolvedValue({
+    courts: [{ court: 1, match_id: 1 }, { court: 2, match_id: 2 }],
+    queue: [4, 99, 3],
+    overflow: false,
+  })
+
+  render(<BracketDiagram playoffBracketId={1} readOnly />)
+
+  expect(await screen.findByText('Waiting for a court · #1')).toBeInTheDocument()
+  expect(screen.getByTestId('match-1-1')).toHaveTextContent('Court 1')
+  expect(screen.getByTestId('match-1-2')).toHaveTextContent('Court 2')
+  expect(screen.getByTestId('match-1-4')).toHaveTextContent('Waiting for a court · #1')
+  expect(screen.getByTestId('match-1-3')).toHaveTextContent('Waiting for a court · #3')
+  expect(screen.getByTestId('match-2-1')).not.toHaveTextContent(/waiting|court/i)
+})
+
+test("an overflow bracket's waiting matches take any free court", async () => {
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(dispatched)
+  vi.spyOn(api, 'getBracketDispatch').mockResolvedValue({
+    courts: [{ court: 1, match_id: 1 }],
+    queue: [3, 4],
+    overflow: true,
+  })
+
+  render(<BracketDiagram playoffBracketId={1} readOnly />)
+
+  expect(await screen.findByText('Waiting (any court) · #1')).toBeInTheDocument()
+  expect(screen.getByTestId('match-1-4')).toHaveTextContent('Waiting (any court) · #2')
+  expect(await screen.findByText(/no courts of its own/i)).toBeInTheDocument()
+})
+
+test('a match can be held and released, and a held match shows as on hold without a score form', async () => {
+  const held = { ...dispatched[2], on_hold: true, version: 2 }
+  const loadMatches = vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(dispatched)
+  vi.spyOn(api, 'getBracketDispatch').mockResolvedValue({ courts: [], queue: [], overflow: false })
+  const holdMatch = vi.spyOn(api, 'holdMatch').mockImplementation(async () => {
+    loadMatches.mockResolvedValue(dispatched.map((m) => (m.id === 3 ? held : m)))
+    return held
+  })
+
+  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
+
+  // Match 2 has a score, so it can't be held.
+  expect(await screen.findByRole('button', { name: 'Hold Round 1 match 3' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Hold Round 1 match 2' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Hold Round 1 match 3' }))
+
+  expect(holdMatch).toHaveBeenCalledWith(3, { onHold: true, version: 1 })
+  expect(await screen.findByRole('button', { name: 'Release Round 1 match 3' })).toBeInTheDocument()
+  expect(screen.getByTestId('match-1-3')).toHaveTextContent('On hold')
+  expect(screen.queryByLabelText('Spikers score')).not.toBeInTheDocument()
+})
+
+test("a refused hold says why", async () => {
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(dispatched)
+  vi.spyOn(api, 'getBracketDispatch').mockResolvedValue({ courts: [], queue: [], overflow: false })
+  vi.spyOn(api, 'holdMatch').mockRejectedValue({
+    json: () => Promise.resolve({ detail: "this match has a score, so it can't be put on hold" }),
+  })
+
+  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Hold Round 1 match 3' }))
+
+  expect(await screen.findByText(/has a score, so it can't be put on hold/)).toBeInTheDocument()
+})
+
 test('a saved schedule shows up in the bracket right away', async () => {
   vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
   vi.spyOn(api, 'scheduleMatch').mockImplementation((id, { court, scheduledTime }) =>

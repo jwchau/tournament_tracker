@@ -24,6 +24,36 @@ dynamic (unlike pools' upfront-known schedule).
   queue position, and each in-progress match's assigned court; manual
   override (slice 06's fields) remains available as an escape hatch.
 
+- Decisions made while building it:
+  - A match that a score correction resets gives up its court and its
+    place in the queue; if it's ready again straight away it queues from
+    the back.
+  - A court set by hand takes the match out of the queue and occupies that
+    court. Clearing a ready match's court by hand puts it back in the
+    queue at its original place, so it's dispatched again; to keep a match
+    off courts, put it on hold instead. Pending matches are never
+    dispatched.
+  - A finished match keeps the court it was played on; only unfinished
+    matches occupy a court.
+  - With more brackets than courts, the later brackets own no courts. Their
+    matches are overflow: whenever any court frees up, it goes to whichever
+    waited longest among that court's bracket's matches and all overflow
+    matches. The ready order is one sequence across the tournament so the
+    two can be compared. A bracket that owns courts still never uses
+    another's. The dispatch endpoint's queue for a bracket with courts
+    includes the overflow matches competing for them, and for an overflow
+    bracket it's the overflow line, for every court.
+- Hold: `PATCH /matches/{id}/hold` with `{on_hold, version}` (version
+  checked, like scoring). A held playoff match is skipped by dispatch;
+  holding one that's on a court frees the court for the next match
+  waiting, and releasing it puts it back in line at its original place.
+  Only unscored, unfinished playoff matches can be held (400 otherwise). A
+  held match can't be scored or put on a court by hand until released. The
+  bracket page has Hold / Release buttons and labels held matches
+  "On hold".
+  - Changing the court count (only possible before play starts)
+    re-dispatches every unfinished playoff match.
+
 ## Out of scope
 
 Any cross-bracket court sharing (explicitly rejected — each bracket has

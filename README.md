@@ -34,14 +34,14 @@ Details for each slice live in its ticket under [tickets/](tickets).
 | 06 | Manual match scheduling | Done |
 | 07 | Pools and round-robin scheduling | Done |
 | 08 | Pool-to-playoff advancement | Done |
-| 09 | Playoff court auto-dispatch | Not started |
+| 09 | Playoff court auto-dispatch | Done |
 | 10 | Frontend on Cloudflare Workers | Done |
 | 11 | Bracket pages and pool settings | Done |
 | 12 | Playoff best-of series | Done |
 | 13 | Confirm tournament settings | Done |
-| 14 | Team check-in edits | Not started |
-| 15 | Tournament lifecycle and results | Not started |
-| 16 | Court view for scorekeepers | Not started |
+| 14 | Team check-in edits | Done |
+| 15 | Tournament lifecycle and results | Done |
+| 16 | Court view for scorekeepers | Done |
 | 17 | Venue deployment | Done |
 | 18 | Dress rehearsal and v1.0.0 | Not started |
 | 19 | Access control and login | Done |
@@ -61,12 +61,13 @@ cookie from `POST /auth/login` and answers `401` without one.
 | Resource | Endpoints |
 | -------- | --------- |
 | Auth | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/password` |
-| Tournaments | `GET/POST /tournaments`, `GET/PATCH/DELETE /tournaments/{id}` |
-| Teams | `GET/POST /tournaments/{id}/teams`, `GET/PATCH /teams/{id}` |
+| Tournaments | `GET/POST /tournaments`, `GET/PATCH/DELETE /tournaments/{id}`, `GET /tournaments/{id}/results` |
+| Teams | `GET/POST /tournaments/{id}/teams`, `GET/PATCH/DELETE /teams/{id}` |
 | Players | `GET/POST /teams/{id}/players`, `DELETE /teams/{id}/players/{playerId}` |
 | Pools | `GET/POST /tournaments/{id}/pools`, `POST /tournaments/{id}/pools/auto-assign`, `GET/PATCH/DELETE /pools/{id}`, `POST /pools/{id}/generate-schedule`, `GET /pools/{id}/matches`, `GET /pools/{id}/standings` |
-| Playoffs | `POST /tournaments/{id}/bracket/generate` (no pools), `GET /tournaments/{id}/playoff-readiness`, `POST /tournaments/{id}/advance-to-playoffs`, `GET/DELETE /tournaments/{id}/playoff-brackets`, `GET /playoff-brackets/{id}`, `GET /playoff-brackets/{id}/matches` |
-| Matches | `GET /matches/{id}`, `PATCH /matches/{id}/score`, `POST /matches/{id}/correct/preview`, `PATCH /matches/{id}/correct`, `PATCH /matches/{id}/schedule`, `GET/POST /matches/{id}/games`, `PATCH /matches/{id}/games/{number}` (best-of series) |
+| Playoffs | `POST /tournaments/{id}/bracket/generate` (no pools), `GET /tournaments/{id}/playoff-readiness`, `POST /tournaments/{id}/advance-to-playoffs`, `GET/DELETE /tournaments/{id}/playoff-brackets`, `GET /playoff-brackets/{id}`, `GET /playoff-brackets/{id}/matches`, `GET /playoff-brackets/{id}/dispatch` (courts and queue) |
+| Matches | `GET /matches/{id}`, `PATCH /matches/{id}/score`, `POST /matches/{id}/correct/preview`, `PATCH /matches/{id}/correct`, `PATCH /matches/{id}/schedule`, `PATCH /matches/{id}/hold` (playoff hold), `GET/POST /matches/{id}/games`, `PATCH /matches/{id}/games/{number}` (best-of series) |
+| Courts | `GET /tournaments/{id}/courts` (each court's current match and what's next) |
 | Health | `GET /health` |
 
 ## Getting started
