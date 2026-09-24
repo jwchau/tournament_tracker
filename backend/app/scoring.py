@@ -5,6 +5,7 @@ from sqlalchemy import case, or_
 from sqlmodel import Session, delete, select, update
 
 from app.models import CorrectionLog, Game, Match
+from app.results import sync_playoff_stage
 
 
 @dataclass
@@ -72,6 +73,8 @@ def submit_score(
         _place_team(session, match.loser_next_match_id, match.loser_next_slot, loser_id)
     if complete and _forces_bracket_reset(match, winner_id):
         _create_bracket_reset(session, match)
+    if complete and match.playoff_bracket_id is not None:
+        sync_playoff_stage(session, match.tournament_id)
 
     session.commit()
     session.refresh(match)
@@ -138,6 +141,9 @@ def correct_score(
         reset_matches.append(stale_reset)
     if winner_id != old_winner_id and _forces_bracket_reset(match, winner_id):
         _create_bracket_reset(session, match)
+
+    if match.playoff_bracket_id is not None:
+        sync_playoff_stage(session, match.tournament_id)
 
     log.reset_match_ids = [reset.id for reset in reset_matches]
     session.add(log)

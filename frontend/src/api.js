@@ -264,6 +264,11 @@ export function listPlayoffBrackets(tournamentId) {
   return getCachedJson(`/tournaments/${tournamentId}/playoff-brackets`)
 }
 
+// Each tier's final placings; the backend refuses (400) until the tournament is complete.
+export function getTournamentResults(tournamentId) {
+  return getCachedJson(`/tournaments/${tournamentId}/results`)
+}
+
 export function getPlayoffBracketMatches(bracketId) {
   return getJson(`/playoff-brackets/${bracketId}/matches`)
 }

@@ -155,6 +155,7 @@ export default function BracketDiagram({
   courtCount = 1,
   readOnly = false,
   bestOf = 1,
+  onChampionChange,
 }) {
   const [matches, setMatches] = useState([])
   const [connectionLost, setConnectionLost] = useState(false)
@@ -209,6 +210,12 @@ export default function BracketDiagram({
   const teamsById = Object.fromEntries(teams.map((team) => [team.id, team]))
   const championId = findChampionId(matches)
   const champion = championId != null ? teamName(teamsById, championId) : null
+
+  // Deciding (or un-deciding, by a correction) the champion can change the
+  // tournament's stage, which the page around this diagram may show.
+  useEffect(() => {
+    onChampionChange?.(championId)
+  }, [championId, onChampionChange])
   // Only matches with both teams known get controls: a TBD slot, a team still
   // waiting on its opponent, or a bye has nothing to score or schedule yet.
   const bothTeams = (readOnly ? [] : matches).filter(
