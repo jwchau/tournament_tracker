@@ -14,28 +14,32 @@ export function GameScoreInputs({
   const team1Id = `${idPrefix}-game-${number}-team1`
   const team2Id = `${idPrefix}-game-${number}-team2`
   return (
-    <>
-      <label htmlFor={team1Id}>
-        Game {number} {team1Name} score
-      </label>
-      <input
-        id={team1Id}
-        type="number"
-        required
-        value={scores.team1}
-        onChange={(event) => onChange({ ...scores, team1: event.target.value })}
-      />
-      <label htmlFor={team2Id}>
-        Game {number} {team2Name} score
-      </label>
-      <input
-        id={team2Id}
-        type="number"
-        required
-        value={scores.team2}
-        onChange={(event) => onChange({ ...scores, team2: event.target.value })}
-      />
-    </>
+    <span className="game-scores">
+      <span className="score-field">
+        <label htmlFor={team1Id}>
+          Game {number} {team1Name} score
+        </label>
+        <input
+          id={team1Id}
+          type="number"
+          required
+          value={scores.team1}
+          onChange={(event) => onChange({ ...scores, team1: event.target.value })}
+        />
+      </span>
+      <span className="score-field">
+        <label htmlFor={team2Id}>
+          Game {number} {team2Name} score
+        </label>
+        <input
+          id={team2Id}
+          type="number"
+          required
+          value={scores.team2}
+          onChange={(event) => onChange({ ...scores, team2: event.target.value })}
+        />
+      </span>
+    </span>
   )
 }
 

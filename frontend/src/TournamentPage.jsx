@@ -61,10 +61,19 @@ function ConfigForm({ tournamentId, tournament, onSaved }) {
     notify('Tournament settings confirmed')
   }
 
+  async function saveOrExplain() {
+    try {
+      await save()
+    } catch (error) {
+      const body = await error?.json?.().catch(() => null)
+      notify(body?.detail ?? 'Failed to save settings', { type: 'error' })
+    }
+  }
+
   async function handleSubmit(event) {
     event.preventDefault()
     if (confirmed) {
-      await save()
+      await saveOrExplain()
     } else {
       setReviewing(true)
     }
@@ -72,12 +81,7 @@ function ConfigForm({ tournamentId, tournament, onSaved }) {
 
   async function handleConfirm() {
     setReviewing(false)
-    try {
-      await save()
-    } catch (error) {
-      const body = await error?.json?.().catch(() => null)
-      notify(body?.detail ?? 'Failed to confirm settings', { type: 'error' })
-    }
+    await saveOrExplain()
   }
 
   return (
@@ -251,6 +255,7 @@ export default function TournamentPage() {
               teams={teams}
               hasPools={hasPools}
               bestOf={tournament.playoff_best_of ?? 1}
+              onChanged={() => getTournament(tournamentId).then(setTournament)}
             />
           </section>
         </>
