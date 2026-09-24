@@ -1,16 +1,32 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
-async function sendJson(method, path, body) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+// Every request sends the session cookie; the API is on another origin.
+function request(path, options = {}) {
+  return fetch(`${API_BASE_URL}${path}`, { ...options, credentials: 'include' })
+}
+
+// Called when a write is refused for want of a session (signed out, or it
+// expired), so the app can send the user to sign in.
+let onUnauthorized = null
+
+export function setUnauthorizedHandler(handler) {
+  onUnauthorized = handler
+}
+
+// Signing in and out answer 401 for their own reasons (wrong password, already
+// signed out), so they skip the sign-in redirect.
+async function sendJson(method, path, body, { redirectIfSignedOut = true } = {}) {
+  const response = await request(path, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
   clearApiCache()
   if (!response.ok) {
+    if (response.status === 401 && redirectIfSignedOut) onUnauthorized?.()
     return Promise.reject(response)
   }
-  return response.json()
+  return response.status === 204 ? null : response.json()
 }
 
 function postJson(path, body) {
@@ -22,7 +38,7 @@ function patchJson(path, body) {
 }
 
 async function getJson(path) {
-  const response = await fetch(`${API_BASE_URL}${path}`)
+  const response = await request(path)
   if (!response.ok) {
     return Promise.reject(response)
   }
@@ -89,11 +105,35 @@ function getCachedJson(path) {
 }
 
 async function deleteRequest(path) {
-  const response = await fetch(`${API_BASE_URL}${path}`, { method: 'DELETE' })
+  const response = await request(path, { method: 'DELETE' })
   clearApiCache()
   if (!response.ok) {
+    if (response.status === 401) onUnauthorized?.()
     return Promise.reject(response)
   }
+}
+
+export function login({ username, password }) {
+  return sendJson('POST', '/auth/login', { username, password }, { redirectIfSignedOut: false })
+}
+
+export function logout() {
+  return sendJson('POST', '/auth/logout', {}, { redirectIfSignedOut: false })
+}
+
+// The signed-in user, or null for a spectator.
+export async function getMe() {
+  const response = await request('/auth/me')
+  if (response.status === 401) return null
+  if (!response.ok) return Promise.reject(response)
+  return response.json()
+}
+
+export function changePassword({ currentPassword, newPassword }) {
+  return postJson('/auth/password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  })
 }
 
 export function createTournament({ name }) {

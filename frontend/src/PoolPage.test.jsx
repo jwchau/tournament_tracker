@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from './testUtils'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
@@ -148,4 +148,56 @@ test('standings are refetched only when the polled matches change', async () => 
   await act(() => vi.advanceTimersByTimeAsync(10000))
   await settle()
   expect(getPoolStandings).toHaveBeenCalledTimes(2)
+})
+
+test('signed out, the pool shows standings and schedule but no controls', async () => {
+  vi.spyOn(api, 'getPool').mockResolvedValue({ id: 7, tournament_id: 3, name: 'Pool A', courts: [1] })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([
+    { id: 10, name: 'Spikers', pool_id: 7 },
+    { id: 11, name: 'Diggers', pool_id: 7 },
+  ])
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue([
+    {
+      id: 1, bracket: 'pool', pool_id: 7, round: 1, position: 1, court: 1, team1_id: 10,
+      team2_id: 11, team1_score: null, team2_score: null, status: 'ready', version: 1,
+    },
+  ])
+  vi.spyOn(api, 'getPoolStandings').mockResolvedValue([])
+
+  render(
+    <MemoryRouter initialEntries={['/pools/7']}>
+      <NotificationProvider>
+        <Routes>
+          <Route path="/pools/:poolId" element={<PoolPage />} />
+        </Routes>
+      </NotificationProvider>
+    </MemoryRouter>,
+    { user: null },
+  )
+
+  expect(await screen.findByText('Court 1: Spikers vs Diggers')).toBeInTheDocument()
+  // Only refreshing, which changes nothing on the server.
+  expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
+    'Refresh standings',
+  ])
+})
+
+test('signed out, an unscheduled pool has no generate button', async () => {
+  mockPoolA()
+
+  render(
+    <MemoryRouter initialEntries={['/pools/7']}>
+      <NotificationProvider>
+        <Routes>
+          <Route path="/pools/:poolId" element={<PoolPage />} />
+        </Routes>
+      </NotificationProvider>
+    </MemoryRouter>,
+    { user: null },
+  )
+
+  expect(await screen.findByRole('heading', { name: 'Pool A' })).toBeInTheDocument()
+  // Let the schedule load: signed in, the generate button would show now.
+  await act(async () => {})
+  expect(screen.queryByRole('button', { name: /generate schedule/i })).not.toBeInTheDocument()
 })

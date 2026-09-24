@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { deletePool, getPool, listTeams } from './api'
+import { useAuth } from './auth'
 import ConfirmModal from './ConfirmModal'
 import { useNotify } from './NotificationContext'
 import PoolSchedule from './PoolSchedule'
@@ -26,6 +27,7 @@ export default function PoolPage() {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const navigate = useNavigate()
   const notify = useNotify()
+  const { user } = useAuth()
 
   useEffect(() => {
     getPool(poolId)
@@ -71,11 +73,13 @@ export default function PoolPage() {
         />
       </section>
 
-      <section>
-        <button type="button" onClick={() => setConfirmingDelete(true)}>
-          Delete pool
-        </button>
-      </section>
+      {user && (
+        <section>
+          <button type="button" onClick={() => setConfirmingDelete(true)}>
+            Delete pool
+          </button>
+        </section>
+      )}
 
       <ConfirmModal
         open={confirmingDelete}

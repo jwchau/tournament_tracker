@@ -31,14 +31,17 @@ Up to now the app has had no authentication. This is deliberately simple: no two
     Changing the password signs out the user's other sessions.
 - Brute-force limit: after 5 failed logins for a username within 15
   minutes, that username gets `429` until the window passes.
-- Access rule, enforced by one FastAPI dependency on the routers:
+- Access rule, enforced by one FastAPI dependency on the app, so it runs on
+  every route (including ones added later, whichever router they're on):
   - `GET` endpoints and `/health` stay public, for spectators.
   - Every `POST`, `PATCH`, and `DELETE` needs a valid session, or gets
     `401`.
   - The only exception is `/auth/login`.
 - CORS sends `allow_credentials=True`. That works with the explicit origin
   list, because the frontend and API share the `johnchau.org` site (and
-  `localhost` in dev).
+  `localhost` in dev). Quick tunnels (`*.trycloudflare.com`) stay allowed by
+  CORS, but each is its own site, so signing in through them doesn't work;
+  they're for spectating.
 - There's no sign-up endpoint. Users are created from the command line:
   `uv run python -m app.users create <username>`, which prompts for the
   password. `... users reset-password <username>` covers lost passwords.

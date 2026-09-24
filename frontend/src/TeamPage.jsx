@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { deletePlayer, getTeam, listPlayers, updateTeam } from './api'
+import { useAuth } from './auth'
 import { useNotify } from './NotificationContext'
 import PlayerForm from './PlayerForm'
 
@@ -11,6 +12,7 @@ export default function TeamPage() {
   const [name, setName] = useState('')
   const [players, setPlayers] = useState([])
   const notify = useNotify()
+  const { user } = useAuth()
 
   useEffect(() => {
     getTeam(teamId).then((fetched) => {
@@ -37,17 +39,22 @@ export default function TeamPage() {
 
   return (
     <>
-      <h2>Team</h2>
-
-      <form onSubmit={handleSaveName}>
-        <label htmlFor="team-page-name">Team name</label>
-        <input
-          id="team-page-name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-        <button type="submit">Save</button>
-      </form>
+      {user ? (
+        <>
+          <h2>Team</h2>
+          <form onSubmit={handleSaveName}>
+            <label htmlFor="team-page-name">Team name</label>
+            <input
+              id="team-page-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+            <button type="submit">Save</button>
+          </form>
+        </>
+      ) : (
+        <h2>{team.name}</h2>
+      )}
 
       <section>
         <h3>Roster</h3>
@@ -55,16 +62,20 @@ export default function TeamPage() {
           {players.map((player) => (
             <li key={player.id}>
               {player.name}{' '}
-              <button type="button" onClick={() => handleRemovePlayer(player.id)}>
-                Remove {player.name}
-              </button>
+              {user && (
+                <button type="button" onClick={() => handleRemovePlayer(player.id)}>
+                  Remove {player.name}
+                </button>
+              )}
             </li>
           ))}
         </ul>
-        <PlayerForm
-          teamId={teamId}
-          onCreated={(player) => setPlayers((current) => [...current, player])}
-        />
+        {user && (
+          <PlayerForm
+            teamId={teamId}
+            onCreated={(player) => setPlayers((current) => [...current, player])}
+          />
+        )}
       </section>
     </>
   )

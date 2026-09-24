@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen } from './testUtils'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
@@ -72,4 +72,29 @@ test('says so when the bracket does not exist', async () => {
   renderAt(99)
 
   expect(await screen.findByText('Bracket not found.')).toBeInTheDocument()
+})
+
+test('signed out, the bracket is read-only', async () => {
+  vi.spyOn(api, 'getPlayoffBracket').mockResolvedValue({ id: 30, tournament_id: 3, tier: 1 })
+  vi.spyOn(api, 'getTournament').mockResolvedValue({ id: 3, court_count: 2 })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([
+    { id: 10, name: 'Spikers' },
+    { id: 11, name: 'Diggers' },
+  ])
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([
+    { id: 1, bracket: 'winners', round: 1, position: 1, team1_id: 10, team2_id: 11, status: 'ready', version: 1 },
+  ])
+
+  render(
+    <MemoryRouter initialEntries={['/brackets/30']}>
+      <Routes>
+        <Route path="/brackets/:bracketId" element={<BracketPage />} />
+      </Routes>
+    </MemoryRouter>,
+    { user: null },
+  )
+
+  expect(await screen.findByText('Spikers')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Diggers score')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button')).not.toBeInTheDocument()
 })

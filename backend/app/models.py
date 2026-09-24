@@ -1,8 +1,41 @@
 from datetime import datetime, timezone
 from typing import Literal
 
-from sqlalchemy import JSON, Column
+from sqlalchemy import JSON, Column, String
 from sqlmodel import Field, SQLModel
+
+
+class User(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    # NOCASE makes the unique constraint and lookups case-insensitive, while
+    # keeping the username as it was typed for display.
+    username: str = Field(sa_column=Column(String(collation="NOCASE"), unique=True, nullable=False))
+    # argon2id; the plain-text password is never stored.
+    password_hash: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class UserPublic(SQLModel):
+    id: int
+    username: str
+
+
+class UserSession(SQLModel, table=True):
+    """A signed-in browser. Only the SHA-256 of the cookie's token is stored."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    token_hash: str = Field(unique=True, index=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    created_at: datetime
+    expires_at: datetime
+
+
+class LoginAttempt(SQLModel, table=True):
+    """A failed sign-in, kept for the brute-force lockout window."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    username: str = Field(sa_column=Column(String(collation="NOCASE"), nullable=False, index=True))
+    created_at: datetime
 
 
 class Tournament(SQLModel, table=True):

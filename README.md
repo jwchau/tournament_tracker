@@ -6,8 +6,9 @@ auto-scheduling, advancement into tiered elimination playoff brackets
 (single or double elimination), live score entry with concurrency-safe
 writes, and cascading score correction.
 
-Scope is a personal/local tool: no authentication, single trusted organizer,
-run via Docker Compose on a local machine or LAN at a venue. See
+Scope is a personal/local tool run via Docker Compose on a local machine or LAN
+at a venue. Anyone can follow pools and brackets read-only; changing anything
+needs a username and password (no sign-up, no roles). See
 [tickets/](tickets) for the vertical slices; the code and its tests are the
 source of truth for behaviour.
 
@@ -43,7 +44,7 @@ Details for each slice live in its ticket under [tickets/](tickets).
 | 16 | Court view for scorekeepers | Not started |
 | 17 | Venue deployment | Not started |
 | 18 | Dress rehearsal and v1.0.0 | Not started |
-| 19 | Access control and login | Not started |
+| 19 | Access control and login | Done |
 
 The road to v1 and its release criteria are in [V1_MVP_PLAN.md](V1_MVP_PLAN.md).
 
@@ -54,8 +55,12 @@ toast notifications, tournament deletion, and page-data caching.
 
 Full interactive reference at http://localhost:8000/docs when the backend is running.
 
+`GET` endpoints are public. Every `POST`/`PATCH`/`DELETE` needs a session
+cookie from `POST /auth/login` and answers `401` without one.
+
 | Resource | Endpoints |
 | -------- | --------- |
+| Auth | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/password` |
 | Tournaments | `GET/POST /tournaments`, `GET/PATCH/DELETE /tournaments/{id}` |
 | Teams | `GET/POST /tournaments/{id}/teams`, `GET/PATCH /teams/{id}` |
 | Players | `GET/POST /teams/{id}/players`, `DELETE /teams/{id}/players/{playerId}` |
@@ -80,6 +85,23 @@ volume-mounted for live reload.
 To run without Docker: `cd backend && uv sync && uv run uvicorn app.main:create_app --factory --reload`
 and `cd frontend && npm install && npm run dev`.
 
+### Users
+
+There's no sign-up page. Create the first user (and any others) from the
+command line; it prompts for the password (at least 8 characters), which is
+stored hashed with argon2id:
+
+```sh
+cd backend && uv run python -m app.users create <username>
+# or, with the dev stack running:
+docker compose exec backend uv run python -m app.users create <username>
+```
+
+`... app.users reset-password <username>` sets a new password for a user who
+lost theirs and signs them out everywhere. Five wrong passwords for a
+username lock it out for 15 minutes. Session cookies last 14 days; set
+`COOKIE_SECURE=true` on the backend when it's served over HTTPS.
+
 ## Testing
 
 ```sh
@@ -102,7 +124,11 @@ it manually alongside Docker Compose:
 cloudflared tunnel run tournament-tracker
 ```
 
-Quick tunnels (`*.trycloudflare.com`) are already allowed by CORS and Vite.
+Quick tunnels (`*.trycloudflare.com`) are already allowed by CORS and Vite,
+but signing in only works where the frontend and API share a site (like the
+two `johnchau.org` hostnames): each quick tunnel is its own site, so the
+browser won't send the `SameSite=Lax` session cookie between two of them.
+Spectating works either way.
 The frontend can instead be deployed to Cloudflare Workers
 (`frontend/wrangler.jsonc`); see
 [tickets/10-cloudflare-workers-frontend.md](tickets/10-cloudflare-workers-frontend.md).

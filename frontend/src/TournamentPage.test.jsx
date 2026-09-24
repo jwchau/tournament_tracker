@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from './testUtils'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
@@ -514,4 +514,44 @@ test('confirming delete tournament removes it and redirects to the home page', a
 
   expect(await screen.findByText('Home page')).toBeInTheDocument()
   expect(deleteTournament).toHaveBeenCalledWith('1')
+})
+
+test('signed out, the tournament is read-only', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    settings_confirmed: true,
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([
+    { id: 10, tournament_id: 1, name: 'Ice Wolves', pool_id: 7, player_count: 2 },
+  ])
+  vi.spyOn(api, 'listPools').mockResolvedValue([{ id: 7, tournament_id: 1, name: 'Pool A', courts: [1] }])
+  vi.spyOn(api, 'getPoolStandings').mockResolvedValue([])
+  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([])
+  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'Pool A has no schedule yet' })
+
+  render(
+    <MemoryRouter initialEntries={['/tournaments/1']}>
+      <NotificationProvider>
+        <Routes>
+          <Route path="/tournaments/:tournamentId" element={<TournamentPage />} />
+        </Routes>
+      </NotificationProvider>
+    </MemoryRouter>,
+    { user: null },
+  )
+
+  expect(await screen.findByRole('link', { name: 'Ice Wolves' })).toBeInTheDocument()
+  expect(await screen.findByRole('link', { name: 'Open Pool A' })).toBeInTheDocument()
+  expect(await screen.findByText('Pool A has no schedule yet')).toBeInTheDocument()
+  // Only the roster toggle and refreshing, which change nothing on the server.
+  expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
+    'Refresh standings',
+  ])
+  expect(screen.getAllByRole('checkbox')).toHaveLength(1)
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
 })

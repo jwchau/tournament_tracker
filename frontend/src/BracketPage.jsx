@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { getPlayoffBracket, getTournament, listTeams } from './api'
+import { useAuth } from './auth'
 import BracketDiagram from './BracketDiagram'
 
 // One playoff tier with everything needed to run it: scores, schedule, and
@@ -12,6 +13,7 @@ export default function BracketPage() {
   const [tournament, setTournament] = useState(null)
   const [teams, setTeams] = useState([])
   const [notFound, setNotFound] = useState(false)
+  const { user } = useAuth()
 
   useEffect(() => {
     getPlayoffBracket(bracketId)
@@ -37,6 +39,7 @@ export default function BracketPage() {
         teams={teams}
         courtCount={tournament.court_count}
         bestOf={tournament.playoff_best_of ?? 1}
+        readOnly={!user}
       />
     </>
   )

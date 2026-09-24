@@ -10,6 +10,7 @@ import {
   listTeams,
   updateTournament,
 } from './api'
+import { useAuth } from './auth'
 import { useNotify } from './NotificationContext'
 import PlayoffsPanel from './PlayoffsPanel'
 import PoolsPanel from './PoolsPanel'
@@ -160,6 +161,7 @@ export default function TournamentPage() {
   const [playersByTeam, setPlayersByTeam] = useState({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const notify = useNotify()
+  const { user } = useAuth()
 
   useEffect(() => {
     getTournament(tournamentId).then(setTournament)
@@ -197,13 +199,19 @@ export default function TournamentPage() {
     <>
       <h2>{tournament.name}</h2>
 
-      <section>
-        <h3>Settings</h3>
-        <ConfigForm tournamentId={tournamentId} tournament={tournament} onSaved={setTournament} />
-      </section>
+      {user && (
+        <section>
+          <h3>Settings</h3>
+          <ConfigForm tournamentId={tournamentId} tournament={tournament} onSaved={setTournament} />
+        </section>
+      )}
 
       {!tournament.settings_confirmed ? (
-        <p>Confirm the tournament settings to add teams, pools, and brackets.</p>
+        <p>
+          {user
+            ? 'Confirm the tournament settings to add teams, pools, and brackets.'
+            : 'This tournament is still being set up.'}
+        </p>
       ) : (
         <>
           <section>
@@ -231,10 +239,14 @@ export default function TournamentPage() {
                 </li>
               ))}
             </ul>
-            <TeamForm
-              tournamentId={tournamentId}
-              onCreated={(team) => setTeams((current) => [...current, { ...team, player_count: 0 }])}
-            />
+            {user && (
+              <TeamForm
+                tournamentId={tournamentId}
+                onCreated={(team) =>
+                  setTeams((current) => [...current, { ...team, player_count: 0 }])
+                }
+              />
+            )}
           </section>
 
           <section>
@@ -261,11 +273,13 @@ export default function TournamentPage() {
         </>
       )}
 
-      <section>
-        <button type="button" onClick={() => setShowDeleteConfirm(true)}>
-          Delete tournament
-        </button>
-      </section>
+      {user && (
+        <section>
+          <button type="button" onClick={() => setShowDeleteConfirm(true)}>
+            Delete tournament
+          </button>
+        </section>
+      )}
 
       <ConfirmModal
         open={showDeleteConfirm}

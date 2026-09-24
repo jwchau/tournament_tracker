@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { autoAssignPools, createPool, listPools, updateTeam } from './api'
+import { useAuth } from './auth'
 
 function courtsLabel(courts) {
   if (courts.length === 0) return 'no court (add courts in settings)'
@@ -17,6 +18,7 @@ export default function PoolsPanel({
 }) {
   const [pools, setPoolsState] = useState([])
   const [newPoolName, setNewPoolName] = useState('')
+  const { user } = useAuth()
 
   function setPools(next) {
     setPoolsState(next)
@@ -67,41 +69,45 @@ export default function PoolsPanel({
         ))}
       </ul>
 
-      <form onSubmit={handleAddPool}>
-        <label htmlFor="new-pool-name">New pool name</label>
-        <input
-          id="new-pool-name"
-          required
-          value={newPoolName}
-          onChange={(event) => setNewPoolName(event.target.value)}
-        />
-        <button type="submit">Add pool</button>
-      </form>
-
-      <button type="button" onClick={handleAutoAssign}>
-        Auto-assign teams (snake seeding)
-      </button>
-      {pools.length > 0 && (
+      {user && (
         <>
-          <ul>
-            {teams.map((team) => (
-              <li key={team.id}>
-                <label htmlFor={`pool-for-${team.id}`}>Pool for {team.name}</label>
-                <select
-                  id={`pool-for-${team.id}`}
-                  value={team.pool_id ?? ''}
-                  onChange={(event) => handleMoveTeam(team, event.target.value)}
-                >
-                  <option value="">No pool</option>
-                  {pools.map((pool) => (
-                    <option key={pool.id} value={pool.id}>
-                      {pool.name}
-                    </option>
-                  ))}
-                </select>
-              </li>
-            ))}
-          </ul>
+          <form onSubmit={handleAddPool}>
+            <label htmlFor="new-pool-name">New pool name</label>
+            <input
+              id="new-pool-name"
+              required
+              value={newPoolName}
+              onChange={(event) => setNewPoolName(event.target.value)}
+            />
+            <button type="submit">Add pool</button>
+          </form>
+
+          <button type="button" onClick={handleAutoAssign}>
+            Auto-assign teams (snake seeding)
+          </button>
+          {pools.length > 0 && (
+            <>
+              <ul>
+                {teams.map((team) => (
+                  <li key={team.id}>
+                    <label htmlFor={`pool-for-${team.id}`}>Pool for {team.name}</label>
+                    <select
+                      id={`pool-for-${team.id}`}
+                      value={team.pool_id ?? ''}
+                      onChange={(event) => handleMoveTeam(team, event.target.value)}
+                    >
+                      <option value="">No pool</option>
+                      {pools.map((pool) => (
+                        <option key={pool.id} value={pool.id}>
+                          {pool.name}
+                        </option>
+                      ))}
+                    </select>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </>
       )}
     </>

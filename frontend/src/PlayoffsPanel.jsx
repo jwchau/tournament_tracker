@@ -8,6 +8,7 @@ import {
   listPlayoffBrackets,
   resetPlayoffBrackets,
 } from './api'
+import { useAuth } from './auth'
 import BracketDiagram from './BracketDiagram'
 import ConfirmModal from './ConfirmModal'
 import { useNotify } from './NotificationContext'
@@ -23,6 +24,7 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
   const [format, setFormat] = useState('single')
   const [confirmingReset, setConfirmingReset] = useState(false)
   const notify = useNotify()
+  const { user } = useAuth()
 
   useEffect(() => {
     listPlayoffBrackets(tournamentId)
@@ -83,7 +85,7 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
             <BracketDiagram playoffBracketId={bracket.id} teams={teams} bestOf={bestOf} readOnly />
           </section>
         ))}
-        {resettable && (
+        {user && resettable && (
           <button type="button" onClick={() => setConfirmingReset(true)}>
             Reset brackets
           </button>
@@ -100,6 +102,8 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
       </>
     )
   }
+
+  if (!user) return hasPools && blocker ? <p>{blocker}</p> : null
 
   return (
     <>

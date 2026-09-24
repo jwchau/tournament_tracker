@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from './testUtils'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
@@ -50,4 +50,19 @@ test('creating a tournament adds it to the list', async () => {
   fireEvent.click(screen.getByRole('button', { name: /create/i }))
 
   expect(await screen.findByRole('link', { name: /winter cup/i })).toBeInTheDocument()
+})
+
+test('signed out, the tournaments are listed but there is no create form', async () => {
+  vi.spyOn(api, 'listTournaments').mockResolvedValue([{ id: 1, name: 'Spring Classic', team_count: 3 }])
+
+  render(
+    <MemoryRouter>
+      <MainPage />
+    </MemoryRouter>,
+    { user: null },
+  )
+
+  expect(await screen.findByRole('link', { name: /spring classic/i })).toBeInTheDocument()
+  expect(screen.queryByLabelText(/tournament name/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /create/i })).not.toBeInTheDocument()
 })
