@@ -13,7 +13,7 @@ function groupBySlot(matches) {
   return [...slots.entries()].sort(([a], [b]) => a - b)
 }
 
-// Observing vs. resting is only a display label for idle teams (PRD §4.4):
+// Observing vs. resting is only a display label for idle teams (scheduling only tracks playing vs. idle):
 // split them as evenly as possible, observers first.
 function splitIdle(idleTeams) {
   const observing = Math.ceil(idleTeams.length / 2)

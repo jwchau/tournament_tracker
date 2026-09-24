@@ -8,7 +8,7 @@ dynamic (unlike pools' upfront-known schedule).
 
 ## Scope
 
-- Court distribution across `PlayoffBracket`s (PRD §6.3): same
+- Court distribution across `PlayoffBracket`s: same
   even-split/remainder-to-earlier rule as pools (slice 07), applied
   across tier brackets instead — each bracket gets its own dedicated
   courts, not a shared pool across brackets.
@@ -27,7 +27,7 @@ dynamic (unlike pools' upfront-known schedule).
 ## Out of scope
 
 Any cross-bracket court sharing (explicitly rejected — each bracket has
-its own dedicated courts, PRD §6.3).
+its own dedicated courts).
 
 ## Done / demoable
 

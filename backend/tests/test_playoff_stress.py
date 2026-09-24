@@ -2,7 +2,7 @@
 
 Every scenario builds a tournament through the API, plays its pools with
 seeded random scores, advances, and then checks the result against an
-independent model of the PRD §5 rules: which teams land in each tier, how
+independent model of the advancement rules: which teams land in each tier, how
 each tier is seeded, how many match rows its bracket has, and that every
 tier plays out to exactly one champion.
 
@@ -96,7 +96,7 @@ def _tier_matches(client, bracket_id):
 
 
 def expected_tiers(standings: list[list[dict]], k: int, bracket_count: int) -> list[list[int]]:
-    """PRD §5: ranks split into tiers of k per pool, the last tier a catch-all,
+    """Ranks split into tiers of k per pool, the last tier a catch-all,
     each tier seeded by points, differential, then points scored (pool order on ties)."""
     tiers = [[] for _ in range(bracket_count)]
     for rows in standings:

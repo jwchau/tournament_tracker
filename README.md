@@ -8,8 +8,8 @@ writes, and cascading score correction.
 
 Scope is a personal/local tool: no authentication, single trusted organizer,
 run via Docker Compose on a local machine or LAN at a venue. See
-[PRD.md](PRD.md) for the full product spec and [tickets/](tickets) for the
-planned vertical slices.
+[tickets/](tickets) for the vertical slices; the code and its tests are the
+source of truth for behaviour.
 
 ## Stack
 
@@ -33,11 +33,19 @@ Details for each slice live in its ticket under [tickets/](tickets).
 | 06 | Manual match scheduling | Done |
 | 07 | Pools and round-robin scheduling | Done |
 | 08 | Pool-to-playoff advancement | Done |
-| 09 | Playoff court auto-dispatch | Next |
+| 09 | Playoff court auto-dispatch | Not started |
 | 10 | Frontend on Cloudflare Workers | Done |
 | 11 | Bracket pages and pool settings | Done |
 | 12 | Playoff best-of series | Done |
 | 13 | Confirm tournament settings | Done |
+| 14 | Team check-in edits | Not started |
+| 15 | Tournament lifecycle and results | Not started |
+| 16 | Court view for scorekeepers | Not started |
+| 17 | Venue deployment | Not started |
+| 18 | Dress rehearsal and v1.0.0 | Not started |
+| 19 | Access control and login | Not started |
+
+The road to v1 and its release criteria are in [V1_MVP_PLAN.md](V1_MVP_PLAN.md).
 
 Unticketed work also done: client-side routing, a nav bar with back/forward,
 toast notifications, tournament deletion, and page-data caching.
@@ -105,5 +113,5 @@ The frontend can instead be deployed to Cloudflare Workers
 backend/    FastAPI app and tests
 frontend/   React app and tests
 tickets/    Implementation tickets
-PRD.md      Product requirements
+V1_MVP_PLAN.md  Road to the v1 release
 ```
