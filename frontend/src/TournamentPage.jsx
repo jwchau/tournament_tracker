@@ -6,6 +6,7 @@ import {
   confirmSettings,
   deleteTournament,
   getTournament,
+  getTournamentResults,
   listPlayers,
   listTeams,
   updateTournament,
@@ -14,6 +15,7 @@ import { useNotify } from './NotificationContext'
 import PlayoffsPanel from './PlayoffsPanel'
 import PoolsPanel from './PoolsPanel'
 import PoolStandings from './PoolStandings'
+import { stageLabel } from './stage'
 import TeamForm from './TeamForm'
 
 // The settings everything else is built on. A new tournament confirms them
@@ -112,7 +114,7 @@ function ConfigForm({ tournamentId, tournament, onSaved }) {
         id="playoff-best-of"
         value={playoffBestOf}
         // Every playoff match is played to this many games; it's fixed once brackets exist.
-        disabled={locked || tournament.stage === 'playoffs'}
+        disabled={locked || ['playoffs', 'complete'].includes(tournament.stage)}
         onChange={(event) => setPlayoffBestOf(event.target.value)}
       >
         {[1, 3, 5, 7].map((count) => (
@@ -147,6 +149,30 @@ function ConfigForm({ tournamentId, tournament, onSaved }) {
         onCancel={() => setReviewing(false)}
       />
     </form>
+  )
+}
+
+// Who won each tier, once every tier has a champion. The rest of the
+// placings live on each bracket's page.
+function Results({ tournamentId }) {
+  const [results, setResults] = useState([])
+
+  useEffect(() => {
+    getTournamentResults(tournamentId).then(setResults)
+  }, [tournamentId])
+
+  return (
+    <section aria-labelledby="results-heading">
+      <h3 id="results-heading">Results</h3>
+      <ul>
+        {results.map((tier) => (
+          <li key={tier.playoff_bracket_id}>
+            <strong>Bracket {tier.tier}</strong> — Champion: {tier.champion.name} · Runner-up:{' '}
+            {tier.runner_up.name} · <Link to={`/brackets/${tier.playoff_bracket_id}`}>Full placings</Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
@@ -196,9 +222,12 @@ export default function TournamentPage() {
   return (
     <>
       <h2>{tournament.name}</h2>
+      {tournament.stage && <p>Stage: {stageLabel(tournament.stage)}</p>}
       <p>
         <Link to={`/tournaments/${tournamentId}/courts`}>Courts (scorekeeper view)</Link>
       </p>
+
+      {tournament.stage === 'complete' && <Results tournamentId={tournamentId} />}
 
       <section>
         <h3>Settings</h3>

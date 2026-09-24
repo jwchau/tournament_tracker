@@ -51,3 +51,40 @@ test('creating a tournament adds it to the list', async () => {
 
   expect(await screen.findByRole('link', { name: /winter cup/i })).toBeInTheDocument()
 })
+
+test('shows each tournament\'s stage', async () => {
+  vi.spyOn(api, 'listTournaments').mockResolvedValue([
+    { id: 1, name: 'Spring Classic', team_count: 8, stage: 'pool_play' },
+    { id: 2, name: 'Fall Invitational', team_count: 4, stage: 'complete' },
+  ])
+
+  render(
+    <MemoryRouter>
+      <MainPage />
+    </MemoryRouter>,
+  )
+
+  const spring = (await screen.findByRole('link', { name: /spring classic/i })).closest('li')
+  expect(spring).toHaveTextContent('Pool play')
+  const fall = screen.getByRole('link', { name: /fall invitational/i }).closest('li')
+  expect(fall).toHaveTextContent('Complete')
+})
+
+test('a new tournament starts in the draft stage in the list', async () => {
+  vi.spyOn(api, 'listTournaments').mockResolvedValue([])
+  vi.spyOn(api, 'createTournament').mockResolvedValue({ id: 5, name: 'Winter Cup', stage: 'draft' })
+
+  render(
+    <MemoryRouter>
+      <MainPage />
+    </MemoryRouter>,
+  )
+
+  fireEvent.change(screen.getByLabelText(/tournament name/i), {
+    target: { value: 'Winter Cup' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: /create/i }))
+
+  const created = (await screen.findByRole('link', { name: /winter cup/i })).closest('li')
+  expect(created).toHaveTextContent('Draft')
+})
