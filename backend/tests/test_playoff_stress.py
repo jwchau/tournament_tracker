@@ -156,18 +156,71 @@ def _best_of(client, match):
     return client.get(f"/tournaments/{match['tournament_id']}").json()["playoff_best_of"]
 
 
+def _unfinished(matches):
+    return [
+        m
+        for m in matches
+        if m["status"] in ("ready", "in_progress") and m["team1_id"] and m["team2_id"]
+    ]
+
+
+def assert_dispatch_consistent(client, tournament_id):
+    """No court has two unfinished matches; a tier that owns courts only plays
+    on them (an overflow tier, owning none, on any tier's); held matches are
+    off court and out of line; and nothing waits while a court it could use
+    is free (for an overflow tier, any court at all)."""
+    owned_courts, on_court = [], []
+    for bracket in client.get(f"/tournaments/{tournament_id}/playoff-brackets").json():
+        matches = _tier_matches(client, bracket["id"])
+        status = client.get(f"/playoff-brackets/{bracket['id']}/dispatch").json()
+        courts = [entry["court"] for entry in status["courts"]]
+        unfinished = _unfinished(matches)
+        placed = [m["court"] for m in unfinished if m["court"] is not None]
+        waiting = [m["id"] for m in unfinished if m["court"] is None and not m["on_hold"]]
+        held = [m for m in matches if m["on_hold"]]
+        assert set(placed) <= set(courts), f"tier {bracket['tier']} off its courts"
+        assert set(waiting) <= set(status["queue"])
+        assert all(m["court"] is None and m["id"] not in status["queue"] for m in held)
+        assert not status["queue"] or None not in [e["match_id"] for e in status["courts"]]
+        assert all(m["court"] is None for m in matches if m["status"] == "pending")
+        on_court += placed
+        if not status["overflow"]:
+            owned_courts.append(set(courts))
+    assert len(on_court) == len(set(on_court)), "a court is double-booked"
+    assert sum(len(courts) for courts in owned_courts) == len(set().union(*owned_courts))
+
+
 def _play_out(client, bracket_id, rng):
-    """Score ready matches at random until nothing is left to play."""
-    for _ in range(500):
-        playable = [
-            m
-            for m in _tier_matches(client, bracket_id)
-            if m["status"] in ("ready", "in_progress") and m["team1_id"] and m["team2_id"]
-        ]
-        if not playable:
+    """Score matches at random until nothing is left to play, preferring ones on a court.
+
+    Now and then an unplayed match is put on hold, and held ones are
+    released at random (always, once nothing else is left). A tier whose
+    courts are busy (or taken by an overflow tier) is played from its queue.
+    """
+    tournament_id = client.get(f"/playoff-brackets/{bracket_id}").json()["tournament_id"]
+    for _ in range(1000):
+        unfinished = _unfinished(_tier_matches(client, bracket_id))
+        if not unfinished:
             return
-        assert _play_step(client, rng.choice(playable), rng).status_code in (200, 201)
+        held = [m for m in unfinished if m["on_hold"]]
+        playable = [m for m in unfinished if not m["on_hold"]]
+        unplayed = [m for m in playable if m["team1_score"] is None]
+        if held and (not playable or rng.random() < 0.3):
+            response = _set_hold(client, rng.choice(held), False)
+        elif unplayed and rng.random() < 0.1:
+            response = _set_hold(client, rng.choice(unplayed), True)
+        else:
+            on_court = [m for m in playable if m["court"] is not None]
+            response = _play_step(client, rng.choice(on_court or playable), rng)
+        assert response.status_code in (200, 201), response.json()
+        assert_dispatch_consistent(client, tournament_id)
     raise AssertionError("tier never finished")
+
+
+def _set_hold(client, match, on_hold):
+    return client.patch(
+        f"/matches/{match['id']}/hold", json={"on_hold": on_hold, "version": match["version"]}
+    )
 
 
 def _losses(matches) -> dict[int, int]:
@@ -194,6 +247,7 @@ def assert_tier_plays_to_one_champion(client, bracket_id, format, team_ids, rng)
     champions = [team for team, count in losses.items() if count <= unbeaten_limit]
     assert len(champions) == 1, f"champions: {champions}, losses: {losses}"
     assert all(count == eliminated_at for team, count in losses.items() if team != champions[0])
+    return champions[0]
 
 
 def assert_advanced_correctly(client, tournament_id, pools, settings, format, rng):
@@ -221,8 +275,13 @@ def assert_advanced_correctly(client, tournament_id, pools, settings, format, rn
             if m["bracket"] == "winners" and m["round"] == 1
         }
         assert first_round == expected_first_round(seeds), f"tier {bracket['tier']} seeding"
-    for bracket, seeds in zip(brackets, tiers):
+    champions = [
         assert_tier_plays_to_one_champion(client, bracket["id"], format, seeds, rng)
+        for bracket, seeds in zip(brackets, tiers)
+    ]
+    assert client.get(f"/tournaments/{tournament_id}").json()["stage"] == "complete"
+    results = client.get(f"/tournaments/{tournament_id}/results").json()
+    assert [tier["champion"]["team_id"] for tier in results] == champions
 
 
 # --- valid scenarios --------------------------------------------------------
@@ -362,7 +421,7 @@ def test_refused_settings_explain_why_and_create_nothing(client, settings, reaso
     assert not readiness["ready"] and reason in readiness["reason"]
     assert response.status_code == 400 and reason in response.json()["detail"]
     assert client.get(f"/tournaments/{tournament_id}/playoff-brackets").json() == []
-    assert client.get(f"/tournaments/{tournament_id}").json()["stage"] == "draft"
+    assert client.get(f"/tournaments/{tournament_id}").json()["stage"] == "pool_play"
 
 
 def test_one_unplayed_pool_match_blocks_advancing(client):

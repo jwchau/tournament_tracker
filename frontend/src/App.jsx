@@ -3,6 +3,8 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import AccountPage from './AccountPage'
 import AuthProvider from './AuthProvider'
 import BracketPage from './BracketPage'
+import CourtPage from './CourtPage'
+import CourtsPage from './CourtsPage'
 import HealthCheck from './HealthCheck'
 import LoginPage from './LoginPage'
 import MainPage from './MainPage'
@@ -29,6 +31,8 @@ function App() {
               <Route path="/teams/:teamId" element={<TeamPage />} />
               <Route path="/pools/:poolId" element={<PoolPage />} />
               <Route path="/brackets/:bracketId" element={<BracketPage />} />
+              <Route path="/tournaments/:tournamentId/courts" element={<CourtsPage />} />
+              <Route path="/tournaments/:tournamentId/courts/:court" element={<CourtPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/account" element={<AccountPage />} />
             </Routes>

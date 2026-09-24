@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import require_session_for_writes
 from app.auth import router as auth_router
+from app.court_routes import router as court_router
 from app.db import drop_tierless_bracket_matches, init_db
 from app.playoff_routes import router as playoff_router
 from app.pool_routes import router as pool_router
@@ -42,5 +43,6 @@ def create_app() -> FastAPI:
     app.include_router(pool_router)
     app.include_router(playoff_router)
     app.include_router(series_router)
+    app.include_router(court_router)
 
     return app

@@ -11,10 +11,12 @@ from app.bracket import (
     validate_teams_for_bracket,
 )
 from app.db import get_session
+from app.dispatch import court_occupancy, dispatch, is_overflow, queue
 from app.models import CorrectionLog, Match, Player, PlayoffBracket, Team, Tournament
-from app.pool_routes import _pool_matches, _pools_in_order, _tournament_or_404
+from app.pool_routes import _pool_matches, _pools_in_order, _tournament_or_404, pre_playoff_stage
 from app.playoffs import playoff_tiers
 from app.pools import pool_standings
+from app.results import placings
 from app.settings import require_confirmed_settings
 
 router = APIRouter()
@@ -151,7 +153,7 @@ def reset_playoff_brackets(tournament_id: int, session: Session = Depends(get_se
     session.flush()
     for bracket in brackets:
         session.delete(bracket)
-    tournament.stage = "draft"
+    tournament.stage = pre_playoff_stage(session, tournament_id)
     session.add(tournament)
     session.commit()
 
@@ -167,7 +169,7 @@ def _create_playoffs(
     """
     claimed = session.execute(
         update(Tournament)
-        .where(Tournament.id == tournament_id, Tournament.stage != "playoffs")
+        .where(Tournament.id == tournament_id, Tournament.stage.not_in(("playoffs", "complete")))
         .values(stage="playoffs", format=format)
     )
     if claimed.rowcount == 0:
@@ -181,6 +183,8 @@ def _create_playoffs(
         session.flush()
         matches = _save_matches(session, tournament_id, generate_bracket(team_ids, format), bracket.id)
         created.append((bracket, matches))
+    # Only once every tier exists, since the court split depends on how many there are.
+    dispatch(session, tournament_id)
     session.commit()
     for bracket, matches in created:
         for row in [bracket, *matches]:
@@ -268,6 +272,38 @@ def get_playoff_bracket(
     return _summaries(session, [bracket])[0]
 
 
+class CourtOccupancy(SQLModel):
+    court: int
+    match_id: int | None
+
+
+class DispatchStatus(SQLModel):
+    # The courts the bracket's matches can go on: its own, or when it owns
+    # none (overflow), every bracket's.
+    courts: list[CourtOccupancy]
+    # Matches in line for those courts, first in line first. A bracket with
+    # courts shares its line with the overflow brackets' matches.
+    queue: list[int]
+    overflow: bool
+
+
+@router.get("/playoff-brackets/{bracket_id}/dispatch", response_model=DispatchStatus)
+def get_bracket_dispatch(
+    bracket_id: int, session: Session = Depends(get_session)
+) -> DispatchStatus:
+    """The bracket's courts with the match on each, and the matches waiting for one."""
+    if session.get(PlayoffBracket, bracket_id) is None:
+        raise HTTPException(status_code=404, detail="Playoff bracket not found")
+    return DispatchStatus(
+        courts=[
+            CourtOccupancy(court=court, match_id=match_id)
+            for court, match_id in court_occupancy(session, bracket_id).items()
+        ],
+        queue=queue(session, bracket_id),
+        overflow=is_overflow(session, bracket_id),
+    )
+
+
 @router.get("/playoff-brackets/{bracket_id}/matches", response_model=list[Match])
 def list_playoff_bracket_matches(
     bracket_id: int, session: Session = Depends(get_session)
@@ -277,3 +313,63 @@ def list_playoff_bracket_matches(
     return list(
         session.exec(select(Match).where(Match.playoff_bracket_id == bracket_id)).all()
     )
+
+
+class PlacedTeam(SQLModel):
+    team_id: int
+    name: str
+
+
+class EliminatedGroup(SQLModel):
+    bracket: str
+    round: int
+    teams: list[PlacedTeam]
+
+
+class TierResult(SQLModel):
+    tier: int
+    playoff_bracket_id: int
+    format: str
+    champion: PlacedTeam
+    runner_up: PlacedTeam
+    eliminated: list[EliminatedGroup]
+
+
+@router.get("/tournaments/{tournament_id}/results", response_model=list[TierResult])
+def tournament_results(
+    tournament_id: int, session: Session = Depends(get_session)
+) -> list[TierResult]:
+    """Each playoff tier's final placings, once every tier has a champion."""
+    if _tournament_or_404(session, tournament_id).stage != "complete":
+        raise HTTPException(status_code=400, detail="the tournament isn't complete yet")
+    names = dict(
+        session.exec(select(Team.id, Team.name).where(Team.tournament_id == tournament_id)).all()
+    )
+
+    def placed(team_id: int) -> PlacedTeam:
+        return PlacedTeam(team_id=team_id, name=names[team_id])
+
+    results = []
+    for bracket in session.exec(
+        select(PlayoffBracket)
+        .where(PlayoffBracket.tournament_id == tournament_id)
+        .order_by(PlayoffBracket.tier)
+    ).all():
+        matches = session.exec(select(Match).where(Match.playoff_bracket_id == bracket.id)).all()
+        final = placings(list(matches))
+        results.append(
+            TierResult(
+                tier=bracket.tier,
+                playoff_bracket_id=bracket.id,
+                format=bracket.format,
+                champion=placed(final.champion_id),
+                runner_up=placed(final.runner_up_id),
+                eliminated=[
+                    EliminatedGroup(
+                        bracket=section, round=round_, teams=[placed(t) for t in team_ids]
+                    )
+                    for section, round_, team_ids in final.eliminated
+                ],
+            )
+        )
+    return results

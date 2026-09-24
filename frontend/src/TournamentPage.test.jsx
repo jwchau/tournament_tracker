@@ -56,6 +56,25 @@ test('loads the tournament and lists its teams with player counts, linking to th
   expect(screen.getByText(/2 players/i)).toBeInTheDocument()
 })
 
+test('links to the court list for scorekeepers', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    settings_confirmed: true,
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+
+  renderAt(1)
+
+  expect(await screen.findByRole('link', { name: /courts/i })).toHaveAttribute(
+    'href',
+    '/tournaments/1/courts',
+  )
+})
+
 test('toggling "show players" fetches and displays each team\'s roster', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
@@ -554,4 +573,78 @@ test('signed out, the tournament is read-only', async () => {
   expect(screen.getAllByRole('checkbox')).toHaveLength(1)
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+})
+
+function mockCompleteTournament(stage) {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    stage,
+    settings_confirmed: true,
+    advance_per_pool: 1,
+    playoff_bracket_count: 2,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  vi.spyOn(api, 'listPools').mockResolvedValue([])
+  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([])
+}
+
+test('shows the tournament stage next to its name', async () => {
+  mockCompleteTournament('pool_play')
+
+  renderAt(1)
+
+  expect(await screen.findByText('Spring Classic')).toBeInTheDocument()
+  expect(screen.getByText('Stage: Pool play')).toBeInTheDocument()
+})
+
+test('a complete tournament lists each tier\'s champion and runner-up, linking to its placings', async () => {
+  mockCompleteTournament('complete')
+  vi.spyOn(api, 'getTournamentResults').mockResolvedValue([
+    {
+      tier: 1,
+      playoff_bracket_id: 30,
+      format: 'double',
+      champion: { team_id: 10, name: 'Spikers' },
+      runner_up: { team_id: 11, name: 'Diggers' },
+      eliminated: [],
+    },
+    {
+      tier: 2,
+      playoff_bracket_id: 31,
+      format: 'double',
+      champion: { team_id: 12, name: 'Blockers' },
+      runner_up: { team_id: 13, name: 'Setters' },
+      eliminated: [],
+    },
+  ])
+
+  renderAt(1)
+
+  const results = await screen.findByRole('region', { name: 'Results' })
+  expect(screen.getByText('Stage: Complete')).toBeInTheDocument()
+  // The section renders before its results load, so wait for the tiers.
+  const tiers = await within(results).findAllByRole('listitem')
+  expect(tiers[0]).toHaveTextContent('Bracket 1')
+  expect(tiers[0]).toHaveTextContent('Champion: Spikers')
+  expect(tiers[0]).toHaveTextContent('Runner-up: Diggers')
+  expect(within(tiers[0]).getByRole('link', { name: /full placings/i })).toHaveAttribute(
+    'href',
+    '/brackets/30',
+  )
+  expect(tiers[1]).toHaveTextContent('Champion: Blockers')
+  expect(tiers[1]).toHaveTextContent('Runner-up: Setters')
+  expect(api.getTournamentResults).toHaveBeenCalledWith('1')
+})
+
+test('there are no results until the tournament is complete', async () => {
+  mockCompleteTournament('playoffs')
+  vi.spyOn(api, 'getTournamentResults')
+
+  renderAt(1)
+
+  expect(await screen.findByText('Stage: Playoffs')).toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: 'Results' })).not.toBeInTheDocument()
+  expect(api.getTournamentResults).not.toHaveBeenCalled()
 })
