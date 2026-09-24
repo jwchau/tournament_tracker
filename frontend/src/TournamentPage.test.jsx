@@ -565,7 +565,8 @@ test('a complete tournament lists each tier\'s champion and runner-up, linking t
 
   const results = await screen.findByRole('region', { name: 'Results' })
   expect(screen.getByText('Stage: Complete')).toBeInTheDocument()
-  const tiers = within(results).getAllByRole('listitem')
+  // The section renders before its results load, so wait for the tiers.
+  const tiers = await within(results).findAllByRole('listitem')
   expect(tiers[0]).toHaveTextContent('Bracket 1')
   expect(tiers[0]).toHaveTextContent('Champion: Spikers')
   expect(tiers[0]).toHaveTextContent('Runner-up: Diggers')
