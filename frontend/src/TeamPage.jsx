@@ -4,7 +4,10 @@ import { useNavigate, useParams } from 'react-router-dom'
 import ConfirmModal from './ConfirmModal'
 import { deletePlayer, deleteTeam, getTeam, listPlayers, updateTeam } from './api'
 import { useAuth } from './auth'
+import { isNotFound } from './failure'
+import NotFound from './NotFound'
 import { useNotify } from './NotificationContext'
+import { useNotifyFailure } from './useNotifyFailure'
 import PlayerForm from './PlayerForm'
 
 async function reasonFor(error, fallback) {
@@ -20,7 +23,9 @@ export default function TeamPage() {
   const [seed, setSeed] = useState('')
   const [players, setPlayers] = useState([])
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [notFound, setNotFound] = useState(false)
   const notify = useNotify()
+  const notifyFailure = useNotifyFailure()
   const { user } = useAuth()
 
   function show(fetched) {
@@ -30,8 +35,17 @@ export default function TeamPage() {
   }
 
   useEffect(() => {
-    getTeam(teamId).then(show)
-    listPlayers(teamId).then(setPlayers)
+    setNotFound(false)
+    getTeam(teamId)
+      .then(show)
+      .catch((error) =>
+        isNotFound(error) ? setNotFound(true) : notifyFailure(error, "Couldn't load the team"),
+      )
+    // A missing team is already reported above.
+    listPlayers(teamId)
+      .then(setPlayers)
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId])
 
   async function handleSave(event) {
@@ -60,10 +74,16 @@ export default function TeamPage() {
   }
 
   async function handleRemovePlayer(playerId) {
-    await deletePlayer(teamId, playerId)
+    try {
+      await deletePlayer(teamId, playerId)
+    } catch (error) {
+      notify(await reasonFor(error, 'Failed to remove player'), { type: 'error' })
+      return
+    }
     setPlayers((current) => current.filter((player) => player.id !== playerId))
   }
 
+  if (notFound) return <NotFound thing="Team" />
   if (!team) return null
 
   return (

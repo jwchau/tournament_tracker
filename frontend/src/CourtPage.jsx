@@ -4,6 +4,8 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { listCourts } from './api'
 import { loginPath, useAuth } from './auth'
 import { courtLabel } from './courtLabel'
+import { isNotFound } from './failure'
+import NotFound from './NotFound'
 import ScoreEntryForm from './ScoreEntryForm'
 import SeriesForm from './SeriesForm'
 import { usePolling } from './usePolling'
@@ -24,11 +26,16 @@ export default function CourtPage() {
   const { user } = useAuth()
   const location = useLocation()
 
-  const { refresh } = usePolling(() => listCourts(tournamentId), setCourts, tournamentId)
+  const [notFound, setNotFound] = useState(false)
 
+  const { refresh } = usePolling(() => listCourts(tournamentId), setCourts, tournamentId, {
+    onError: (error) => setNotFound(isNotFound(error)),
+  })
+
+  if (notFound) return <NotFound thing="Tournament" />
   if (courts === null) return null
   const court = courts.find((entry) => entry.court === Number(courtNumber))
-  if (!court) return <p>Court not found.</p>
+  if (!court) return <NotFound thing="Court" />
   const { current } = court
 
   return (

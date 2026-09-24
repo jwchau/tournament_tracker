@@ -3,15 +3,20 @@ import { Link } from 'react-router-dom'
 
 import { listTournaments } from './api'
 import { useAuth } from './auth'
+import { useNotifyFailure } from './useNotifyFailure'
 import { stageLabel } from './stage'
 import TournamentForm from './TournamentForm'
 
 export default function MainPage() {
   const [tournaments, setTournaments] = useState([])
   const { user } = useAuth()
+  const notifyFailure = useNotifyFailure()
 
   useEffect(() => {
-    listTournaments().then(setTournaments)
+    listTournaments()
+      .then(setTournaments)
+      .catch((error) => notifyFailure(error, "Couldn't load the tournaments"))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function handleCreated(tournament) {

@@ -648,3 +648,22 @@ test('there are no results until the tournament is complete', async () => {
   expect(screen.queryByRole('region', { name: 'Results' })).not.toBeInTheDocument()
   expect(api.getTournamentResults).not.toHaveBeenCalled()
 })
+
+test('says so when the tournament does not exist', async () => {
+  vi.spyOn(api, 'getTournament').mockRejectedValue({ status: 404 })
+  vi.spyOn(api, 'listTeams').mockRejectedValue({ status: 404 })
+
+  renderAt(999)
+
+  expect(await screen.findByRole('heading', { name: 'Tournament not found' })).toBeInTheDocument()
+})
+
+test('a tournament that fails to load for another reason says so', async () => {
+  vi.spyOn(api, 'getTournament').mockRejectedValue(new TypeError('Failed to fetch'))
+  vi.spyOn(api, 'listTeams').mockRejectedValue(new TypeError('Failed to fetch'))
+
+  renderAt(1)
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't reach the server/i)
+  expect(screen.queryByText(/not found/i)).not.toBeInTheDocument()
+})

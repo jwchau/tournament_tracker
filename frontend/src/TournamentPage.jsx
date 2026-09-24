@@ -12,7 +12,10 @@ import {
   updateTournament,
 } from './api'
 import { useAuth } from './auth'
+import { isNotFound } from './failure'
+import NotFound from './NotFound'
 import { useNotify } from './NotificationContext'
+import { useNotifyFailure } from './useNotifyFailure'
 import PlayoffsPanel from './PlayoffsPanel'
 import PoolsPanel from './PoolsPanel'
 import PoolStandings from './PoolStandings'
@@ -157,9 +160,13 @@ function ConfigForm({ tournamentId, tournament, onSaved }) {
 // placings live on each bracket's page.
 function Results({ tournamentId }) {
   const [results, setResults] = useState([])
+  const notifyFailure = useNotifyFailure()
 
   useEffect(() => {
-    getTournamentResults(tournamentId).then(setResults)
+    getTournamentResults(tournamentId)
+      .then(setResults)
+      .catch((error) => notifyFailure(error, "Couldn't load the results"))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tournamentId])
 
   return (
@@ -186,12 +193,24 @@ export default function TournamentPage() {
   const [showRosters, setShowRosters] = useState(false)
   const [playersByTeam, setPlayersByTeam] = useState({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [notFound, setNotFound] = useState(false)
   const notify = useNotify()
+  const notifyFailure = useNotifyFailure()
   const { user } = useAuth()
 
   useEffect(() => {
-    getTournament(tournamentId).then(setTournament)
-    listTeams(tournamentId).then(setTeams)
+    setNotFound(false)
+    Promise.all([getTournament(tournamentId), listTeams(tournamentId)])
+      .then(([loaded, loadedTeams]) => {
+        setTournament(loaded)
+        setTeams(loadedTeams)
+      })
+      .catch((error) =>
+        isNotFound(error)
+          ? setNotFound(true)
+          : notifyFailure(error, "Couldn't load the tournament"),
+      )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tournamentId])
 
   async function handleToggleRosters(event) {
@@ -219,6 +238,7 @@ export default function TournamentPage() {
     }
   }
 
+  if (notFound) return <NotFound thing="Tournament" />
   if (!tournament) return null
 
   return (

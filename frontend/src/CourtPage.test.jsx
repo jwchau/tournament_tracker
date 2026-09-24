@@ -162,7 +162,7 @@ test('a court the tournament does not have is not found', async () => {
 
   renderAt('/tournaments/3/courts/9')
 
-  expect(await screen.findByText(/court not found/i)).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Court not found' })).toBeInTheDocument()
 })
 
 test('signed out, the court shows its match without a score form', async () => {
@@ -195,4 +195,12 @@ test('a court lent to a bracket without courts says so, without changing where i
 
   expect(await screen.findByText('Bracket 1 · now playing Bracket 2')).toBeInTheDocument()
   expect(screen.getByText(/next free Bracket 1 court/)).toBeInTheDocument()
+})
+
+test('a tournament that does not exist is not found', async () => {
+  vi.spyOn(api, 'listCourts').mockRejectedValue({ status: 404 })
+
+  renderAt('/tournaments/999/courts/1')
+
+  expect(await screen.findByRole('heading', { name: 'Tournament not found' })).toBeInTheDocument()
 })

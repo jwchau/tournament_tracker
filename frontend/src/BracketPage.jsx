@@ -4,6 +4,9 @@ import { Link, useParams } from 'react-router-dom'
 import { getPlayoffBracket, getTournament, getTournamentResults, listTeams } from './api'
 import { useAuth } from './auth'
 import BracketDiagram from './BracketDiagram'
+import { isNotFound } from './failure'
+import NotFound from './NotFound'
+import { useNotifyFailure } from './useNotifyFailure'
 
 function ordinal(place) {
   const teen = place % 100 >= 11 && place % 100 <= 13
@@ -62,6 +65,7 @@ export default function BracketPage() {
   const [tournament, setTournament] = useState(null)
   const [teams, setTeams] = useState([])
   const [notFound, setNotFound] = useState(false)
+  const notifyFailure = useNotifyFailure()
   const { user } = useAuth()
   const [championId, setChampionId] = useState(null)
   const reportedChampion = useRef(undefined)
@@ -89,10 +93,13 @@ export default function BracketPage() {
           listTeams(loaded.tournament_id).then(setTeams),
         ])
       })
-      .catch(() => setNotFound(true))
+      .catch((error) =>
+        isNotFound(error) ? setNotFound(true) : notifyFailure(error, "Couldn't load the bracket"),
+      )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bracketId])
 
-  if (notFound) return <p>Bracket not found.</p>
+  if (notFound) return <NotFound thing="Bracket" />
   if (!bracket || !tournament) return null
 
   return (
