@@ -15,7 +15,9 @@ import { useNotify } from './NotificationContext'
 // A tournament with pools advances from pool play into tiered brackets; one
 // without pools generates a single bracket of every team. Either happens once,
 // and can be undone until the first playoff score.
-export default function PlayoffsPanel({ tournamentId, teams, hasPools }) {
+// onChanged is told whenever brackets are created or reset, since that changes
+// which tournament settings are locked.
+export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 1, onChanged }) {
   const [brackets, setBrackets] = useState(null)
   const [blocker, setBlocker] = useState('Checking pool play…')
   const [format, setFormat] = useState('single')
@@ -34,6 +36,7 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools }) {
   async function handleAdvance() {
     try {
       setBrackets(await advanceToPlayoffs(tournamentId, { format }))
+      onChanged?.()
       notify('Advanced to playoffs')
     } catch (error) {
       const body = await error?.json?.().catch(() => null)
@@ -45,6 +48,7 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools }) {
     try {
       await generateBracket(tournamentId, { format })
       setBrackets(await listPlayoffBrackets(tournamentId))
+      onChanged?.()
       notify('Bracket generated')
     } catch (error) {
       const body = await error?.json?.().catch(() => null)
@@ -57,6 +61,7 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools }) {
     try {
       await resetPlayoffBrackets(tournamentId)
       setBrackets([])
+      onChanged?.()
       setBlocker((await getPlayoffReadiness(tournamentId)).reason)
       notify('Brackets reset')
     } catch (error) {
@@ -75,7 +80,7 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools }) {
           <section key={bracket.id}>
             <h4>Bracket {bracket.tier}</h4>
             <Link to={`/brackets/${bracket.id}`}>Open Bracket {bracket.tier}</Link>
-            <BracketDiagram playoffBracketId={bracket.id} teams={teams} readOnly />
+            <BracketDiagram playoffBracketId={bracket.id} teams={teams} bestOf={bestOf} readOnly />
           </section>
         ))}
         {resettable && (

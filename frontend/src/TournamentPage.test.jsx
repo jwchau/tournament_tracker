@@ -348,6 +348,73 @@ test('once play has started only the tournament name can be edited', async () =>
   expect(screen.getByText(/settings are locked once play has started/i)).toBeInTheDocument()
 })
 
+test('playoff best-of is chosen from odd counts and locks once brackets exist', async () => {
+  const confirmed = { ...unconfirmed, settings_confirmed: true, playoff_best_of: 1, stage: 'draft' }
+  vi.spyOn(api, 'getTournament').mockResolvedValue(confirmed)
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  vi.spyOn(api, 'listPools').mockResolvedValue([])
+  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([])
+  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'x' })
+  const updateTournament = vi
+    .spyOn(api, 'updateTournament')
+    .mockImplementation(async (id, values) => ({ ...confirmed, ...values }))
+
+  const { unmount } = renderAt(1)
+
+  const bestOf = await screen.findByLabelText(/playoff best-of/i)
+  expect([...bestOf.options].map((option) => option.value)).toEqual(['1', '3', '5', '7'])
+  fireEvent.change(bestOf, { target: { value: '3' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() =>
+    expect(updateTournament).toHaveBeenCalledWith('1', expect.objectContaining({ playoff_best_of: 3 })),
+  )
+  unmount()
+
+  api.getTournament.mockResolvedValue({ ...confirmed, stage: 'playoffs' })
+  renderAt(1)
+  expect(await screen.findByLabelText(/playoff best-of/i)).toBeDisabled()
+  expect(screen.getByLabelText(/court count/i)).toBeEnabled()
+})
+
+test('generating a bracket locks the best-of setting without a reload', async () => {
+  const confirmed = { ...unconfirmed, settings_confirmed: true, playoff_best_of: 3, stage: 'draft' }
+  vi.spyOn(api, 'getTournament')
+    .mockResolvedValueOnce(confirmed)
+    .mockResolvedValue({ ...confirmed, stage: 'playoffs' })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  vi.spyOn(api, 'listPools').mockResolvedValue([])
+  vi.spyOn(api, 'listPlayoffBrackets')
+    .mockResolvedValueOnce([])
+    .mockResolvedValue([{ id: 30, tournament_id: 1, tier: 1, format: 'single', has_scores: false }])
+  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'x' })
+  vi.spyOn(api, 'generateBracket').mockResolvedValue([])
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([])
+
+  renderAt(1)
+
+  expect(await screen.findByLabelText(/playoff best-of/i)).toBeEnabled()
+  fireEvent.click(await screen.findByRole('button', { name: /generate bracket/i }))
+
+  await waitFor(() => expect(screen.getByLabelText(/playoff best-of/i)).toBeDisabled())
+})
+
+test('a refused settings save says why', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({ ...unconfirmed, settings_confirmed: true })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  vi.spyOn(api, 'listPools').mockResolvedValue([])
+  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([])
+  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'x' })
+  vi.spyOn(api, 'updateTournament').mockRejectedValue({
+    json: () => Promise.resolve({ detail: 'play has started, so only the tournament name can still be changed' }),
+  })
+
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Save' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/play has started/)
+})
+
 function mockPlayoffsNotStarted() {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,

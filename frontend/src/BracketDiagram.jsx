@@ -6,6 +6,7 @@ import CorrectionForm from './CorrectionForm'
 import { matchName } from './matchName'
 import ScheduleForm from './ScheduleForm'
 import ScoreEntryForm from './ScoreEntryForm'
+import SeriesForm from './SeriesForm'
 import { withTimeout } from './withTimeout'
 
 const MATCH_WIDTH = 140
@@ -153,6 +154,7 @@ export default function BracketDiagram({
   teams = [],
   courtCount = 1,
   readOnly = false,
+  bestOf = 1,
 }) {
   const [matches, setMatches] = useState([])
   const [connectionLost, setConnectionLost] = useState(false)
@@ -272,10 +274,14 @@ export default function BracketDiagram({
             {[match.team1_id, match.team2_id].map((teamId, index) => {
               const label = slotLabel(teamsById, teamId, match.status)
               const shown = truncate(label)
+              // A series shows games won next to each team once it's under way.
+              const wins = [match.team1_score, match.team2_score][index]
+              const tally = bestOf > 1 && teamId != null && wins != null ? ` · ${wins}` : ''
               return (
                 <text key={index} y={LINE_HEIGHT * (index + 1)}>
                   {shown !== label && <title>{label}</title>}
                   {shown}
+                  {tally}
                 </text>
               )
             })}
@@ -297,6 +303,7 @@ export default function BracketDiagram({
         >
           <CorrectionForm
             match={match}
+            bestOf={bestOf}
             team1Name={teamName(teamsById, match.team1_id)}
             team2Name={teamName(teamsById, match.team2_id)}
             onCorrected={handleCorrected}
@@ -313,15 +320,26 @@ export default function BracketDiagram({
           onSaved={replaceMatch}
         />
       ))}
-      {playable.map((match) => (
-        <ScoreEntryForm
-          key={match.id}
-          match={match}
-          team1Name={teamName(teamsById, match.team1_id)}
-          team2Name={teamName(teamsById, match.team2_id)}
-          onScored={replaceMatch}
-        />
-      ))}
+      {playable.map((match) =>
+        bestOf > 1 ? (
+          <SeriesForm
+            key={match.id}
+            match={match}
+            bestOf={bestOf}
+            team1Name={teamName(teamsById, match.team1_id)}
+            team2Name={teamName(teamsById, match.team2_id)}
+            onScored={replaceMatch}
+          />
+        ) : (
+          <ScoreEntryForm
+            key={match.id}
+            match={match}
+            team1Name={teamName(teamsById, match.team1_id)}
+            team2Name={teamName(teamsById, match.team2_id)}
+            onScored={replaceMatch}
+          />
+        ),
+      )}
     </>
   )
 }

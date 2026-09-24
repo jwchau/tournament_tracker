@@ -25,6 +25,7 @@ class Settings:
     bracket_count: int
     court_count: int
     games_per_pairing: int = 1
+    best_of: int = 1
 
 
 # --- building and playing a tournament through the API ---------------------
@@ -39,6 +40,7 @@ def _build(client, settings: Settings) -> tuple[int, list[dict]]:
             "playoff_bracket_count": settings.bracket_count,
             "court_count": settings.court_count,
             "games_per_pairing": settings.games_per_pairing,
+            "playoff_best_of": settings.best_of,
         },
     )
     pools, seed = [], 1
@@ -134,6 +136,26 @@ def expected_first_round(seeds: list[int]) -> set[frozenset]:
 # --- invariants checked on every advanced tournament ----------------------
 
 
+def _play_step(client, match, rng):
+    """Finish a single-game match, or play the next game of a best-of series."""
+    if match["bracket"] == "pool" or _best_of(client, match) == 1:
+        return _complete(client, match, rng)
+    loser_points = rng.randint(0, 19)
+    team1_wins = rng.random() < 0.5
+    return client.post(
+        f"/matches/{match['id']}/games",
+        json={
+            "team1_score": 21 if team1_wins else loser_points,
+            "team2_score": loser_points if team1_wins else 21,
+            "version": match["version"],
+        },
+    )
+
+
+def _best_of(client, match):
+    return client.get(f"/tournaments/{match['tournament_id']}").json()["playoff_best_of"]
+
+
 def _play_out(client, bracket_id, rng):
     """Score ready matches at random until nothing is left to play."""
     for _ in range(500):
@@ -144,7 +166,7 @@ def _play_out(client, bracket_id, rng):
         ]
         if not playable:
             return
-        assert _complete(client, rng.choice(playable), rng).status_code == 200
+        assert _play_step(client, rng.choice(playable), rng).status_code in (200, 201)
     raise AssertionError("tier never finished")
 
 
@@ -216,6 +238,9 @@ SCENARIOS = {
     "S8 big pools, k=3, four tiers": Settings((10, 10), 3, 4, 2),
     "S9 volume, two games per pairing": Settings((8, 8, 8, 8), 4, 2, 8, games_per_pairing=2),
     "S10 uneven court split": Settings((4, 4, 4), 2, 2, 5),
+    "B1 best-of-3, even pools": Settings((4, 4), 2, 2, 2, best_of=3),
+    "B2 best-of-3, catch-all with byes": Settings((8, 5), 4, 2, 4, best_of=3),
+    "B3 best-of-5, four tiers": Settings((7, 7, 6), 2, 4, 6, best_of=5),
     "E1 single-team pool": Settings((5, 1), 2, 2, 2),
 }
 

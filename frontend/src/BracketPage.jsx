@@ -36,6 +36,7 @@ export default function BracketPage() {
         playoffBracketId={bracket.id}
         teams={teams}
         courtCount={tournament.court_count}
+        bestOf={tournament.playoff_best_of ?? 1}
       />
     </>
   )

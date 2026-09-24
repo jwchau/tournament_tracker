@@ -166,6 +166,26 @@ p {
   position: absolute;
 }
 
+/* One game's two scores: each label stays beside its input, and the pair wraps as a unit. */
+.game-scores {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 2px 0;
+}
+
+.score-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.score-field input {
+  width: 4.5em;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;

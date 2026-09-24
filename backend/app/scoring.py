@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from sqlalchemy import case, or_
 from sqlmodel import Session, delete, select, update
 
-from app.models import CorrectionLog, Match
+from app.models import CorrectionLog, Game, Match
 
 
 @dataclass
@@ -133,6 +133,7 @@ def correct_score(
     )
     if stale_reset is not None:
         session.execute(delete(CorrectionLog).where(CorrectionLog.match_id == stale_reset.id))
+        session.execute(delete(Game).where(Game.match_id == stale_reset.id))
         _delete_or_conflict(session, stale_reset)
         reset_matches.append(stale_reset)
     if winner_id != old_winner_id and _forces_bracket_reset(match, winner_id):
@@ -215,7 +216,8 @@ def _reset_plan(
 
 
 def _unplay(session: Session, match: Match, slots: list[int]) -> None:
-    """Empty the given slots and clear the match's result."""
+    """Empty the given slots and clear the match's result, including any series games."""
+    session.execute(delete(Game).where(Game.match_id == match.id))
     _update_or_conflict(
         session,
         match,

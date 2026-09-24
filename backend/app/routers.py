@@ -6,6 +6,7 @@ from sqlmodel import Session, SQLModel, func, select, update
 from app.db import get_session
 from app.models import (
     CorrectionLog,
+    Game,
     Match,
     Player,
     PlayerCreate,
@@ -21,6 +22,7 @@ from app.models import (
     TournamentSummary,
     TournamentUpdate,
 )
+from app.series import best_of, replace_games, series_result
 from app.settings import require_confirmed_settings
 from app.scoring import (
     InvalidScore,
@@ -110,6 +112,13 @@ def update_tournament(
             status_code=400,
             detail="play has started, so only the tournament name can still be changed",
         )
+    if "playoff_best_of" in changed_settings and session.exec(
+        select(PlayoffBracket.id).where(PlayoffBracket.tournament_id == tournament_id)
+    ).first() is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="brackets already exist; reset them to change the playoff best-of",
+        )
 
     for field, value in changes.items():
         setattr(tournament, field, value)
@@ -160,6 +169,8 @@ def delete_tournament(
     ).all()
     for correction in corrections:
         session.delete(correction)
+    for game in session.exec(select(Game).where(Game.match_id.in_([m.id for m in matches]))).all():
+        session.delete(game)
     for match in matches:
         session.delete(match)
     session.flush()
@@ -305,6 +316,12 @@ def get_match(match_id: int, session: Session = Depends(get_session)) -> Match:
 def submit_match_score(
     match_id: int, data: ScoreSubmission, session: Session = Depends(get_session)
 ) -> Match:
+    match = session.get(Match, match_id)
+    if match is not None and (games := best_of(session, match)) > 1:
+        raise HTTPException(
+            status_code=400,
+            detail=f"this match is best-of-{games}; enter its games one at a time instead",
+        )
     try:
         return submit_score(
             session,
@@ -353,9 +370,17 @@ def schedule_match(
     return match
 
 
-class CorrectionPreviewRequest(SQLModel):
+class GameScore(SQLModel):
     team1_score: int
     team2_score: int
+
+
+class CorrectionPreviewRequest(SQLModel):
+    """A single game's corrected score, or for a best-of series every corrected game."""
+
+    team1_score: int | None = None
+    team2_score: int | None = None
+    games: list[GameScore] | None = None
 
 
 class CorrectionRequest(CorrectionPreviewRequest):
@@ -370,14 +395,35 @@ class CorrectionResult(CorrectionPreview):
     match: Match
 
 
+def _corrected_result(
+    session: Session, match_id: int, data: CorrectionPreviewRequest
+) -> tuple[int, int, list[tuple[int, int]] | None]:
+    """The corrected match score, plus the corrected games when the match is a series."""
+    match = session.get(Match, match_id)
+    if match is None:
+        raise HTTPException(status_code=404, detail="Match not found")
+    games_needed = best_of(session, match)
+    try:
+        if games_needed > 1:
+            if not data.games:
+                raise InvalidScore(f"this match is best-of-{games_needed}; send its corrected games")
+            scores = [(game.team1_score, game.team2_score) for game in data.games]
+            wins1, wins2 = series_result(scores, games_needed)
+            return wins1, wins2, scores
+        if data.team1_score is None or data.team2_score is None:
+            raise InvalidScore("send the corrected team1_score and team2_score")
+        return data.team1_score, data.team2_score, None
+    except InvalidScore as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @router.post("/matches/{match_id}/correct/preview", response_model=CorrectionPreview)
 def preview_match_correction(
     match_id: int, data: CorrectionPreviewRequest, session: Session = Depends(get_session)
 ) -> CorrectionPreview:
+    team1_score, team2_score, _ = _corrected_result(session, match_id, data)
     try:
-        reset_matches = preview_correction(
-            session, match_id, data.team1_score, data.team2_score
-        )
+        reset_matches = preview_correction(session, match_id, team1_score, team2_score)
     except MatchNotFound:
         raise HTTPException(status_code=404, detail="Match not found")
     except InvalidScore as exc:
@@ -389,13 +435,16 @@ def preview_match_correction(
 def correct_match_score(
     match_id: int, data: CorrectionRequest, session: Session = Depends(get_session)
 ) -> CorrectionResult:
+    team1_score, team2_score, games = _corrected_result(session, match_id, data)
     try:
-        correction = correct_score(
-            session, match_id, data.team1_score, data.team2_score, data.version
-        )
+        if games is not None:
+            # Staged in the correction's transaction: a conflict discards them too.
+            replace_games(session, match_id, games)
+        correction = correct_score(session, match_id, team1_score, team2_score, data.version)
     except MatchNotFound:
         raise HTTPException(status_code=404, detail="Match not found")
     except InvalidScore as exc:
+        session.rollback()
         raise HTTPException(status_code=400, detail=str(exc))
     except VersionConflict:
         raise HTTPException(
