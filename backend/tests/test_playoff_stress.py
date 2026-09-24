@@ -11,6 +11,7 @@ Slow, so skipped by default; run with `pytest -m stress`.
 
 import random
 from dataclasses import dataclass
+from fractions import Fraction
 
 import pytest
 from tests.helpers import create_tournament
@@ -97,18 +98,18 @@ def _tier_matches(client, bracket_id):
 
 def expected_tiers(standings: list[list[dict]], k: int, bracket_count: int) -> list[list[int]]:
     """Ranks split into tiers of k per pool, the last tier a catch-all,
-    each tier seeded by points, differential, then points scored (pool order on ties)."""
+    each tier seeded by points, differential, then points scored, each per
+    match played (pool order on ties)."""
     tiers = [[] for _ in range(bracket_count)]
     for rows in standings:
         for rank, row in enumerate(rows):
             tiers[min(rank // k, bracket_count - 1)].append(row)
-    return [
-        [
-            row["team_id"]
-            for row in sorted(tier, key=lambda r: (-r["points"], -r["point_diff"], -r["points_for"]))
-        ]
-        for tier in tiers
-    ]
+
+    def per_match(row):
+        played = max(row["played"], 1)
+        return tuple(-Fraction(row[key], played) for key in ("points", "point_diff", "points_for"))
+
+    return [[row["team_id"] for row in sorted(tier, key=per_match)] for tier in tiers]
 
 
 def _bracket_size(team_count):
