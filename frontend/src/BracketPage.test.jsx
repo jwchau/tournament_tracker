@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
@@ -134,6 +134,45 @@ test('double-elimination placings name the losers-bracket round', async () => {
 
   const placings = await screen.findByRole('region', { name: 'Placings' })
   expect(within(placings).getByText('3rd: Blockers (out in losers round 2)')).toBeInTheDocument()
+})
+
+test('scoring the final shows the placings without a reload', async () => {
+  const final = {
+    id: 1, bracket: 'winners', round: 1, position: 1,
+    team1_id: 10, team2_id: 11, status: 'ready', version: 1,
+  }
+  vi.spyOn(api, 'getPlayoffBracket').mockResolvedValue({ id: 30, tournament_id: 3, tier: 1 })
+  vi.spyOn(api, 'getTournament')
+    .mockResolvedValueOnce({ id: 3, court_count: 1, stage: 'playoffs' })
+    .mockResolvedValue({ id: 3, court_count: 1, stage: 'complete' })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([
+    { id: 10, name: 'Spikers' },
+    { id: 11, name: 'Diggers' },
+  ])
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([final])
+  vi.spyOn(api, 'submitScore').mockResolvedValue({
+    ...final, team1_score: 21, team2_score: 15, status: 'complete', winner_id: 10, version: 2,
+  })
+  vi.spyOn(api, 'getTournamentResults').mockResolvedValue([
+    {
+      tier: 1,
+      playoff_bracket_id: 30,
+      format: 'single',
+      champion: { team_id: 10, name: 'Spikers' },
+      runner_up: { team_id: 11, name: 'Diggers' },
+      eliminated: [],
+    },
+  ])
+
+  renderAt(30)
+
+  fireEvent.change(await screen.findByLabelText('Spikers score'), { target: { value: '21' } })
+  fireEvent.change(screen.getByLabelText('Diggers score'), { target: { value: '15' } })
+  fireEvent.click(screen.getByLabelText(/complete match/i))
+  fireEvent.click(screen.getByRole('button', { name: /submit score/i }))
+
+  const placings = await screen.findByRole('region', { name: 'Placings' })
+  expect(await within(placings).findByText('1st: Spikers')).toBeInTheDocument()
 })
 
 test('shows no placings while the tournament is still being played', async () => {

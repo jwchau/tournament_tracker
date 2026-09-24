@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { getPlayoffBracket, getTournament, getTournamentResults, listTeams } from './api'
@@ -12,14 +12,18 @@ function ordinal(place) {
 
 // Every team's finish in this tier once the tournament is complete. Teams
 // that went out in the same round share a place.
-function Placings({ tournamentId, bracketId }) {
+// They're reloaded when the champion changes.
+function Placings({ tournamentId, bracketId, championId }) {
   const [tier, setTier] = useState(null)
 
   useEffect(() => {
-    getTournamentResults(tournamentId).then((results) =>
-      setTier(results.find((result) => result.playoff_bracket_id === bracketId) ?? null),
-    )
-  }, [tournamentId, bracketId])
+    getTournamentResults(tournamentId)
+      .then((results) =>
+        setTier(results.find((result) => result.playoff_bracket_id === bracketId) ?? null),
+      )
+      // Refused while the tournament isn't complete, e.g. just after a correction.
+      .catch(() => setTier(null))
+  }, [tournamentId, bracketId, championId])
 
   if (!tier) return null
   const rows = [
@@ -37,13 +41,14 @@ function Placings({ tournamentId, bracketId }) {
   return (
     <section aria-labelledby="placings-heading">
       <h3 id="placings-heading">Placings</h3>
-      <ol>
+      {/* Each row names its own place, so no list numbers. */}
+      <ul style={{ listStyle: 'none', padding: 0 }}>
         {rows.map(([label, teams]) => (
           <li key={label}>
             {label}: {teams}
           </li>
         ))}
-      </ol>
+      </ul>
     </section>
   )
 }
@@ -56,6 +61,22 @@ export default function BracketPage() {
   const [tournament, setTournament] = useState(null)
   const [teams, setTeams] = useState([])
   const [notFound, setNotFound] = useState(false)
+  const [championId, setChampionId] = useState(null)
+  const reportedChampion = useRef(undefined)
+
+  // A score or correction here can finish the tournament or reopen it, so
+  // the stage (and with it the placings) is re-read whenever the champion
+  // changes. The diagram's first report is just what was already loaded.
+  const handleChampionChange = useCallback(
+    (newChampionId) => {
+      const previous = reportedChampion.current
+      reportedChampion.current = newChampionId
+      if (previous === undefined || previous === newChampionId) return
+      setChampionId(newChampionId)
+      if (bracket) getTournament(bracket.tournament_id).then(setTournament)
+    },
+    [bracket],
+  )
 
   useEffect(() => {
     getPlayoffBracket(bracketId)
@@ -77,13 +98,18 @@ export default function BracketPage() {
       <Link to={`/tournaments/${bracket.tournament_id}`}>Back to tournament</Link>
       <h2>Bracket {bracket.tier}</h2>
       {tournament.stage === 'complete' && (
-        <Placings tournamentId={bracket.tournament_id} bracketId={bracket.id} />
+        <Placings
+          tournamentId={bracket.tournament_id}
+          bracketId={bracket.id}
+          championId={championId}
+        />
       )}
       <BracketDiagram
         playoffBracketId={bracket.id}
         teams={teams}
         courtCount={tournament.court_count}
         bestOf={tournament.playoff_best_of ?? 1}
+        onChampionChange={handleChampionChange}
       />
     </>
   )
