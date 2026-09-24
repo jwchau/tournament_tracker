@@ -21,6 +21,9 @@ const REQUEST_TIMEOUT_MS = 5000
 const FAILURE_THRESHOLD = 3
 const COOLDOWN_MS = 30000
 const MAX_LABEL_LENGTH = 18
+// Names are cut shorter when a score sits at the right edge of the box.
+const MAX_SCORED_LABEL_LENGTH = 15
+const SCORE_INSET = 6
 
 function teamName(teamsById, teamId) {
   return teamsById[teamId]?.name ?? `Team ${teamId}`
@@ -47,7 +50,8 @@ function queuePositions(dispatch) {
 function scheduleLabel(match, queuePosition, overflow) {
   const parts = []
   if (match.on_hold) parts.push('On hold')
-  if (match.court != null) parts.push(`Court ${match.court}`)
+  // A finished match has left its court, which may now hold another match.
+  if (match.court != null && match.status !== 'complete') parts.push(`Court ${match.court}`)
   if (queuePosition != null) {
     parts.push(`${overflow ? 'Waiting (any court)' : 'Waiting for a court'} · #${queuePosition}`)
   }
@@ -59,8 +63,20 @@ function scheduleLabel(match, queuePosition, overflow) {
   return parts.join(' · ')
 }
 
-function truncate(label) {
-  return label.length > MAX_LABEL_LENGTH ? `${label.slice(0, MAX_LABEL_LENGTH - 1)}…` : label
+function truncate(label, maxLength = MAX_LABEL_LENGTH) {
+  return label.length > maxLength ? `${label.slice(0, maxLength - 1)}…` : label
+}
+
+// What to show at the right of a team's row: a series' games won once it's
+// under way, or a single game's final score. Byes and unfinished games show
+// nothing.
+function slotScore(match, index, bestOf) {
+  const teamId = [match.team1_id, match.team2_id][index]
+  const score = [match.team1_score, match.team2_score][index]
+  if (teamId == null || score == null) return null
+  if (bestOf > 1) return score
+  const bothTeams = match.team1_id != null && match.team2_id != null
+  return match.status === 'complete' && bothTeams ? score : null
 }
 
 function matchY(round, position) {
@@ -332,16 +348,27 @@ export default function BracketDiagram({
             <rect width={MATCH_WIDTH} height={MATCH_HEIGHT} fill="white" stroke="black" />
             {[match.team1_id, match.team2_id].map((teamId, index) => {
               const label = slotLabel(teamsById, teamId, match.status)
-              const shown = truncate(label)
-              // A series shows games won next to each team once it's under way.
-              const wins = [match.team1_score, match.team2_score][index]
-              const tally = bestOf > 1 && teamId != null && wins != null ? ` · ${wins}` : ''
+              const score = slotScore(match, index, bestOf)
+              const shown = truncate(label, score == null ? MAX_LABEL_LENGTH : MAX_SCORED_LABEL_LENGTH)
+              const won =
+                match.status === 'complete' && teamId != null && teamId === match.winner_id
+              const y = LINE_HEIGHT * (index + 1)
               return (
-                <text key={index} y={LINE_HEIGHT * (index + 1)}>
-                  {shown !== label && <title>{label}</title>}
-                  {shown}
-                  {tally}
-                </text>
+                <g
+                  key={index}
+                  data-testid={`team${index + 1}-${matchTestId(match)}`}
+                  fontWeight={won ? 'bold' : undefined}
+                >
+                  <text y={y}>
+                    {shown !== label && <title>{label}</title>}
+                    {shown}
+                  </text>
+                  {score != null && (
+                    <text x={MATCH_WIDTH - SCORE_INSET} y={y} textAnchor="end">
+                      {score}
+                    </text>
+                  )}
+                </g>
               )
             })}
             <text y={LINE_HEIGHT * 3} fontSize="11">
