@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session, SQLModel, select
 
 from app.db import get_session
-from app.dispatch import court_occupancy, queue
+from app.dispatch import court_occupancy, is_overflow, queue
 from app.models import Match, PlayoffBracket, Team, Tournament
 from app.pool_routes import _pools_in_order, _tournament_or_404
 from app.pools import pool_courts
@@ -49,7 +49,9 @@ class CourtSummary(SQLModel):
     # The earliest unfinished match on the court with both teams, or None if it's empty.
     current: CourtMatch | None
     # A pool court's next scheduled matches; for a playoff court, the front of
-    # its bracket's queue, which goes to whichever of the bracket's courts frees first.
+    # its bracket's queue (including any overflow brackets' matches, and
+    # leaving out held ones), which goes to whichever of the bracket's courts
+    # frees first.
     up_next: list[CourtMatch]
 
 
@@ -94,6 +96,10 @@ def list_courts(tournament_id: int, session: Session = Depends(get_session)) -> 
     }
     if brackets:
         for bracket in brackets:
+            # A bracket without courts of its own (overflow) waits in line on
+            # the others' courts, so its matches show up in their up next.
+            if is_overflow(session, bracket.id):
+                continue
             waiting = [session.get(Match, match_id) for match_id in queue(session, bracket.id)]
             up_next = [as_court_match(match) for match in waiting[:UP_NEXT]]
             for court, match_id in court_occupancy(session, bracket.id).items():

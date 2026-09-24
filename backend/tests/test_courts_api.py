@@ -1,4 +1,5 @@
 from tests.test_court_dispatch_api import _bracket, _complete, _get
+from tests.test_playoff_advancement_api import _advance, _play, _setup
 from tests.test_pools_api import _generate_schedule, _pool_matches, _pool_with_teams
 
 
@@ -127,3 +128,32 @@ def test_courts_follow_the_pool_split_and_are_unused_before_there_are_pools(clie
 
 def test_courts_of_a_missing_tournament_is_404(client):
     assert client.get("/tournaments/999/courts").status_code == 404
+
+
+def test_held_matches_are_left_out_of_up_next(client):
+    ids = _bracket(client, 8, court_count=1)
+    r1 = [ids[("winners", 1, position)] for position in range(1, 5)]
+    tournament_id = _get(client, r1[0])["tournament_id"]
+    client.patch(f"/matches/{r1[2]}/hold", json={"on_hold": True, "version": 1})
+
+    [court] = _courts(client, tournament_id)
+
+    assert court["current"]["id"] == r1[0]
+    assert _ids(court["up_next"]) == [r1[1], r1[3]]
+
+
+def test_a_bracket_without_courts_waits_in_line_on_the_courts_it_shares(client):
+    # One court, two brackets: bracket 2 owns none, so its matches queue for court 1.
+    tournament_id, [pool], _ = _setup(
+        client, [4], advance_per_pool=2, playoff_bracket_count=2, court_count=1
+    )
+    _play(client, pool["id"])
+    tier_one, tier_two = _advance(client, tournament_id).json()
+    [first_final] = client.get(f"/playoff-brackets/{tier_one['id']}/matches").json()
+    [second_final] = client.get(f"/playoff-brackets/{tier_two['id']}/matches").json()
+
+    [court] = _courts(client, tournament_id)
+
+    assert (court["use"], court["label"]) == ("playoff", "Bracket 1")
+    assert court["current"]["id"] == first_final["id"]
+    assert _ids(court["up_next"]) == [second_final["id"]]
