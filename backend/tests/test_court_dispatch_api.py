@@ -372,3 +372,88 @@ def test_a_held_match_cannot_be_scored_or_put_on_a_court_by_hand(client):
     assert scored.status_code == 400 and "on hold" in scored.json()["detail"]
     assert placed.status_code == 400 and "on hold" in placed.json()["detail"]
     assert _court(client, held["id"]) is None
+
+
+def _two_brackets_on_two_courts(client):
+    """Bracket 1 (4 teams) owns court 1; bracket 2 (8 teams) owns court 2. Double elimination."""
+    tournament_id, pools, _ = _setup(
+        client, [6, 6], advance_per_pool=2, playoff_bracket_count=2, court_count=2
+    )
+    for pool in pools:
+        _play(client, pool["id"])
+    tier_one, tier_two = _advance(client, tournament_id, format="double").json()
+    return tournament_id, tier_one["id"], tier_two["id"]
+
+
+def _ids(client, bracket_id):
+    matches = client.get(f"/playoff-brackets/{bracket_id}/matches").json()
+    return {(m["bracket"], m["round"], m["position"]): m["id"] for m in matches}
+
+
+def _finish(client, bracket_id):
+    """Play the bracket to the end on its courts; the team in slot 1 always wins."""
+    while True:
+        matches = client.get(f"/playoff-brackets/{bracket_id}/matches").json()
+        on_court = [m for m in matches if m["status"] in ("ready", "in_progress") and m["court"]]
+        if not on_court:
+            assert all(m["status"] == "complete" for m in matches)
+            return
+        _complete(client, on_court[0]["id"])
+
+
+def test_a_finished_bracket_lends_its_courts_to_a_bracket_still_playing(client):
+    tournament_id, first, second = _two_brackets_on_two_courts(client)
+    two = _ids(client, second)
+    assert _court(client, two[("winners", 1, 1)]) == 2
+    assert _court(client, two[("winners", 1, 2)]) is None
+
+    _finish(client, first)
+
+    # Court 1 is bracket 1's, but bracket 1 has nothing left to play.
+    assert _court(client, two[("winners", 1, 2)]) == 1
+    court_one = client.get(f"/tournaments/{tournament_id}/courts").json()[0]
+    assert court_one["label"] == "Bracket 1"
+    assert court_one["now_playing"] == "Bracket 2"
+    assert court_one["current"]["id"] == two[("winners", 1, 2)]
+    assert [m["id"] for m in court_one["up_next"]] == [two[("winners", 1, 3)], two[("winners", 1, 4)]]
+
+
+def test_a_lent_court_takes_the_earliest_round_before_the_longest_waiting(client):
+    _, first, second = _two_brackets_on_two_courts(client)
+    two = _ids(client, second)
+    _complete(client, two[("winners", 1, 1)])
+    _complete(client, two[("winners", 1, 2)])
+    # Winners round 2 match 1 became ready just before losers round 1 match 1.
+    assert _court(client, two[("winners", 1, 3)]) == 2
+
+    _finish(client, first)
+    assert _court(client, two[("winners", 1, 4)]) == 1
+    _complete(client, two[("winners", 1, 4)])
+
+    assert _court(client, two[("losers", 1, 1)]) == 1
+    assert _court(client, two[("winners", 2, 1)]) is None
+    # Bracket 2's own court still goes first come, first served.
+    _complete(client, two[("winners", 1, 3)])
+    assert _court(client, two[("winners", 2, 1)]) == 2
+
+
+def test_a_bracket_reopened_by_a_correction_takes_its_court_back_once_it_frees(client):
+    _, first, second = _two_brackets_on_two_courts(client)
+    two = _ids(client, second)
+    _finish(client, first)
+    borrowed = two[("winners", 1, 2)]
+    assert _court(client, borrowed) == 1
+
+    # The losers' side now wins the grand final, which adds a reset match.
+    grand_final = _get(client, _ids(client, first)[("grand_final", 1, 1)])
+    response = client.patch(
+        f"/matches/{grand_final['id']}/correct",
+        json={"team1_score": 10, "team2_score": 21, "version": grand_final["version"]},
+    )
+    assert response.status_code == 200, response.json()
+    reset = _ids(client, first)[("grand_final", 2, 1)]
+    assert _court(client, reset) is None  # the borrowed match plays on
+
+    _complete(client, borrowed)
+
+    assert _court(client, reset) == 1

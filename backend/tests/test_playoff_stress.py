@@ -167,19 +167,33 @@ def _unfinished(matches):
 
 def assert_dispatch_consistent(client, tournament_id):
     """No court has two unfinished matches; a tier that owns courts only plays
-    on them (an overflow tier, owning none, on any tier's); held matches are
-    off court and out of line; and nothing waits while a court it could use
-    is free (for an overflow tier, any court at all)."""
-    owned_courts, on_court = [], []
-    for bracket in client.get(f"/tournaments/{tournament_id}/playoff-brackets").json():
-        matches = _tier_matches(client, bracket["id"])
-        status = client.get(f"/playoff-brackets/{bracket['id']}/dispatch").json()
+    on them or a finished tier's (an overflow tier, owning none, on any
+    tier's); held matches are off court and out of line; and nothing waits
+    while a court it could use is free (for an overflow tier, any court at
+    all; for any tier, a finished tier's court)."""
+    brackets = [
+        (
+            bracket,
+            _tier_matches(client, bracket["id"]),
+            client.get(f"/playoff-brackets/{bracket['id']}/dispatch").json(),
+        )
+        for bracket in client.get(f"/tournaments/{tournament_id}/playoff-brackets").json()
+    ]
+    lent_courts = {
+        entry["court"]
+        for _, matches, status in brackets
+        if not status["overflow"] and all(m["status"] == "complete" for m in matches)
+        for entry in status["courts"]
+    }
+    owned_courts, on_court, anything_waiting = [], [], False
+    for bracket, matches, status in brackets:
         courts = [entry["court"] for entry in status["courts"]]
         unfinished = _unfinished(matches)
         placed = [m["court"] for m in unfinished if m["court"] is not None]
         waiting = [m["id"] for m in unfinished if m["court"] is None and not m["on_hold"]]
+        anything_waiting = anything_waiting or bool(waiting)
         held = [m for m in matches if m["on_hold"]]
-        assert set(placed) <= set(courts), f"tier {bracket['tier']} off its courts"
+        assert set(placed) <= set(courts) | lent_courts, f"tier {bracket['tier']} off its courts"
         assert set(waiting) <= set(status["queue"])
         assert all(m["court"] is None and m["id"] not in status["queue"] for m in held)
         assert not status["queue"] or None not in [e["match_id"] for e in status["courts"]]
@@ -188,6 +202,7 @@ def assert_dispatch_consistent(client, tournament_id):
         if not status["overflow"]:
             owned_courts.append(set(courts))
     assert len(on_court) == len(set(on_court)), "a court is double-booked"
+    assert not anything_waiting or lent_courts <= set(on_court), "a finished tier's court sits idle"
     assert sum(len(courts) for courts in owned_courts) == len(set().union(*owned_courts))
 
 
