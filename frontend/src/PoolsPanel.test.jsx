@@ -28,8 +28,10 @@ test('lists pools with their courts', async () => {
 
   render(<PoolsPanel tournamentId={5} teams={teams} />)
 
-  expect(await screen.findByText('Pool A — courts 1, 2')).toBeInTheDocument()
-  expect(screen.getByText('Pool B — court 3')).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Pool A' })).toBeInTheDocument()
+  expect(screen.getByText('Courts 1, 2')).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Pool B' })).toBeInTheDocument()
+  expect(screen.getByText('Court 3')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Open Pool A' })).toHaveAttribute('href', '/pools/1')
 })
 
@@ -38,7 +40,7 @@ test('warns when a pool has no court', async () => {
 
   render(<PoolsPanel tournamentId={5} teams={teams} />)
 
-  expect(await screen.findByText('Pool B — no court (add courts in settings)')).toBeInTheDocument()
+  expect(await screen.findByText('No court yet (add courts in the settings)')).toBeInTheDocument()
 })
 
 test('adds a pool and reloads the list', async () => {
@@ -47,7 +49,7 @@ test('adds a pool and reloads the list', async () => {
 
   render(<PoolsPanel tournamentId={5} teams={teams} />)
 
-  fireEvent.change(screen.getByLabelText(/new pool name/i), { target: { value: 'Pool A' } })
+  fireEvent.change(await screen.findByLabelText(/new pool name/i), { target: { value: 'Pool A' } })
   fireEvent.click(screen.getByRole('button', { name: /add pool/i }))
 
   await waitFor(() => expect(createPool).toHaveBeenCalledWith(5, { name: 'Pool A' }))
@@ -75,7 +77,7 @@ test('auto-assign works with no pools yet and shows the pools it created', async
   render(<PoolsPanel tournamentId={5} teams={teams} onPoolsChanged={onPoolsChanged} />)
   fireEvent.click(await screen.findByRole('button', { name: /auto-assign/i }))
 
-  expect(await screen.findByText('Pool A — courts 1, 2')).toBeInTheDocument()
+  expect(await screen.findByText('Courts 1, 2')).toBeInTheDocument()
   expect(listPools).toHaveBeenCalledTimes(2)
   expect(onPoolsChanged).toHaveBeenLastCalledWith(pools)
 })

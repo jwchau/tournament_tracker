@@ -1,0 +1,75 @@
+{
+  "title": "Tournament page layout",
+  "question": "Kiln is the look for every option. Pick how the tournament page is arranged, steer one, or re-roll.",
+  "options": [
+    {
+      "id": "court-map",
+      "label": "Court map",
+      "kicker": "THE ROLL",
+      "lineage": "the venue floor plan pinned at the scorer's table",
+      "thesis": "The page opens on the venue: every court as a tile with what it is playing now and the live score.",
+      "palette": ["#1A1A1A", "#E68435", "#DFAE4E", "#EEECE9"],
+      "materials": ["court tiles", "ember live-score chips"],
+      "viewport": "Tournament name and stage on an ink band; below it the courts grid (2 per row on a phone), each tile showing court number, teams, score and bracket; pools, playoffs and teams follow in stage order.",
+      "risk": "Before play starts the courts are empty, so draft and check-in lean on the sections below the map.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 12,
+        "regions": [
+          { "label": "name + stage", "x": 0, "y": 0, "w": 12, "h": 2, "accent": true },
+          { "label": "court 1", "x": 0, "y": 2, "w": 6, "h": 3 },
+          { "label": "court 2", "x": 6, "y": 2, "w": 6, "h": 3 },
+          { "label": "court 3", "x": 0, "y": 5, "w": 6, "h": 3 },
+          { "label": "court 4", "x": 6, "y": 5, "w": 6, "h": 3 },
+          { "label": "pools / playoffs", "x": 0, "y": 8, "w": 12, "h": 2 },
+          { "label": "teams", "x": 0, "y": 10, "w": 12, "h": 2 }
+        ]
+      }
+    },
+    {
+      "id": "stage-track",
+      "label": "Stage track",
+      "lineage": "the tournament day's run sheet",
+      "thesis": "A stepper across the top (Setup, Pool play, Playoffs, Results) and the current stage's work fills the page.",
+      "palette": ["#1A1A1A", "#E68435", "#DFAE4E", "#EEECE9"],
+      "materials": ["stage stepper", "collapsed stage summaries"],
+      "viewport": "Name on an ink band, the four-step stage track under it with the current step in ember; the current stage's content below (pool standings in pool play, brackets in playoffs); finished stages fold into one-line summaries.",
+      "risk": "The organizer's settings and team edits move behind the Setup step, one tap further away mid-event.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 12,
+        "regions": [
+          { "label": "name", "x": 0, "y": 0, "w": 12, "h": 2 },
+          { "label": "setup · pools · playoffs · results", "x": 0, "y": 2, "w": 12, "h": 1, "accent": true },
+          { "label": "current stage", "x": 0, "y": 3, "w": 12, "h": 7 },
+          { "label": "done stages (folded)", "x": 0, "y": 10, "w": 12, "h": 2 }
+        ]
+      }
+    },
+    {
+      "id": "scoreboard",
+      "label": "Scoreboard first",
+      "lineage": "the results board players crowd around between games",
+      "thesis": "Standings lead: every pool's ranked table (or each bracket's path) at arm's-length size, with organizer tools in a Manage drawer.",
+      "palette": ["#1A1A1A", "#E68435", "#DFAE4E", "#EEECE9"],
+      "materials": ["ranked tables", "manage drawer"],
+      "viewport": "Name and stage on an ink band with a Manage button; below, pool standings side by side on a laptop and stacked on a phone, advancing places marked in amber; courts and teams follow.",
+      "risk": "Setup-heavy moments (check-in, confirming settings) live inside the drawer instead of on the page.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 12,
+        "regions": [
+          { "label": "name + stage", "x": 0, "y": 0, "w": 9, "h": 2 },
+          { "label": "manage", "x": 9, "y": 0, "w": 3, "h": 2, "accent": true },
+          { "label": "pool A standings", "x": 0, "y": 2, "w": 4, "h": 6 },
+          { "label": "pool B standings", "x": 4, "y": 2, "w": 4, "h": 6 },
+          { "label": "pool C standings", "x": 8, "y": 2, "w": 4, "h": 6 },
+          { "label": "courts · teams", "x": 0, "y": 8, "w": 12, "h": 4 }
+        ]
+      }
+    }
+  ],
+  "reroll": true,
+  "steer": true,
+  "buildPath": { "value": "code", "toggle": false }
+}

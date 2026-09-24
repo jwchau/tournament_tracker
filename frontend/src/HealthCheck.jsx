@@ -12,5 +12,9 @@ export default function HealthCheck() {
       .catch(() => setStatus('error'))
   }, [])
 
-  return <p>Backend status: {status}</p>
+  return (
+    <p className="health" data-status={status} title={`Backend status: ${status}`}>
+      <span className="health-label">Backend status: {status}</span>
+    </p>
+  )
 }

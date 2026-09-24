@@ -10,7 +10,8 @@ function signed(value) {
 
 // Without `refreshKey` the standings poll on their own. With one, they only
 // reload when it changes, e.g. when the pool's matches do.
-export default function PoolStandings({ poolId, refreshKey }) {
+// `advancing` is how many places go through to the playoffs; those rows are marked.
+export default function PoolStandings({ poolId, refreshKey, advancing = 0 }) {
   // null until the first load; later reloads keep the current table on screen.
   const [rows, setRows] = useState(null)
 
@@ -21,11 +22,14 @@ export default function PoolStandings({ poolId, refreshKey }) {
     { auto: refreshKey === undefined },
   )
 
+  const refreshButton = (
+    <button type="button" className="standings-refresh" onClick={refresh} disabled={!canRefresh}>
+      Refresh standings
+    </button>
+  )
+
   return (
     <>
-      <button type="button" onClick={refresh} disabled={!canRefresh}>
-        Refresh standings
-      </button>
       {rows === null ? (
         <Loading label="Loading standings" rows={4} />
       ) : (
@@ -44,7 +48,7 @@ export default function PoolStandings({ poolId, refreshKey }) {
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.team_id}>
+              <tr key={row.team_id} className={row.rank <= advancing ? 'advancing' : undefined}>
                 <td>{row.rank}</td>
                 <td>{row.name}</td>
                 <td>{row.played}</td>
@@ -58,6 +62,12 @@ export default function PoolStandings({ poolId, refreshKey }) {
           </tbody>
         </table>
       )}
+      <div className="standings-foot">
+        {rows !== null && advancing > 0 && (
+          <p className="advance-note">Top {advancing} advance to the playoffs</p>
+        )}
+        {refreshButton}
+      </div>
     </>
   )
 }

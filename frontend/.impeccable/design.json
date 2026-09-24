@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "name": "Kiln",
+  "source": "design.md",
+  "section": "As shipped in Tournament Tracker",
+  "derivedFrom": [
+    "frontend/src/index.css",
+    "frontend/src/App.jsx",
+    "frontend/src/NavBar.jsx",
+    "frontend/src/HealthCheck.jsx",
+    "frontend/src/TournamentPage.jsx",
+    "frontend/src/PoolsPanel.jsx",
+    "frontend/src/PoolStandings.jsx",
+    "frontend/src/PlayoffsPanel.jsx",
+    "frontend/src/BracketDiagram.jsx",
+    "frontend/index.html"
+  ],
+  "scope": ["app shell", "tournament page /tournaments/:id"],
+  "themes": {
+    "default": "dark",
+    "light": "prefers-color-scheme: light"
+  },
+  "tokens": {
+    "color": {
+      "--ground": { "dark": "linear-gradient(180deg, #1c1c1c 0%, #161616 100%)", "light": "linear-gradient(180deg, #ffffff 0%, #f6f4f1 100%)" },
+      "--ink": { "dark": "linear-gradient(180deg, #151515 0%, #0e0e0e 100%)", "light": "linear-gradient(180deg, #151515 0%, #0e0e0e 100%)" },
+      "--panel": { "dark": "linear-gradient(180deg, #262626 0%, #1f1f1f 100%)", "light": "linear-gradient(180deg, #ffffff 0%, #f6f4f1 100%)" },
+      "--surface": { "dark": "#1a1a1a", "light": "#ffffff" },
+      "--surface-2": { "dark": "#232323", "light": "#f6f4f1" },
+      "--surface-3": { "dark": "#2b2b2b", "light": "#e0e0e0" },
+      "--text": { "dark": "#eeece9", "light": "#111111" },
+      "--muted": { "dark": "#a3a3a3", "light": "#333333" },
+      "--subtle": { "dark": "#999999", "light": "#333333" },
+      "--accent-text": { "dark": "#ea9557", "light": "#9e5019" },
+      "--border": { "dark": "#4d4d4d", "light": "#e0e0e0" },
+      "--hairline": { "dark": "rgba(255, 255, 255, 0.1)", "light": "rgba(0, 0, 0, 0.1)" },
+      "--field-border": { "dark": "#4d4d4d", "light": "#4d4d4d" },
+      "--ghost": { "dark": "rgba(255, 255, 255, 0.1)", "light": "rgba(0, 0, 0, 0.1)" },
+      "--ghost-hover": { "dark": "rgba(255, 255, 255, 0.15)", "light": "rgba(0, 0, 0, 0.15)" },
+      "--ghost-active": { "dark": "rgba(255, 255, 255, 0.2)", "light": "rgba(0, 0, 0, 0.2)" },
+      "--amber": { "dark": "#dfae4e", "light": "#dfae4e" },
+      "--amber-tint": { "dark": "rgba(223, 174, 78, 0.1)", "light": "rgba(223, 174, 78, 0.2)" },
+      "--amber-text": { "dark": "#dfae4e", "light": "#9e5019", "role": "advancing places and winning scores as text" },
+      "--ember": { "dark": "linear-gradient(135deg, #ee9148 0%, #d8742c 100%)", "light": "same", "role": "primary action only" },
+      "--ember-hover": { "dark": "linear-gradient(135deg, #f29a52 0%, #e0803a 100%)", "light": "same" },
+      "--ember-active": { "dark": "linear-gradient(135deg, #d57a33 0%, #c66a25 100%)", "light": "same" },
+      "--on-ember": { "dark": "#231306", "light": "#231306" },
+      "--ember-glow": { "dark": "radial-gradient(circle at 80% 20%, rgba(230, 132, 53, 0.14) 0%, rgba(230, 132, 53, 0) 60%)", "light": "same", "role": "board-head band only" },
+      "--band-text": { "dark": "#eeece9", "light": "#eeece9" },
+      "--band-muted": { "dark": "#a3a3a3", "light": "#a3a3a3" },
+      "ember-solid": { "value": "#e68435", "role": "selection, caret, accent-color, focus ring hue" }
+    },
+    "effect": {
+      "--focus": "0 0 0 3px rgba(230, 132, 53, 0.4)",
+      "--elevation-3": { "dark": "0 0 0 1px rgba(255, 255, 255, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.05)", "light": "0 0 0 1px rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.05)" }
+    },
+    "font": {
+      "--display": "'Unbounded', system-ui, -apple-system, 'Segoe UI', sans-serif",
+      "--ui": "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
+      "--nav": "'DM Sans', 'Inter', system-ui, sans-serif",
+      "--emphasis": "'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif"
+    },
+    "space": {
+      "--gutter": { "base": "16px", "768": "24px", "1024": "40px" },
+      "--section-gap": { "base": "32px", "768": "48px", "1024": "56px" },
+      "maxWidth": "1200px"
+    },
+    "radius": { "field": "0px", "focus": "4px", "tile": "8px", "button": "12px", "iconButton": "14px", "card": "16px" },
+    "motion": { "--ease": "cubic-bezier(0.22, 1, 0.36, 1)", "state": "200ms ease-in-out", "enter": "300ms var(--ease)", "reducedMotion": "all animation and transition off" }
+  },
+  "type": {
+    "tournament-name": { "selector": "h2.board-title", "family": "--display", "weight": 700, "size": "32px", "lineHeight": "36px", "from768": { "size": "48px", "lineHeight": "48px" }, "tracking": "-0.02em" },
+    "section-head": { "selector": "h3", "family": "--display", "weight": 700, "size": "24px", "lineHeight": "28px", "from768": { "size": "28px", "lineHeight": "32px" }, "tracking": "-0.01em" },
+    "card-head": { "selector": ".pool-card-head h4, .results-list strong, .manage-panel-head h3, .modal h2", "family": "--display", "weight": 700, "size": "22px", "lineHeight": "26.4px" },
+    "brand": { "selector": ".brand", "family": "--display", "weight": 700, "size": "16px" },
+    "body": { "selector": ":root", "family": "--ui", "weight": 400, "size": "16.8px", "lineHeight": "25.2px" },
+    "ui-heading": { "selector": "h4", "family": "--ui", "weight": 600, "size": "16.8px", "lineHeight": "25.2px" },
+    "table": { "family": "--ui", "weight": 400, "size": "16px", "lineHeight": "24px", "numeric": "tabular-nums" },
+    "table-head": { "family": "--ui", "weight": 600, "size": "14px", "lineHeight": "20px" },
+    "label": { "family": "--ui", "weight": 600, "size": "14.7px", "lineHeight": "21px" },
+    "note": { "family": "--ui", "weight": 400, "size": "14px", "lineHeight": "20px" },
+    "button-nav": { "selector": "button, .nav-bar, .board-meta, .disclosure > summary, .manage-toggle", "family": "--nav", "weight": 500, "size": "16px", "lineHeight": "24px" },
+    "primary-action": { "selector": ".btn-primary, button[type='submit']", "family": "--emphasis", "weight": 700, "size": "16px", "lineHeight": "24px" }
+  },
+  "components": {
+    "app-bar": { "selector": ".app-bar", "fill": "--ink", "sticky": true, "zIndex": 6, "minHeight": "64px", "phone": "one row below 640px, brand word visually hidden, Home link dropped" },
+    "board-head": { "selector": ".board-head", "fill": "--ember-glow over --ink", "text": "--band-text", "bleed": "full, rounded 0 0 16px 16px from 1200px" },
+    "stage-chip": { "selector": ".stage-chip", "radius": "12px", "fill": "rgba(255, 255, 255, 0.1)", "font": "label", "dot": "8px #ea9557" },
+    "pool-card": { "selector": ".pool-grid > .pool-card", "grid": "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", "gap": "16px", "fill": "--panel", "radius": "16px", "shadow": "--elevation-3", "padding": "20px", "usedFor": ["pools", "playoff bracket tiers"] },
+    "standings": { "selector": "table[aria-label='Standings']", "advancing": { "row": "background --amber-tint", "rank": "--amber-text, weight 700", "sideStripe": false }, "key": ".advance-note" },
+    "results-card": { "selector": ".results-list > li", "treatment": "same as pool-card, gap 6px", "championLabel": "amber, Inter 600 14/20", "championName": "card-head" },
+    "manage-drawer": { "selector": "details.manage", "panel": "fixed right, min(480px, 100%), --surface", "scrim": "rgba(0, 0, 0, 0.5)", "enter": "drawer-in 300ms --ease", "sectionGap": "32px" },
+    "bracket-diagram": { "selector": ".bracket-svg", "nameSize": "16px", "metaSize": "14px", "metaColor": "--muted", "winningScore": "--amber-text", "matchWidth": 176, "roundGap": 60, "box": "--surface-3 with --hairline stroke", "connector": "--border 1.5px" },
+    "button": { "fill": "--ghost", "radius": "12px", "minHeight": "48px", "padding": "12px 20px", "disabledOpacity": 0.5 },
+    "field": { "radius": "0px", "border": "1px --field-border", "minHeight": "48px", "focus": "--accent-text edge plus --focus" }
+  },
+  "rules": [
+    { "id": "amber-means-advancing", "rule": "Amber (--amber, --amber-tint, --amber-text) only marks advancing places and winning results; never decoration, status, or emphasis." },
+    { "id": "ember-one-primary", "rule": "The ember gradient fills only the one primary action per view (.btn-primary, submit); the brand tile is the product mark. Everything else is ghost." },
+    { "id": "ember-glow-band-only", "rule": "--ember-glow appears only on the board-head band." },
+    { "id": "ink-bands", "rule": "--ink fills the app bar and board head in both themes; text on it uses --band-text and --band-muted." },
+    { "id": "standings-are-the-page", "rule": "Organizer tools live in the Manage drawer or disclosures, never at equal weight with the board." },
+    { "id": "arms-length-targets", "rule": "Interactive elements are at least 48px tall; exceptions are the 32px bracket match actions and the 40px standings refresh." }
+  ],
+  "notOverhauled": [
+    "CourtsPage / CourtPage (court view)",
+    "BracketPage (champion line in BracketDiagram.jsx still renders a trophy emoji; to be replaced, not a system pattern)",
+    "PoolPage / PoolSchedule",
+    "TeamPage, MainPage, AccountPage, LoginPage, TournamentForm, ScoreEntryForm, SeriesForm, CorrectionForm"
+  ],
+  "notCanonized": [
+    { "item": "trophy emoji in BracketDiagram.jsx champion line", "reason": "glyph icon; craft-floor defect awaiting replacement" },
+    { "item": ".result-label uses --amber with a hard-coded #9e5019 light override instead of --amber-text", "reason": "token drift; same values, not a separate rule" },
+    { "item": "hard-coded band colors (#ea9557 chip dot and Courts link, #eeece9 manage toggle, #232323 notification)", "reason": "literal copies of tokens on theme-fixed surfaces; drift, not new tokens" }
+  ]
+}
