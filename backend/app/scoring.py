@@ -6,6 +6,7 @@ from sqlmodel import Session, delete, select, update
 
 from app.dispatch import dispatch
 from app.models import CorrectionLog, Game, Match
+from app.results import sync_playoff_stage
 
 
 @dataclass
@@ -76,6 +77,8 @@ def submit_score(
     if complete and _forces_bracket_reset(match, winner_id):
         _create_bracket_reset(session, match)
     if match.playoff_bracket_id is not None:
+        if complete:
+            sync_playoff_stage(session, match.tournament_id)
         dispatch(session, match.tournament_id)
 
     session.commit()
@@ -145,6 +148,7 @@ def correct_score(
         _create_bracket_reset(session, match)
 
     if match.playoff_bracket_id is not None:
+        sync_playoff_stage(session, match.tournament_id)
         dispatch(session, match.tournament_id)
 
     log.reset_match_ids = [reset.id for reset in reset_matches]

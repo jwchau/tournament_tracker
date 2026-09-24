@@ -132,11 +132,16 @@ export function getTeam(teamId) {
   return getCachedJson(`/teams/${teamId}`)
 }
 
-export function updateTeam(teamId, { name, poolId }) {
+export function updateTeam(teamId, { name, seed, poolId }) {
   const body = {}
   if (name !== undefined) body.name = name
+  if (seed !== undefined) body.seed = seed
   if (poolId !== undefined) body.pool_id = poolId
   return patchJson(`/teams/${teamId}`, body)
+}
+
+export function deleteTeam(teamId) {
+  return deleteRequest(`/teams/${teamId}`)
 }
 
 export function createPlayer(teamId, { name }) {
@@ -257,6 +262,11 @@ export function getPlayoffReadiness(tournamentId) {
 
 export function listPlayoffBrackets(tournamentId) {
   return getCachedJson(`/tournaments/${tournamentId}/playoff-brackets`)
+}
+
+// Each tier's final placings; the backend refuses (400) until the tournament is complete.
+export function getTournamentResults(tournamentId) {
+  return getCachedJson(`/tournaments/${tournamentId}/results`)
 }
 
 export function getPlayoffBracketMatches(bracketId) {

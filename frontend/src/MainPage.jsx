@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { listTournaments } from './api'
+import { stageLabel } from './stage'
 import TournamentForm from './TournamentForm'
 
 export default function MainPage() {
@@ -30,6 +31,7 @@ export default function MainPage() {
               <Link to={`/tournaments/${tournament.id}`}>{tournament.name}</Link>
               {' — '}
               {tournament.team_count} teams
+              {tournament.stage && ` · ${stageLabel(tournament.stage)}`}
             </li>
           ))}
         </ul>
