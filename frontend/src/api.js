@@ -263,6 +263,15 @@ export function getPlayoffBracketMatches(bracketId) {
   return getJson(`/playoff-brackets/${bracketId}/matches`)
 }
 
+// The bracket's courts and who's in line for them.
+export function getBracketDispatch(bracketId) {
+  return getJson(`/playoff-brackets/${bracketId}/dispatch`)
+}
+
+export function holdMatch(matchId, { onHold, version }) {
+  return patchJson(`/matches/${matchId}/hold`, { on_hold: onHold, version })
+}
+
 export function scheduleMatch(matchId, { court, scheduledTime }) {
   return patchJson(`/matches/${matchId}/schedule`, {
     court,

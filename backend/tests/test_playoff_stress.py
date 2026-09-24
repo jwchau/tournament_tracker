@@ -165,38 +165,62 @@ def _unfinished(matches):
 
 
 def assert_dispatch_consistent(client, tournament_id):
-    """Each tier's unfinished matches sit on distinct courts of its own, and
-    none waits in the queue while one of its tier's courts is free."""
-    tier_courts = []
+    """No court has two unfinished matches; a tier that owns courts only plays
+    on them (an overflow tier, owning none, on any tier's); held matches are
+    off court and out of line; and nothing waits while a court it could use
+    is free (for an overflow tier, any court at all)."""
+    owned_courts, on_court = [], []
     for bracket in client.get(f"/tournaments/{tournament_id}/playoff-brackets").json():
         matches = _tier_matches(client, bracket["id"])
         status = client.get(f"/playoff-brackets/{bracket['id']}/dispatch").json()
         courts = [entry["court"] for entry in status["courts"]]
-        on_court = [m["court"] for m in _unfinished(matches) if m["court"] is not None]
-        waiting = [m["id"] for m in _unfinished(matches) if m["court"] is None]
-        assert len(on_court) == len(set(on_court)), f"tier {bracket['tier']} double-booked"
-        assert set(on_court) <= set(courts), f"tier {bracket['tier']} off its courts"
-        assert sorted(status["queue"]) == sorted(waiting)
+        unfinished = _unfinished(matches)
+        placed = [m["court"] for m in unfinished if m["court"] is not None]
+        waiting = [m["id"] for m in unfinished if m["court"] is None and not m["on_hold"]]
+        held = [m for m in matches if m["on_hold"]]
+        assert set(placed) <= set(courts), f"tier {bracket['tier']} off its courts"
+        assert set(waiting) <= set(status["queue"])
+        assert all(m["court"] is None and m["id"] not in status["queue"] for m in held)
         assert not status["queue"] or None not in [e["match_id"] for e in status["courts"]]
         assert all(m["court"] is None for m in matches if m["status"] == "pending")
-        tier_courts.append(set(courts))
-    assert sum(len(courts) for courts in tier_courts) == len(set().union(*tier_courts))
+        on_court += placed
+        if not status["overflow"]:
+            owned_courts.append(set(courts))
+    assert len(on_court) == len(set(on_court)), "a court is double-booked"
+    assert sum(len(courts) for courts in owned_courts) == len(set().union(*owned_courts))
 
 
 def _play_out(client, bracket_id, rng):
     """Score matches at random until nothing is left to play, preferring ones on a court.
 
-    A tier with no courts of its own (more tiers than courts) is played from its queue.
+    Now and then an unplayed match is put on hold, and held ones are
+    released at random (always, once nothing else is left). A tier whose
+    courts are busy (or taken by an overflow tier) is played from its queue.
     """
     tournament_id = client.get(f"/playoff-brackets/{bracket_id}").json()["tournament_id"]
-    for _ in range(500):
-        playable = _unfinished(_tier_matches(client, bracket_id))
-        if not playable:
+    for _ in range(1000):
+        unfinished = _unfinished(_tier_matches(client, bracket_id))
+        if not unfinished:
             return
-        on_court = [m for m in playable if m["court"] is not None]
-        assert _play_step(client, rng.choice(on_court or playable), rng).status_code in (200, 201)
+        held = [m for m in unfinished if m["on_hold"]]
+        playable = [m for m in unfinished if not m["on_hold"]]
+        unplayed = [m for m in playable if m["team1_score"] is None]
+        if held and (not playable or rng.random() < 0.3):
+            response = _set_hold(client, rng.choice(held), False)
+        elif unplayed and rng.random() < 0.1:
+            response = _set_hold(client, rng.choice(unplayed), True)
+        else:
+            on_court = [m for m in playable if m["court"] is not None]
+            response = _play_step(client, rng.choice(on_court or playable), rng)
+        assert response.status_code in (200, 201), response.json()
         assert_dispatch_consistent(client, tournament_id)
     raise AssertionError("tier never finished")
+
+
+def _set_hold(client, match, on_hold):
+    return client.patch(
+        f"/matches/{match['id']}/hold", json={"on_hold": on_hold, "version": match["version"]}
+    )
 
 
 def _losses(matches) -> dict[int, int]:
