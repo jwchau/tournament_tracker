@@ -83,13 +83,24 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
     const resettable = brackets.every((bracket) => !bracket.has_scores)
     return (
       <>
-        {brackets.map((bracket) => (
-          <section key={bracket.id}>
-            <h4>Bracket {bracket.tier}</h4>
-            <Link to={`/brackets/${bracket.id}`}>Open Bracket {bracket.tier}</Link>
-            <BracketDiagram playoffBracketId={bracket.id} teams={teams} bestOf={bestOf} readOnly />
-          </section>
-        ))}
+        <ul className="pool-grid">
+          {brackets.map((bracket) => (
+            <li key={bracket.id} className="pool-card">
+              <div className="pool-card-head">
+                <h4>Bracket {bracket.tier}</h4>
+                <Link to={`/brackets/${bracket.id}`}>Open Bracket {bracket.tier}</Link>
+              </div>
+              <div className="bracket-scroll">
+                <BracketDiagram
+                  playoffBracketId={bracket.id}
+                  teams={teams}
+                  bestOf={bestOf}
+                  readOnly
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
         {user && resettable && (
           <button type="button" onClick={() => setConfirmingReset(true)}>
             Reset brackets
@@ -108,29 +119,44 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
     )
   }
 
-  if (!user) return hasPools && blocker ? <p>{blocker}</p> : null
+  if (!user) {
+    return (
+      <p className="setup-note">
+        {hasPools && blocker ? blocker : 'The playoffs haven’t started yet.'}
+      </p>
+    )
+  }
 
   return (
     <>
-      {hasPools && blocker && <p>{blocker}</p>}
-      <label htmlFor="playoff-format">Playoff format</label>
-      <select
-        id="playoff-format"
-        value={format}
-        onChange={(event) => setFormat(event.target.value)}
-      >
-        <option value="single">Single elimination</option>
-        <option value="double">Double elimination</option>
-      </select>
-      {hasPools ? (
-        <button type="button" disabled={blocker !== null || advancing} onClick={handleAdvance}>
-          {advancing ? 'Advancing…' : 'Advance to playoffs'}
-        </button>
-      ) : (
-        <button type="button" onClick={handleGenerate}>
-          Generate bracket
-        </button>
-      )}
+      {hasPools && blocker && <p className="setup-note">{blocker}</p>}
+      <div className="playoff-controls">
+        <span className="field">
+          <label htmlFor="playoff-format">Playoff format</label>
+          <select
+            id="playoff-format"
+            value={format}
+            onChange={(event) => setFormat(event.target.value)}
+          >
+            <option value="single">Single elimination</option>
+            <option value="double">Double elimination</option>
+          </select>
+        </span>
+        {hasPools ? (
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={blocker !== null || advancing}
+            onClick={handleAdvance}
+          >
+            {advancing ? 'Advancing…' : 'Advance to playoffs'}
+          </button>
+        ) : (
+          <button type="button" className="btn-primary" onClick={handleGenerate}>
+            Generate bracket
+          </button>
+        )}
+      </div>
     </>
   )
 }

@@ -57,6 +57,17 @@ test('a refresh button fetches the standings now and is disabled for 3 seconds',
   expect(button).toBeEnabled()
 })
 
+test('marks the places that advance and says how many go through', async () => {
+  vi.spyOn(api, 'getPoolStandings').mockResolvedValue(standings)
+
+  render(<PoolStandings poolId={1} advancing={2} />)
+
+  const table = await screen.findByRole('table', { name: /standings/i })
+  const bodyRows = within(table).getAllByRole('row').slice(1)
+  expect(bodyRows.map((row) => row.classList.contains('advancing'))).toEqual([true, true, false])
+  expect(screen.getByText('Top 2 advance to the playoffs')).toBeInTheDocument()
+})
+
 test('shows a loading placeholder, not an empty table, until the standings arrive', () => {
   vi.spyOn(api, 'getPoolStandings').mockReturnValue(new Promise(() => {}))
 

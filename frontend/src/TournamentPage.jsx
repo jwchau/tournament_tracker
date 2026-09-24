@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import ConfirmModal from './ConfirmModal'
@@ -157,6 +157,57 @@ function ConfigForm({ tournamentId, tournament, onSaved }) {
   )
 }
 
+// The organizer's tools, off the board: a side drawer on a laptop, full
+// screen on a phone. A native <details>, so it opens without script and
+// every control stays in the page for assistive tech and tests.
+function ManageDrawer({ startOpen, children }) {
+  const ref = useRef(null)
+  // Only the first render decides; after that the organizer opens and closes it.
+  const [initiallyOpen] = useState(startOpen)
+
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === 'Escape' && ref.current?.open) ref.current.open = false
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  function close() {
+    ref.current.open = false
+  }
+
+  return (
+    <details
+      ref={ref}
+      className="manage"
+      open={initiallyOpen}
+      // A click on the dimmed backdrop lands on the <details> itself.
+      onClick={(event) => event.target === event.currentTarget && close()}
+    >
+      <summary className="manage-toggle">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M3 6h9M16 6h1M3 14h1M8 14h9" strokeLinecap="round" />
+          <circle cx="14" cy="6" r="2" />
+          <circle cx="6" cy="14" r="2" />
+        </svg>
+        Manage
+      </summary>
+      <div className="manage-panel" role="region" aria-label="Manage tournament">
+        <div className="manage-panel-head">
+          <h3>Manage</h3>
+          <button type="button" className="icon-button" onClick={close} aria-label="Close manage">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M5 5l10 10M15 5 5 15" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+        {children}
+      </div>
+    </details>
+  )
+}
+
 // Who won each tier, once every tier has a champion. The rest of the
 // placings live on each bracket's page.
 function Results({ tournamentId }) {
@@ -171,13 +222,18 @@ function Results({ tournamentId }) {
   }, [tournamentId])
 
   return (
-    <section aria-labelledby="results-heading">
+    <section aria-labelledby="results-heading" className="board-section">
       <h3 id="results-heading">Results</h3>
-      <ul>
+      <ul className="results-list">
         {results.map((tier) => (
           <li key={tier.playoff_bracket_id}>
-            <strong>Bracket {tier.tier}</strong> — Champion: {tier.champion.name} · Runner-up:{' '}
-            {tier.runner_up.name} · <Link to={`/brackets/${tier.playoff_bracket_id}`}>Full placings</Link>
+            <h4>Bracket {tier.tier}</h4>
+            <p>
+              <span className="result-label">Champion: </span>
+              <strong>{tier.champion.name}</strong>
+            </p>
+            <p className="section-note">Runner-up: {tier.runner_up.name}</p>
+            <Link to={`/brackets/${tier.playoff_bracket_id}`}>Full placings</Link>
           </li>
         ))}
       </ul>
@@ -190,7 +246,9 @@ export default function TournamentPage() {
   const navigate = useNavigate()
   const [tournament, setTournament] = useState(null)
   const [teams, setTeams] = useState([])
-  const [hasPools, setHasPools] = useState(false)
+  // null until the pools load.
+  const [poolCount, setPoolCount] = useState(null)
+  const hasPools = poolCount > 0
   const [showRosters, setShowRosters] = useState(false)
   const [playersByTeam, setPlayersByTeam] = useState({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -237,46 +295,109 @@ export default function TournamentPage() {
   if (status === 'not-found') return <NotFound thing="Tournament" />
   if (status !== 'ready') return <Loading label="Loading tournament" rows={6} />
 
+  const inPlayoffs = ['playoffs', 'complete'].includes(tournament.stage)
+
+  const standings = (
+    <section className="board-section" aria-labelledby="standings-heading">
+      <div className="section-head">
+        <h3 id="standings-heading">Standings</h3>
+        <p className="section-note">Updates as scores come in</p>
+      </div>
+      <PoolsPanel
+        tournamentId={tournamentId}
+        teams={teams}
+        onTeamsChanged={setTeams}
+        onPoolsChanged={(pools) => setPoolCount(pools.length)}
+        renderPool={(pool) => (
+          <PoolStandings poolId={pool.id} advancing={tournament.advance_per_pool} />
+        )}
+      />
+    </section>
+  )
+
+  const playoffs = (
+    <section className="board-section" aria-labelledby="playoffs-heading">
+      <h3 id="playoffs-heading">Playoffs</h3>
+      <PlayoffsPanel
+        tournamentId={tournamentId}
+        teams={teams}
+        hasPools={hasPools}
+        bestOf={tournament.playoff_best_of ?? 1}
+        onChanged={() => getTournament(tournamentId).then(setTournament)}
+      />
+    </section>
+  )
+
   return (
     <>
-      <h2>{tournament.name}</h2>
-      {tournament.stage && <p>Stage: {stageLabel(tournament.stage)}</p>}
-      <p>
-        <Link to={`/tournaments/${tournamentId}/courts`}>Courts (scorekeeper view)</Link>
-      </p>
+      <header className="board-head">
+        <div>
+          <h2 className="board-title">{tournament.name}</h2>
+          <div className="board-meta">
+            {tournament.stage && (
+              <span className="stage-chip">Stage: {stageLabel(tournament.stage)}</span>
+            )}
+            <Link to={`/tournaments/${tournamentId}/courts`}>Courts (scorekeeper view)</Link>
+          </div>
+        </div>
+        {user && (
+          <ManageDrawer startOpen={!tournament.settings_confirmed}>
+            <section aria-labelledby="settings-heading">
+              <h4 id="settings-heading">Settings</h4>
+              <ConfigForm tournamentId={tournamentId} tournament={tournament} onSaved={setTournament} />
+            </section>
+            {tournament.settings_confirmed && (
+              <section aria-labelledby="add-team-heading">
+                <h4 id="add-team-heading">Add a team</h4>
+                <TeamForm
+                  tournamentId={tournamentId}
+                  onCreated={(team) =>
+                    setTeams((current) => [...current, { ...team, player_count: 0 }])
+                  }
+                />
+              </section>
+            )}
+            <section className="danger-zone">
+              <button type="button" onClick={() => setShowDeleteConfirm(true)}>
+                Delete tournament
+              </button>
+            </section>
+          </ManageDrawer>
+        )}
+      </header>
 
       {tournament.stage === 'complete' && <Results tournamentId={tournamentId} />}
 
-      {user && (
-        <section>
-          <h3>Settings</h3>
-          <ConfigForm tournamentId={tournamentId} tournament={tournament} onSaved={setTournament} />
-        </section>
-      )}
-
       {!tournament.settings_confirmed ? (
-        <p>
+        <p className="setup-note">
           {user
             ? 'Confirm the tournament settings to add teams, pools, and brackets.'
             : 'This tournament is still being set up.'}
         </p>
       ) : (
         <>
-          <section>
-            <h3>Teams</h3>
-            <label htmlFor="show-rosters">
-              <input
-                id="show-rosters"
-                type="checkbox"
-                checked={showRosters}
-                onChange={handleToggleRosters}
-              />
-              Show players
-            </label>
-            <ul>
+          {inPlayoffs ? playoffs : standings}
+          {/* A tournament that went straight to a bracket has no standings to show. */}
+          {inPlayoffs ? poolCount !== 0 && standings : playoffs}
+
+          <section className="board-section" aria-labelledby="teams-heading">
+            <div className="section-head">
+              <h3 id="teams-heading">Teams</h3>
+              <label htmlFor="show-rosters">
+                <input
+                  id="show-rosters"
+                  type="checkbox"
+                  checked={showRosters}
+                  onChange={handleToggleRosters}
+                />
+                Show players
+              </label>
+            </div>
+            <ul className="team-list">
               {teams.map((team) => (
                 <li key={team.id}>
-                  <Link to={`/teams/${team.id}`}>{team.name}</Link> ({team.player_count} players)
+                  <Link to={`/teams/${team.id}`}>{team.name}</Link> ({team.player_count}{' '}
+                  {team.player_count === 1 ? 'player' : 'players'})
                   {showRosters && (
                     <ul>
                       {(playersByTeam[team.id] ?? []).map((player) => (
@@ -287,46 +408,8 @@ export default function TournamentPage() {
                 </li>
               ))}
             </ul>
-            {user && (
-              <TeamForm
-                tournamentId={tournamentId}
-                onCreated={(team) =>
-                  setTeams((current) => [...current, { ...team, player_count: 0 }])
-                }
-              />
-            )}
-          </section>
-
-          <section>
-            <h3>Pools</h3>
-            <PoolsPanel
-              tournamentId={tournamentId}
-              teams={teams}
-              onTeamsChanged={setTeams}
-              onPoolsChanged={(pools) => setHasPools(pools.length > 0)}
-              renderPool={(pool) => <PoolStandings poolId={pool.id} />}
-            />
-          </section>
-
-          <section>
-            <h3>Playoffs</h3>
-            <PlayoffsPanel
-              tournamentId={tournamentId}
-              teams={teams}
-              hasPools={hasPools}
-              bestOf={tournament.playoff_best_of ?? 1}
-              onChanged={() => getTournament(tournamentId).then(setTournament)}
-            />
           </section>
         </>
-      )}
-
-      {user && (
-        <section>
-          <button type="button" onClick={() => setShowDeleteConfirm(true)}>
-            Delete tournament
-          </button>
-        </section>
       )}
 
       <ConfirmModal

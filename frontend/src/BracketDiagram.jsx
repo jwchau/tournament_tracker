@@ -10,12 +10,16 @@ import ScoreEntryForm from './ScoreEntryForm'
 import SeriesForm from './SeriesForm'
 import { withTimeout } from './withTimeout'
 
-const MATCH_WIDTH = 140
-const LINE_HEIGHT = 17
-const MATCH_HEIGHT = LINE_HEIGHT * 3 + 5
+// Sized to read at arm's length on a phone in daylight: 16px names, 14px
+// court and time.
+const MATCH_WIDTH = 176
+const LINE_HEIGHT = 22
+const MATCH_HEIGHT = LINE_HEIGHT * 3 + 8
+// Keeps labels off the box's rounded left edge.
+const TEXT_INSET = 8
 const ROUND_GAP = 60
 // Leaves room under each box for its "Correct" button.
-const ROW_UNIT = 90
+const ROW_UNIT = 120
 const ACTIONS_GAP = 4
 const POLL_INTERVAL_MS = 4000
 const REQUEST_TIMEOUT_MS = 5000
@@ -24,7 +28,7 @@ const COOLDOWN_MS = 30000
 const MAX_LABEL_LENGTH = 18
 // Names are cut shorter when a score sits at the right edge of the box.
 const MAX_SCORED_LABEL_LENGTH = 15
-const SCORE_INSET = 6
+const SCORE_INSET = 8
 
 function teamName(teamsById, teamId) {
   return teamsById[teamId]?.name ?? `Team ${teamId}`
@@ -80,9 +84,11 @@ function slotScore(match, index, bestOf) {
   return match.status === 'complete' && bothTeams ? score : null
 }
 
+// The first round starts at the top; each later match sits level with the
+// middle of the two it follows.
 function matchY(round, position) {
   const spacing = ROW_UNIT * 2 ** (round - 1)
-  return spacing * (position - 1) + spacing / 2
+  return spacing * (position - 1) + (spacing - ROW_UNIT) / 2
 }
 
 const COLUMN_WIDTH = MATCH_WIDTH + ROUND_GAP
@@ -314,19 +320,20 @@ export default function BracketDiagram({
         </p>
       )}
       {overflow && (
-        <p>
+        <p className="pool-courts">
           This bracket has no courts of its own: its matches take any court that frees up, in
           turn with the other brackets.
         </p>
       )}
       {champion && (
-        <section aria-label="Champion">
-          <h4>Champion</h4>
-          <p>🏆 {champion}</p>
+        <section aria-label="Champion" className="champion">
+          <h4 className="result-label">Champion</h4>
+          <p className="champion-name">{champion}</p>
         </section>
       )}
       <div className="bracket-canvas" style={{ width, height }}>
       <svg
+        className="bracket-svg"
         role="img"
         aria-label="Bracket"
         width={width}
@@ -352,7 +359,7 @@ export default function BracketDiagram({
                 y1={from.y + MATCH_HEIGHT / 2}
                 x2={to.x}
                 y2={to.y + MATCH_HEIGHT / 2}
-                stroke="black"
+                className="bracket-line"
               />
             )
           })}
@@ -364,7 +371,7 @@ export default function BracketDiagram({
             data-y={positions[match.id].y}
             transform={`translate(${positions[match.id].x}, ${positions[match.id].y})`}
           >
-            <rect width={MATCH_WIDTH} height={MATCH_HEIGHT} fill="white" stroke="black" />
+            <rect className="bracket-box" width={MATCH_WIDTH} height={MATCH_HEIGHT} rx={12} />
             {[match.team1_id, match.team2_id].map((teamId, index) => {
               const label = slotLabel(teamsById, teamId, match.status)
               const score = slotScore(match, index, bestOf)
@@ -378,19 +385,24 @@ export default function BracketDiagram({
                   data-testid={`team${index + 1}-${matchTestId(match)}`}
                   fontWeight={won ? 'bold' : undefined}
                 >
-                  <text y={y}>
+                  <text x={TEXT_INSET} y={y}>
                     {shown !== label && <title>{label}</title>}
                     {shown}
                   </text>
                   {score != null && (
-                    <text x={MATCH_WIDTH - SCORE_INSET} y={y} textAnchor="end">
+                    <text
+                      className={won ? 'bracket-score-won' : undefined}
+                      x={MATCH_WIDTH - SCORE_INSET}
+                      y={y}
+                      textAnchor="end"
+                    >
                       {score}
                     </text>
                   )}
                 </g>
               )
             })}
-            <text y={LINE_HEIGHT * 3} fontSize="11">
+            <text className="bracket-meta" x={TEXT_INSET} y={LINE_HEIGHT * 3}>
               {scheduleLabel(match, queued[match.id], overflow)}
             </text>
           </g>

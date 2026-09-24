@@ -271,7 +271,8 @@ test('shows each pool with its standings, leaving the schedule to the pool page'
 
   renderAt(1)
 
-  expect(await screen.findByText('Pool A — courts 1, 2')).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Pool A' })).toBeInTheDocument()
+  expect(screen.getByText('Courts 1, 2')).toBeInTheDocument()
   expect(await screen.findByRole('table', { name: /standings/i })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Open Pool A' })).toHaveAttribute('href', '/pools/7')
   expect(screen.queryByRole('button', { name: /generate schedule/i })).not.toBeInTheDocument()
@@ -298,6 +299,58 @@ test('has a playoffs section showing the tier brackets once the tournament has a
 
   expect(await screen.findByRole('heading', { name: 'Playoffs' })).toBeInTheDocument()
   expect(await screen.findByRole('heading', { name: 'Bracket 1' })).toBeInTheDocument()
+})
+
+test('a tournament that went straight to a bracket shows no standings section', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    settings_confirmed: true,
+    stage: 'playoffs',
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  vi.spyOn(api, 'listPools').mockResolvedValue([])
+  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([
+    { id: 30, tournament_id: 1, tier: 1, format: 'single' },
+  ])
+  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'advanced' })
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([])
+
+  renderAt(1)
+
+  expect(await screen.findByRole('heading', { name: 'Bracket 1' })).toBeInTheDocument()
+  await waitFor(() => expect(api.listPools).toHaveBeenCalled())
+  expect(screen.queryByRole('heading', { name: 'Standings' })).not.toBeInTheDocument()
+  expect(screen.queryByText(/no pools yet/i)).not.toBeInTheDocument()
+})
+
+test('a team with one player says "1 player"', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    settings_confirmed: true,
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([
+    { id: 10, tournament_id: 1, name: 'Aces', player_count: 1 },
+    { id: 11, tournament_id: 1, name: 'Blockers', player_count: 2 },
+  ])
+  vi.spyOn(api, 'listPools').mockResolvedValue([])
+  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([])
+  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'no pools' })
+
+  renderAt(1)
+
+  const aces = (await screen.findByRole('link', { name: 'Aces' })).closest('li')
+  expect(aces).toHaveTextContent('Aces (1 player)')
+  expect(screen.getByRole('link', { name: 'Blockers' }).closest('li')).toHaveTextContent(
+    'Blockers (2 players)',
+  )
 })
 
 const unconfirmed = {
