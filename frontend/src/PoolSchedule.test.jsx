@@ -99,3 +99,43 @@ test('does not offer to generate a schedule once the pool has one', async () => 
   expect(screen.queryByRole('button', { name: /generate schedule/i })).not.toBeInTheDocument()
   expect(screen.queryByLabelText(/games per pairing/i)).not.toBeInTheDocument()
 })
+
+test('a finished match offers a correction; unfinished ones do not', async () => {
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
+
+  render(<PoolSchedule pool={pool} teams={teams} />)
+
+  expect(
+    await screen.findByRole('button', { name: 'Correct Spikers vs Diggers' }),
+  ).toBeInTheDocument()
+  expect(screen.getAllByRole('button', { name: /^correct /i })).toHaveLength(1)
+})
+
+test('signed out, finished matches cannot be corrected', async () => {
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
+
+  render(<PoolSchedule pool={pool} teams={teams} />, { user: null })
+
+  await screen.findByText('Court 1: Spikers vs Diggers — 21–15')
+  expect(screen.queryByRole('button', { name: /^correct /i })).not.toBeInTheDocument()
+})
+
+test('a correction shows the new score and tells the page the matches changed', async () => {
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
+  vi.spyOn(api, 'previewCorrection').mockResolvedValue({ reset_matches: [] })
+  const corrected = { ...schedule[0], team1_score: 15, team2_score: 21, winner_id: 11, version: 2 }
+  vi.spyOn(api, 'correctScore').mockResolvedValue({ match: corrected, reset_matches: [] })
+  const onMatchesChange = vi.fn()
+
+  render(<PoolSchedule pool={pool} teams={teams} onMatchesChange={onMatchesChange} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Correct Spikers vs Diggers' }))
+  const dialog = screen.getByRole('dialog', { name: 'Correct Spikers vs Diggers' })
+  fireEvent.change(within(dialog).getByLabelText('Spikers score'), { target: { value: '15' } })
+  fireEvent.change(within(dialog).getByLabelText('Diggers score'), { target: { value: '21' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: /review correction/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /apply correction/i }))
+
+  expect(await screen.findByText('Court 1: Spikers vs Diggers — 15–21')).toBeInTheDocument()
+  expect(onMatchesChange).toHaveBeenLastCalledWith(expect.arrayContaining([corrected]))
+})

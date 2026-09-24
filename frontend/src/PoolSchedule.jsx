@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { generatePoolSchedule, getPoolMatches } from './api'
 import { useAuth } from './auth'
+import CorrectionForm from './CorrectionForm'
 import ScoreEntryForm from './ScoreEntryForm'
 import { usePolling } from './usePolling'
 
@@ -95,6 +96,18 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
                       team1Name={nameOf(match.team1_id)}
                       team2Name={nameOf(match.team2_id)}
                       onScored={handleScored}
+                    />
+                  ))}
+              {user &&
+                slotMatches
+                  .filter((match) => match.status === 'complete')
+                  .map((match) => (
+                    <CorrectionForm
+                      key={`${match.id}-${match.version}`}
+                      match={match}
+                      team1Name={nameOf(match.team1_id)}
+                      team2Name={nameOf(match.team2_id)}
+                      onCorrected={({ match: corrected }) => handleScored(corrected)}
                     />
                   ))}
             </li>
