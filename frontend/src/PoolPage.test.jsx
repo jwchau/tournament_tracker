@@ -103,6 +103,26 @@ test('shows the pool with its courts, schedule, standings, and a link back', asy
   expect(listTeams).toHaveBeenCalledWith(3)
 })
 
+test('shows a loading placeholder until the pool arrives', () => {
+  vi.spyOn(api, 'getPool').mockReturnValue(new Promise(() => {}))
+
+  renderAt(7)
+
+  expect(screen.getByRole('status', { name: 'Loading pool' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading')).not.toBeInTheDocument()
+})
+
+test('the standings show a loading placeholder while they wait for the schedule', async () => {
+  vi.spyOn(api, 'getPool').mockResolvedValue({ id: 7, tournament_id: 3, name: 'Pool A', courts: [1] })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+  vi.spyOn(api, 'getPoolMatches').mockReturnValue(new Promise(() => {}))
+
+  renderAt(7)
+
+  expect(await screen.findByRole('heading', { name: 'Pool A' })).toBeInTheDocument()
+  expect(screen.getByRole('status', { name: 'Loading standings' })).toBeInTheDocument()
+})
+
 test('says so when the pool does not exist', async () => {
   vi.spyOn(api, 'getPool').mockRejectedValue({ status: 404 })
 

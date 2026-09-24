@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { addGame, editGame, getMatch, listGames } from './api'
+import { usePending } from './usePending'
 
 // Two score inputs for one game, labelled "Game N <team> score".
 export function GameScoreInputs({
@@ -77,7 +78,8 @@ export default function SeriesForm({
       .catch(() => {})
   }, [match.id, currentMatch.version])
 
-  async function save(write) {
+  // One write at a time; a second tap while one is saving is ignored.
+  const [save, saving] = usePending(async (write) => {
     try {
       await write()
       const updated = await getMatch(currentMatch.id)
@@ -95,7 +97,7 @@ export default function SeriesForm({
       }
       return false
     }
-  }
+  })
 
   async function handleRecord(event) {
     event.preventDefault()
@@ -149,7 +151,9 @@ export default function SeriesForm({
                   scores={fixing}
                   onChange={(scores) => setFixing({ ...fixing, ...scores })}
                 />
-                <button type="submit">Save game {game.number}</button>
+                <button type="submit" disabled={saving}>
+                  {saving ? 'Saving…' : `Save game ${game.number}`}
+                </button>
                 <button type="button" onClick={() => setFixing(null)}>
                   Cancel
                 </button>
@@ -184,7 +188,9 @@ export default function SeriesForm({
             scores={next}
             onChange={setNext}
           />
-          <button type="submit">Record game {nextNumber}</button>
+          <button type="submit" disabled={saving}>
+            {saving ? 'Saving…' : `Record game ${nextNumber}`}
+          </button>
         </form>
       )}
       {conflict && (

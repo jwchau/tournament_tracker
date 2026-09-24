@@ -2,17 +2,23 @@ import { useState } from 'react'
 
 import { createTournament } from './api'
 import { useNotify } from './NotificationContext'
+import { usePending } from './usePending'
 
 export default function TournamentForm({ onCreated }) {
   const [name, setName] = useState('')
   const notify = useNotify()
 
-  async function handleSubmit(event) {
-    event.preventDefault()
+  // A double tap would create the tournament twice.
+  const [create, creating] = usePending(async () => {
     const tournament = await createTournament({ name })
     notify(`Tournament "${tournament.name}" created`)
     setName('')
     onCreated?.(tournament)
+  })
+
+  function handleSubmit(event) {
+    event.preventDefault()
+    create()
   }
 
   return (
@@ -23,7 +29,9 @@ export default function TournamentForm({ onCreated }) {
         value={name}
         onChange={(event) => setName(event.target.value)}
       />
-      <button type="submit">Create</button>
+      <button type="submit" disabled={creating}>
+        {creating ? 'Creating…' : 'Create'}
+      </button>
     </form>
   )
 }

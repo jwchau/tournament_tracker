@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { getPoolStandings } from './api'
+import Loading from './Loading'
 import { usePolling } from './usePolling'
 
 function signed(value) {
@@ -10,7 +11,8 @@ function signed(value) {
 // Without `refreshKey` the standings poll on their own. With one, they only
 // reload when it changes, e.g. when the pool's matches do.
 export default function PoolStandings({ poolId, refreshKey }) {
-  const [rows, setRows] = useState([])
+  // null until the first load; later reloads keep the current table on screen.
+  const [rows, setRows] = useState(null)
 
   const { refresh, canRefresh } = usePolling(
     () => getPoolStandings(poolId),
@@ -24,34 +26,38 @@ export default function PoolStandings({ poolId, refreshKey }) {
       <button type="button" onClick={refresh} disabled={!canRefresh}>
         Refresh standings
       </button>
-      <table aria-label="Standings">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Team</th>
-            <th>P</th>
-            <th>W</th>
-            <th>L</th>
-            <th>Pts</th>
-            <th>Diff</th>
-            <th>PF</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.team_id}>
-              <td>{row.rank}</td>
-              <td>{row.name}</td>
-              <td>{row.played}</td>
-              <td>{row.wins}</td>
-              <td>{row.losses}</td>
-              <td>{row.points}</td>
-              <td>{signed(row.point_diff)}</td>
-              <td>{row.points_for}</td>
+      {rows === null ? (
+        <Loading label="Loading standings" rows={4} />
+      ) : (
+        <table aria-label="Standings">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Team</th>
+              <th>P</th>
+              <th>W</th>
+              <th>L</th>
+              <th>Pts</th>
+              <th>Diff</th>
+              <th>PF</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.team_id}>
+                <td>{row.rank}</td>
+                <td>{row.name}</td>
+                <td>{row.played}</td>
+                <td>{row.wins}</td>
+                <td>{row.losses}</td>
+                <td>{row.points}</td>
+                <td>{signed(row.point_diff)}</td>
+                <td>{row.points_for}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </>
   )
 }

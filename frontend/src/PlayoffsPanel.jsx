@@ -11,8 +11,10 @@ import {
 import { useAuth } from './auth'
 import BracketDiagram from './BracketDiagram'
 import ConfirmModal from './ConfirmModal'
+import Loading from './Loading'
 import { useNotify } from './NotificationContext'
 import { useNotifyFailure } from './useNotifyFailure'
+import { usePending } from './usePending'
 
 // A tournament with pools advances from pool play into tiered brackets; one
 // without pools generates a single bracket of every team. Either happens once,
@@ -38,7 +40,7 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tournamentId])
 
-  async function handleAdvance() {
+  const [handleAdvance, advancing] = usePending(async () => {
     try {
       setBrackets(await advanceToPlayoffs(tournamentId, { format }))
       onChanged?.()
@@ -47,7 +49,7 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
       const body = await error?.json?.().catch(() => null)
       notify(body?.detail ?? 'Failed to advance to playoffs', { type: 'error' })
     }
-  }
+  })
 
   async function handleGenerate() {
     try {
@@ -75,7 +77,7 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
     }
   }
 
-  if (brackets === null) return null
+  if (brackets === null) return <Loading label="Loading playoffs" />
 
   if (brackets.length > 0) {
     const resettable = brackets.every((bracket) => !bracket.has_scores)
@@ -121,8 +123,8 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
         <option value="double">Double elimination</option>
       </select>
       {hasPools ? (
-        <button type="button" disabled={blocker !== null} onClick={handleAdvance}>
-          Advance to playoffs
+        <button type="button" disabled={blocker !== null || advancing} onClick={handleAdvance}>
+          {advancing ? 'Advancing…' : 'Advance to playoffs'}
         </button>
       ) : (
         <button type="button" onClick={handleGenerate}>

@@ -159,6 +159,22 @@ test('signed out, the team and roster are read-only', async () => {
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   expect(screen.queryByRole('button')).not.toBeInTheDocument()
 })
+test('shows a loading placeholder until the team arrives, then the team', async () => {
+  let resolveTeam
+  vi.spyOn(api, 'getTeam').mockReturnValue(new Promise((resolve) => (resolveTeam = resolve)))
+  vi.spyOn(api, 'listPlayers').mockResolvedValue([])
+
+  renderAt(10)
+
+  expect(screen.getByRole('status', { name: 'Loading team' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Roster' })).not.toBeInTheDocument()
+
+  resolveTeam({ id: 10, tournament_id: 1, name: 'Aces', seed: 3 })
+
+  expect(await screen.findByDisplayValue('Aces')).toBeInTheDocument()
+  expect(screen.queryByRole('status', { name: 'Loading team' })).not.toBeInTheDocument()
+})
+
 test('says so when the team does not exist', async () => {
   vi.spyOn(api, 'getTeam').mockRejectedValue({ status: 404 })
   vi.spyOn(api, 'listPlayers').mockRejectedValue({ status: 404 })

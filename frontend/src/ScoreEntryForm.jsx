@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { getMatch, submitScore } from './api'
+import { usePending } from './usePending'
 
 export default function ScoreEntryForm({
   match,
@@ -29,11 +30,15 @@ export default function ScoreEntryForm({
     setSeenVersion((current) => Math.max(current, next.version))
   }
 
-  async function handleSubmit(event) {
+  function handleSubmit(event) {
     event.preventDefault()
     if (team1Score === '' || team2Score === '') {
       return
     }
+    submit()
+  }
+
+  const [submit, submitting] = usePending(async () => {
     try {
       const updated = await submitScore(currentMatch.id, {
         team1Score: Number(team1Score),
@@ -52,7 +57,7 @@ export default function ScoreEntryForm({
         setSubmitError(true)
       }
     }
-  }
+  })
 
   async function handleRefetch() {
     const latest = await getMatch(currentMatch.id)
@@ -90,7 +95,9 @@ export default function ScoreEntryForm({
         />
         Complete match
       </label>
-      <button type="submit">Submit score</button>
+      <button type="submit" disabled={submitting}>
+        {submitting ? 'Submitting…' : 'Submit score'}
+      </button>
       {conflict && (
         <p>
           Version conflict: this match was updated elsewhere.{' '}

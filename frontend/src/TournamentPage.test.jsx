@@ -658,6 +658,16 @@ test('says so when the tournament does not exist', async () => {
   expect(await screen.findByRole('heading', { name: 'Tournament not found' })).toBeInTheDocument()
 })
 
+test('shows a loading placeholder, not an empty page, until the tournament arrives', () => {
+  vi.spyOn(api, 'getTournament').mockReturnValue(new Promise(() => {}))
+  vi.spyOn(api, 'listTeams').mockReturnValue(new Promise(() => {}))
+
+  renderAt(1)
+
+  expect(screen.getByRole('status', { name: 'Loading tournament' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading')).not.toBeInTheDocument()
+})
+
 test('a tournament that fails to load for another reason says so', async () => {
   vi.spyOn(api, 'getTournament').mockRejectedValue(new TypeError('Failed to fetch'))
   vi.spyOn(api, 'listTeams').mockRejectedValue(new TypeError('Failed to fetch'))

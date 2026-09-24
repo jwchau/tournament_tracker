@@ -29,6 +29,28 @@ test('shows a retry affordance when submitting a score hits a 409 conflict', asy
   expect(screen.queryByText(/version conflict/i)).not.toBeInTheDocument()
 })
 
+test('a score being submitted cannot be sent twice', async () => {
+  let finish
+  const submitScore = vi
+    .spyOn(api, 'submitScore')
+    .mockReturnValue(new Promise((resolve) => (finish = resolve)))
+
+  render(<ScoreEntryForm match={match} />)
+
+  fireEvent.change(screen.getByLabelText(/team 1 score/i), { target: { value: '21' } })
+  fireEvent.change(screen.getByLabelText(/team 2 score/i), { target: { value: '15' } })
+  const form = screen.getByRole('button', { name: /submit score/i }).closest('form')
+  fireEvent.submit(form)
+  fireEvent.submit(form)
+
+  expect(submitScore).toHaveBeenCalledTimes(1)
+  expect(screen.getByRole('button', { name: 'Submitting…' })).toBeDisabled()
+
+  finish({ ...match, team1_score: 21, team2_score: 15, version: 4 })
+
+  expect(await screen.findByRole('button', { name: 'Submit score' })).toBeEnabled()
+})
+
 test('shows an error message when submitting a score fails for a non-conflict reason', async () => {
   vi.spyOn(api, 'submitScore').mockRejectedValue({ status: 400 })
 

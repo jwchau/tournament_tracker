@@ -105,6 +105,27 @@ test('a new tournament starts in the draft stage in the list', async () => {
   expect(created).toHaveTextContent('Draft')
 })
 
+test('shows a loading placeholder in place of the list until the tournaments arrive', async () => {
+  let resolveTournaments
+  vi.spyOn(api, 'listTournaments').mockReturnValue(
+    new Promise((resolve) => (resolveTournaments = resolve)),
+  )
+
+  render(
+    <MemoryRouter>
+      <MainPage />
+    </MemoryRouter>,
+  )
+
+  expect(screen.getByRole('status', { name: 'Loading tournaments' })).toBeInTheDocument()
+  expect(screen.queryByRole('list')).not.toBeInTheDocument()
+
+  resolveTournaments([{ id: 1, name: 'Spring Classic', team_count: 3 }])
+
+  expect(await screen.findByRole('link', { name: /spring classic/i })).toBeInTheDocument()
+  expect(screen.queryByRole('status', { name: 'Loading tournaments' })).not.toBeInTheDocument()
+})
+
 test('says so when the tournaments fail to load', async () => {
   vi.spyOn(api, 'listTournaments').mockRejectedValue(new TypeError('Failed to fetch'))
 

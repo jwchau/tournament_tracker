@@ -4,9 +4,9 @@ import { Link, useParams } from 'react-router-dom'
 import { getPlayoffBracket, getTournament, getTournamentResults, listTeams } from './api'
 import { useAuth } from './auth'
 import BracketDiagram from './BracketDiagram'
-import { isNotFound } from './failure'
+import Loading from './Loading'
 import NotFound from './NotFound'
-import { useNotifyFailure } from './useNotifyFailure'
+import { useLoad } from './useLoad'
 
 function ordinal(place) {
   const teen = place % 100 >= 11 && place % 100 <= 13
@@ -64,8 +64,6 @@ export default function BracketPage() {
   const [bracket, setBracket] = useState(null)
   const [tournament, setTournament] = useState(null)
   const [teams, setTeams] = useState([])
-  const [notFound, setNotFound] = useState(false)
-  const notifyFailure = useNotifyFailure()
   const { user } = useAuth()
   const [championId, setChampionId] = useState(null)
   const reportedChampion = useRef(undefined)
@@ -84,23 +82,30 @@ export default function BracketPage() {
     [bracket],
   )
 
-  useEffect(() => {
-    getPlayoffBracket(bracketId)
-      .then((loaded) => {
+  const status = useLoad(
+    async () => {
+      const loaded = await getPlayoffBracket(bracketId)
+      return [
+        loaded,
+        ...(await Promise.all([
+          getTournament(loaded.tournament_id),
+          listTeams(loaded.tournament_id),
+        ])),
+      ]
+    },
+    bracketId,
+    {
+      onData: ([loaded, loadedTournament, loadedTeams]) => {
         setBracket(loaded)
-        return Promise.all([
-          getTournament(loaded.tournament_id).then(setTournament),
-          listTeams(loaded.tournament_id).then(setTeams),
-        ])
-      })
-      .catch((error) =>
-        isNotFound(error) ? setNotFound(true) : notifyFailure(error, "Couldn't load the bracket"),
-      )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bracketId])
+        setTournament(loadedTournament)
+        setTeams(loadedTeams)
+      },
+      failureMessage: "Couldn't load the bracket",
+    },
+  )
 
-  if (notFound) return <NotFound thing="Bracket" />
-  if (!bracket || !tournament) return null
+  if (status === 'not-found') return <NotFound thing="Bracket" />
+  if (status !== 'ready') return <Loading label="Loading bracket" rows={6} />
 
   return (
     <>

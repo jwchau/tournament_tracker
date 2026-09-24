@@ -12,7 +12,7 @@ import {
   updateTournament,
 } from './api'
 import { useAuth } from './auth'
-import { isNotFound } from './failure'
+import Loading from './Loading'
 import NotFound from './NotFound'
 import { useNotify } from './NotificationContext'
 import { useNotifyFailure } from './useNotifyFailure'
@@ -21,6 +21,7 @@ import PoolsPanel from './PoolsPanel'
 import PoolStandings from './PoolStandings'
 import { stageLabel } from './stage'
 import TeamForm from './TeamForm'
+import { useLoad } from './useLoad'
 
 // The settings everything else is built on. A new tournament confirms them
 // once (after reviewing them in a dialog) before teams, pools, and brackets
@@ -193,25 +194,20 @@ export default function TournamentPage() {
   const [showRosters, setShowRosters] = useState(false)
   const [playersByTeam, setPlayersByTeam] = useState({})
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [notFound, setNotFound] = useState(false)
   const notify = useNotify()
-  const notifyFailure = useNotifyFailure()
   const { user } = useAuth()
 
-  useEffect(() => {
-    setNotFound(false)
-    Promise.all([getTournament(tournamentId), listTeams(tournamentId)])
-      .then(([loaded, loadedTeams]) => {
+  const status = useLoad(
+    () => Promise.all([getTournament(tournamentId), listTeams(tournamentId)]),
+    tournamentId,
+    {
+      onData: ([loaded, loadedTeams]) => {
         setTournament(loaded)
         setTeams(loadedTeams)
-      })
-      .catch((error) =>
-        isNotFound(error)
-          ? setNotFound(true)
-          : notifyFailure(error, "Couldn't load the tournament"),
-      )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tournamentId])
+      },
+      failureMessage: "Couldn't load the tournament",
+    },
+  )
 
   async function handleToggleRosters(event) {
     const next = event.target.checked
@@ -238,8 +234,8 @@ export default function TournamentPage() {
     }
   }
 
-  if (notFound) return <NotFound thing="Tournament" />
-  if (!tournament) return null
+  if (status === 'not-found') return <NotFound thing="Tournament" />
+  if (status !== 'ready') return <Loading label="Loading tournament" rows={6} />
 
   return (
     <>

@@ -1,15 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { deletePool, getPool, listTeams } from './api'
 import { useAuth } from './auth'
 import ConfirmModal from './ConfirmModal'
-import { isNotFound } from './failure'
+import Loading from './Loading'
 import NotFound from './NotFound'
 import { useNotify } from './NotificationContext'
-import { useNotifyFailure } from './useNotifyFailure'
 import PoolSchedule from './PoolSchedule'
 import PoolStandings from './PoolStandings'
+import { useLoad } from './useLoad'
 
 function courtsLabel(courts) {
   if (courts.length === 0) return 'No court (add courts in the tournament settings)'
@@ -25,25 +25,26 @@ export default function PoolPage() {
   const { poolId } = useParams()
   const [pool, setPool] = useState(null)
   const [teams, setTeams] = useState([])
-  const [notFound, setNotFound] = useState(false)
   const [matchesKey, setMatchesKey] = useState(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const navigate = useNavigate()
   const notify = useNotify()
-  const notifyFailure = useNotifyFailure()
   const { user } = useAuth()
 
-  useEffect(() => {
-    getPool(poolId)
-      .then((loaded) => {
+  const status = useLoad(
+    async () => {
+      const loaded = await getPool(poolId)
+      return [loaded, await listTeams(loaded.tournament_id)]
+    },
+    poolId,
+    {
+      onData: ([loaded, loadedTeams]) => {
         setPool(loaded)
-        return listTeams(loaded.tournament_id).then(setTeams)
-      })
-      .catch((error) =>
-        isNotFound(error) ? setNotFound(true) : notifyFailure(error, "Couldn't load the pool"),
-      )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [poolId])
+        setTeams(loadedTeams)
+      },
+      failureMessage: "Couldn't load the pool",
+    },
+  )
 
   async function handleDelete() {
     setConfirmingDelete(false)
@@ -57,8 +58,8 @@ export default function PoolPage() {
     }
   }
 
-  if (notFound) return <NotFound thing="Pool" />
-  if (!pool) return null
+  if (status === 'not-found') return <NotFound thing="Pool" />
+  if (status !== 'ready') return <Loading label="Loading pool" rows={5} />
 
   return (
     <>
@@ -68,7 +69,12 @@ export default function PoolPage() {
 
       <section>
         <h3>Standings</h3>
-        {matchesKey !== null && <PoolStandings poolId={pool.id} refreshKey={matchesKey} />}
+        {matchesKey === null ? (
+          // Standings follow the schedule, so they start loading once it has.
+          <Loading label="Loading standings" rows={4} />
+        ) : (
+          <PoolStandings poolId={pool.id} refreshKey={matchesKey} />
+        )}
       </section>
 
       <section>

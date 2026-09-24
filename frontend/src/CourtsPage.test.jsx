@@ -67,6 +67,21 @@ test('a court lent to a bracket without courts says whose match it is playing', 
   )
 })
 
+test('shows a loading placeholder, not an empty list, until the courts arrive', () => {
+  vi.spyOn(api, 'listCourts').mockReturnValue(new Promise(() => {}))
+
+  render(
+    <MemoryRouter initialEntries={['/tournaments/3/courts']}>
+      <Routes>
+        <Route path="/tournaments/:tournamentId/courts" element={<CourtsPage />} />
+      </Routes>
+    </MemoryRouter>,
+  )
+
+  expect(screen.getByRole('status', { name: 'Loading courts' })).toBeInTheDocument()
+  expect(screen.queryByRole('list')).not.toBeInTheDocument()
+})
+
 test('a tournament that does not exist is not found', async () => {
   vi.spyOn(api, 'listCourts').mockRejectedValue({ status: 404 })
 

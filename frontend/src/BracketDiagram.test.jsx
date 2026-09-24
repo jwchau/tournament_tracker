@@ -30,6 +30,16 @@ test('renders all rounds, matches, and connecting lines for an 8-team bracket', 
   expect(screen.queryByText('Losers bracket')).not.toBeInTheDocument()
 })
 
+test('shows a loading placeholder, not an empty diagram, until the matches arrive', () => {
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockReturnValue(new Promise(() => {}))
+  vi.spyOn(api, 'getBracketDispatch').mockReturnValue(new Promise(() => {}))
+
+  render(<BracketDiagram playoffBracketId={1} />)
+
+  expect(screen.getByRole('status', { name: 'Loading matches' })).toBeInTheDocument()
+  expect(screen.queryAllByTestId(/^match-/)).toHaveLength(0)
+})
+
 const fiveTeamBracket = [
   { id: 11, round: 1, position: 1, team1_id: 10, team2_id: null, status: 'complete', winner_id: 10, winner_next_match_id: 15, winner_next_slot: 1 },
   { id: 12, round: 1, position: 2, team1_id: 40, team2_id: 50, status: 'ready', winner_next_match_id: 15, winner_next_slot: 2 },

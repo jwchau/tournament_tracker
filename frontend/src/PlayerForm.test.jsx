@@ -28,3 +28,24 @@ test('submitting the form adds a player, notifies the caller, and clears the inp
   expect(input).toHaveValue('')
   expect(api.createPlayer).toHaveBeenCalledWith(10, { name: 'Alex Kim' })
 })
+
+test('a player being added cannot be added twice', async () => {
+  let finish
+  const createPlayer = vi
+    .spyOn(api, 'createPlayer')
+    .mockReturnValue(new Promise((resolve) => (finish = resolve)))
+
+  render(<PlayerForm teamId={10} />)
+
+  fireEvent.change(screen.getByLabelText(/player name/i), { target: { value: 'Alex Kim' } })
+  const form = screen.getByRole('button', { name: /add player/i }).closest('form')
+  fireEvent.submit(form)
+  fireEvent.submit(form)
+
+  expect(createPlayer).toHaveBeenCalledTimes(1)
+  expect(screen.getByRole('button', { name: 'Adding…' })).toBeDisabled()
+
+  finish({ id: 1, team_id: 10, name: 'Alex Kim' })
+
+  expect(await screen.findByRole('button', { name: 'Add player' })).toBeEnabled()
+})

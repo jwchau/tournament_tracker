@@ -66,6 +66,15 @@ test('a best-of tournament scores its playoff matches as series', async () => {
   expect(screen.getByRole('button', { name: 'Record game 1' })).toBeInTheDocument()
 })
 
+test('shows a loading placeholder until the bracket arrives', () => {
+  vi.spyOn(api, 'getPlayoffBracket').mockReturnValue(new Promise(() => {}))
+
+  renderAt(30)
+
+  expect(screen.getByRole('status', { name: 'Loading bracket' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading')).not.toBeInTheDocument()
+})
+
 test('says so when the bracket does not exist', async () => {
   vi.spyOn(api, 'getPlayoffBracket').mockRejectedValue({ status: 404 })
 

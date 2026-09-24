@@ -100,6 +100,16 @@ test('does not offer to generate a schedule once the pool has one', async () => 
   expect(screen.queryByLabelText(/games per pairing/i)).not.toBeInTheDocument()
 })
 
+test('shows a loading placeholder, not an empty schedule or the generate button, until the matches arrive', () => {
+  vi.spyOn(api, 'getPoolMatches').mockReturnValue(new Promise(() => {}))
+
+  render(<PoolSchedule pool={pool} teams={teams} />)
+
+  expect(screen.getByRole('status', { name: 'Loading schedule' })).toBeInTheDocument()
+  expect(screen.queryByRole('list')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /generate schedule/i })).not.toBeInTheDocument()
+})
+
 test('a finished match offers a correction; unfinished ones do not', async () => {
   vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
 

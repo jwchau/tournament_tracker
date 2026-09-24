@@ -264,3 +264,44 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* Placeholder bars while a page's first load is in flight (Loading.jsx). */
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+}
+
+.loading-bar {
+  display: block;
+  height: 1em;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--border) 25%, var(--code-bg) 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: loading-shimmer 1.4s ease-in-out infinite;
+}
+
+.loading-bar:nth-child(odd) {
+  width: 85%;
+}
+
+.loading-bar.loading-heading {
+  width: 40%;
+  height: 1.6em;
+}
+
+@keyframes loading-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-bar {
+    animation: none;
+  }
+}

@@ -4,11 +4,11 @@ import { useNavigate, useParams } from 'react-router-dom'
 import ConfirmModal from './ConfirmModal'
 import { deletePlayer, deleteTeam, getTeam, listPlayers, updateTeam } from './api'
 import { useAuth } from './auth'
-import { isNotFound } from './failure'
+import Loading from './Loading'
 import NotFound from './NotFound'
 import { useNotify } from './NotificationContext'
-import { useNotifyFailure } from './useNotifyFailure'
 import PlayerForm from './PlayerForm'
+import { useLoad } from './useLoad'
 
 async function reasonFor(error, fallback) {
   const body = await error?.json?.().catch(() => null)
@@ -23,9 +23,7 @@ export default function TeamPage() {
   const [seed, setSeed] = useState('')
   const [players, setPlayers] = useState([])
   const [confirmingDelete, setConfirmingDelete] = useState(false)
-  const [notFound, setNotFound] = useState(false)
   const notify = useNotify()
-  const notifyFailure = useNotifyFailure()
   const { user } = useAuth()
 
   function show(fetched) {
@@ -34,18 +32,16 @@ export default function TeamPage() {
     setSeed(fetched.seed ?? '')
   }
 
+  const status = useLoad(() => getTeam(teamId), teamId, {
+    onData: show,
+    failureMessage: "Couldn't load the team",
+  })
+
   useEffect(() => {
-    setNotFound(false)
-    getTeam(teamId)
-      .then(show)
-      .catch((error) =>
-        isNotFound(error) ? setNotFound(true) : notifyFailure(error, "Couldn't load the team"),
-      )
-    // A missing team is already reported above.
+    // A missing team is already reported by the load above.
     listPlayers(teamId)
       .then(setPlayers)
       .catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId])
 
   async function handleSave(event) {
@@ -83,8 +79,8 @@ export default function TeamPage() {
     setPlayers((current) => current.filter((player) => player.id !== playerId))
   }
 
-  if (notFound) return <NotFound thing="Team" />
-  if (!team) return null
+  if (status === 'not-found') return <NotFound thing="Team" />
+  if (status !== 'ready') return <Loading label="Loading team" />
 
   return (
     <>

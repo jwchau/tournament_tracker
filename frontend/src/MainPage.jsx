@@ -3,24 +3,29 @@ import { Link } from 'react-router-dom'
 
 import { listTournaments } from './api'
 import { useAuth } from './auth'
+import Loading from './Loading'
 import { useNotifyFailure } from './useNotifyFailure'
 import { stageLabel } from './stage'
 import TournamentForm from './TournamentForm'
 
 export default function MainPage() {
-  const [tournaments, setTournaments] = useState([])
+  // null until the first load, so an empty list is never mistaken for no tournaments.
+  const [tournaments, setTournaments] = useState(null)
   const { user } = useAuth()
   const notifyFailure = useNotifyFailure()
 
   useEffect(() => {
     listTournaments()
       .then(setTournaments)
-      .catch((error) => notifyFailure(error, "Couldn't load the tournaments"))
+      .catch((error) => {
+        setTournaments([])
+        notifyFailure(error, "Couldn't load the tournaments")
+      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function handleCreated(tournament) {
-    setTournaments((current) => [...current, { ...tournament, team_count: 0 }])
+    setTournaments((current) => [...(current ?? []), { ...tournament, team_count: 0 }])
   }
 
   return (
@@ -34,16 +39,20 @@ export default function MainPage() {
 
       <section>
         <h2>Tournaments</h2>
-        <ul>
-          {tournaments.map((tournament) => (
-            <li key={tournament.id}>
-              <Link to={`/tournaments/${tournament.id}`}>{tournament.name}</Link>
-              {' — '}
-              {tournament.team_count} teams
-              {tournament.stage && ` · ${stageLabel(tournament.stage)}`}
-            </li>
-          ))}
-        </ul>
+        {tournaments === null ? (
+          <Loading label="Loading tournaments" />
+        ) : (
+          <ul>
+            {tournaments.map((tournament) => (
+              <li key={tournament.id}>
+                <Link to={`/tournaments/${tournament.id}`}>{tournament.name}</Link>
+                {' — '}
+                {tournament.team_count} teams
+                {tournament.stage && ` · ${stageLabel(tournament.stage)}`}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </>
   )

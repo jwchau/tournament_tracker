@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { generatePoolSchedule, getPoolMatches } from './api'
 import { useAuth } from './auth'
 import CorrectionForm from './CorrectionForm'
+import Loading from './Loading'
 import ScoreEntryForm from './ScoreEntryForm'
 import { usePolling } from './usePolling'
 
@@ -59,9 +60,11 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
     )
   }
 
+  if (matches === null) return <Loading label="Loading schedule" rows={4} />
+
   return (
     <>
-      {user && matches?.length === 0 && (
+      {user && matches.length === 0 && (
         <form onSubmit={handleGenerate}>
           <button type="submit">Generate schedule</button>
           {error && <p>{error}</p>}
