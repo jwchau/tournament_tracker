@@ -84,9 +84,11 @@ function slotScore(match, index, bestOf) {
   return match.status === 'complete' && bothTeams ? score : null
 }
 
+// The first round starts at the top; each later match sits level with the
+// middle of the two it follows.
 function matchY(round, position) {
   const spacing = ROW_UNIT * 2 ** (round - 1)
-  return spacing * (position - 1) + spacing / 2
+  return spacing * (position - 1) + (spacing - ROW_UNIT) / 2
 }
 
 const COLUMN_WIDTH = MATCH_WIDTH + ROUND_GAP
@@ -324,9 +326,9 @@ export default function BracketDiagram({
         </p>
       )}
       {champion && (
-        <section aria-label="Champion">
-          <h4>Champion</h4>
-          <p>🏆 {champion}</p>
+        <section aria-label="Champion" className="champion">
+          <h4 className="result-label">Champion</h4>
+          <p className="champion-name">{champion}</p>
         </section>
       )}
       <div className="bracket-canvas" style={{ width, height }}>

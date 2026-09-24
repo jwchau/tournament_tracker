@@ -36,6 +36,19 @@
   /* On the ink band, whatever the device theme. */
   --band-text: #eeece9;
   --band-muted: #a3a3a3;
+  --band-accent: #ea9557;
+  --band-ghost: rgba(255, 255, 255, 0.1);
+  --band-ghost-hover: rgba(255, 255, 255, 0.15);
+  --band-divider: rgba(255, 255, 255, 0.08);
+  /* Toasts stay dark in both themes, like the band. */
+  --toast: #232323;
+
+  --ember-solid: #e68435;
+  --selection: rgba(230, 132, 53, 0.4);
+  --status-idle: #999999;
+  --error-ring: rgba(234, 149, 87, 0.3);
+  --scrim: rgba(0, 0, 0, 0.5);
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.3);
 
   --display: 'Unbounded', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --emphasis: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -117,7 +130,7 @@ body {
 }
 
 ::selection {
-  background: rgba(230, 132, 53, 0.4);
+  background: var(--selection);
   color: var(--text);
 }
 
@@ -129,8 +142,8 @@ body {
 
 html {
   scrollbar-color: var(--border) transparent;
-  accent-color: #e68435;
-  caret-color: #e68435;
+  accent-color: var(--ember-solid);
+  caret-color: var(--ember-solid);
 }
 
 h1,
@@ -312,7 +325,7 @@ form > select {
   z-index: 6;
   background: var(--ink);
   color: var(--band-text);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--band-divider);
 }
 
 .app-bar-inner {
@@ -381,16 +394,16 @@ form > select {
 }
 
 .nav-bar a:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--band-ghost);
 }
 
 .nav-bar button {
   color: var(--band-text);
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--band-ghost);
 }
 
 .nav-bar button:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--band-ghost-hover);
 }
 
 .icon-button {
@@ -419,7 +432,7 @@ form > select {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #999999;
+  background: var(--status-idle);
 }
 
 .health[data-status='connected']::before {
@@ -438,8 +451,8 @@ form > select {
 }
 
 .health[data-status='error']::before {
-  background: #ea9557;
-  box-shadow: 0 0 0 3px rgba(234, 149, 87, 0.3);
+  background: var(--band-accent);
+  box-shadow: 0 0 0 3px var(--error-ring);
 }
 
 /* Phones: one row. The brand keeps only its mark, and it already goes home. */
@@ -555,7 +568,7 @@ form > select {
   gap: 8px;
   padding: 4px 12px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--band-ghost);
   color: var(--band-text);
   font: 600 14.7px/21px var(--ui);
 }
@@ -565,11 +578,11 @@ form > select {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ea9557;
+  background: var(--band-accent);
 }
 
 .board-meta a {
-  color: #ea9557;
+  color: var(--band-accent);
   min-height: 48px;
   display: inline-flex;
   align-items: center;
@@ -859,15 +872,15 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   min-height: 48px;
   padding: 12px 20px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #eeece9;
+  background: var(--band-ghost);
+  color: var(--band-text);
   font: 500 16px/24px var(--nav);
   cursor: pointer;
   transition: background 200ms ease-in-out;
 }
 
 .manage-toggle:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--band-ghost-hover);
 }
 
 .manage-toggle svg {
@@ -896,7 +909,7 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   position: fixed;
   inset: 0;
   z-index: 20;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--scrim);
 }
 
 .manage-panel-head {
@@ -997,9 +1010,9 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   width: 100%;
   padding: 14px 16px;
   border-radius: 12px;
-  background: #232323;
-  color: #eeece9;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 8px 24px rgba(0, 0, 0, 0.3);
+  background: var(--toast);
+  color: var(--band-text);
+  box-shadow: 0 0 0 1px var(--band-ghost), var(--shadow-float);
   font: 500 16px/24px var(--ui);
   transform: translate(calc(var(--stack-index) * -6px), calc(var(--stack-index) * -6px));
   transition: transform 200ms var(--ease);
@@ -1007,7 +1020,7 @@ table[aria-label='Standings'] tr.advancing td:first-child {
 }
 
 .notification-error {
-  box-shadow: inset 0 0 0 1px #ea9557, 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 0 0 1px var(--band-accent), var(--shadow-float);
 }
 
 @keyframes toast-in {
@@ -1022,7 +1035,7 @@ table[aria-label='Standings'] tr.advancing td:first-child {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1085,6 +1098,24 @@ table[aria-label='Standings'] tr.advancing td:first-child {
 .bracket-box {
   fill: var(--surface-3);
   stroke: var(--hairline);
+}
+
+/* A decided bracket names its champion above the diagram, in the
+   tournament-name face with amber for the win. */
+.champion {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: var(--amber-tint);
+  margin-bottom: 16px;
+}
+
+.champion-name {
+  font: 700 22px/26.4px var(--display);
+  color: var(--text);
+  overflow-wrap: anywhere;
 }
 
 /* Diagrams on the board scroll sideways inside their card on a phone. */
