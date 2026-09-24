@@ -5,6 +5,7 @@ import { listCourts } from './api'
 import { loginPath, useAuth } from './auth'
 import { courtLabel } from './courtLabel'
 import { isNotFound } from './failure'
+import Loading from './Loading'
 import NotFound from './NotFound'
 import ScoreEntryForm from './ScoreEntryForm'
 import SeriesForm from './SeriesForm'
@@ -33,7 +34,7 @@ export default function CourtPage() {
   })
 
   if (notFound) return <NotFound thing="Tournament" />
-  if (courts === null) return null
+  if (courts === null) return <Loading label="Loading court" />
   const court = courts.find((entry) => entry.court === Number(courtNumber))
   if (!court) return <NotFound thing="Court" />
   const { current } = court

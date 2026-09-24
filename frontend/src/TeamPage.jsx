@@ -5,6 +5,7 @@ import ConfirmModal from './ConfirmModal'
 import { deletePlayer, deleteTeam, getTeam, listPlayers, updateTeam } from './api'
 import { useAuth } from './auth'
 import { isNotFound } from './failure'
+import Loading from './Loading'
 import NotFound from './NotFound'
 import { useNotify } from './NotificationContext'
 import { useNotifyFailure } from './useNotifyFailure'
@@ -84,7 +85,7 @@ export default function TeamPage() {
   }
 
   if (notFound) return <NotFound thing="Team" />
-  if (!team) return null
+  if (!team) return <Loading label="Loading team" />
 
   return (
     <>

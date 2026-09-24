@@ -56,3 +56,12 @@ test('a refresh button fetches the standings now and is disabled for 3 seconds',
   await act(() => vi.advanceTimersByTimeAsync(3000))
   expect(button).toBeEnabled()
 })
+
+test('shows a loading placeholder, not an empty table, until the standings arrive', () => {
+  vi.spyOn(api, 'getPoolStandings').mockReturnValue(new Promise(() => {}))
+
+  render(<PoolStandings poolId={1} />)
+
+  expect(screen.getByRole('status', { name: 'Loading standings' })).toBeInTheDocument()
+  expect(screen.queryByRole('table')).not.toBeInTheDocument()
+})

@@ -5,6 +5,7 @@ import { deletePool, getPool, listTeams } from './api'
 import { useAuth } from './auth'
 import ConfirmModal from './ConfirmModal'
 import { isNotFound } from './failure'
+import Loading from './Loading'
 import NotFound from './NotFound'
 import { useNotify } from './NotificationContext'
 import { useNotifyFailure } from './useNotifyFailure'
@@ -58,7 +59,7 @@ export default function PoolPage() {
   }
 
   if (notFound) return <NotFound thing="Pool" />
-  if (!pool) return null
+  if (!pool) return <Loading label="Loading pool" rows={5} />
 
   return (
     <>

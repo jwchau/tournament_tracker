@@ -125,6 +125,32 @@ test('a match finished on another device is replaced after the next poll', async
   expect(screen.queryByLabelText('Spikers score')).not.toBeInTheDocument()
 })
 
+test('shows a loading placeholder until the first poll, and later polls keep the match on screen', async () => {
+  vi.useFakeTimers()
+  let resolveFirst
+  const listCourts = vi
+    .spyOn(api, 'listCourts')
+    .mockReturnValueOnce(new Promise((resolve) => (resolveFirst = resolve)))
+
+  renderAt('/tournaments/3/courts/2')
+  expect(screen.getByRole('status', { name: 'Loading court' })).toBeInTheDocument()
+
+  resolveFirst(playing)
+  await act(() => vi.advanceTimersByTimeAsync(0))
+  expect(screen.getByLabelText('Spikers score')).toBeInTheDocument()
+
+  // The next poll is slow, then fails: the match stays, with no placeholder.
+  let rejectSecond
+  listCourts.mockReturnValueOnce(new Promise((_, reject) => (rejectSecond = reject)))
+  await act(() => vi.advanceTimersByTimeAsync(10000))
+  expect(screen.getByLabelText('Spikers score')).toBeInTheDocument()
+  expect(screen.queryByRole('status', { name: 'Loading court' })).not.toBeInTheDocument()
+
+  rejectSecond(new TypeError('Failed to fetch'))
+  await act(() => vi.advanceTimersByTimeAsync(0))
+  expect(screen.getByLabelText('Spikers score')).toBeInTheDocument()
+})
+
 test('a version conflict offers to refetch the match', async () => {
   vi.spyOn(api, 'listCourts').mockResolvedValue(playing)
   vi.spyOn(api, 'submitScore').mockRejectedValue({ status: 409 })

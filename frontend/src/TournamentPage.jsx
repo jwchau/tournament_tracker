@@ -13,6 +13,7 @@ import {
 } from './api'
 import { useAuth } from './auth'
 import { isNotFound } from './failure'
+import Loading from './Loading'
 import NotFound from './NotFound'
 import { useNotify } from './NotificationContext'
 import { useNotifyFailure } from './useNotifyFailure'
@@ -239,7 +240,7 @@ export default function TournamentPage() {
   }
 
   if (notFound) return <NotFound thing="Tournament" />
-  if (!tournament) return null
+  if (!tournament) return <Loading label="Loading tournament" rows={6} />
 
   return (
     <>

@@ -5,6 +5,7 @@ import { getPlayoffBracket, getTournament, getTournamentResults, listTeams } fro
 import { useAuth } from './auth'
 import BracketDiagram from './BracketDiagram'
 import { isNotFound } from './failure'
+import Loading from './Loading'
 import NotFound from './NotFound'
 import { useNotifyFailure } from './useNotifyFailure'
 
@@ -100,7 +101,7 @@ export default function BracketPage() {
   }, [bracketId])
 
   if (notFound) return <NotFound thing="Bracket" />
-  if (!bracket || !tournament) return null
+  if (!bracket || !tournament) return <Loading label="Loading bracket" rows={6} />
 
   return (
     <>

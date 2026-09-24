@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { getBracketDispatch, getPlayoffBracketMatches, holdMatch } from './api'
 import { createCircuitBreaker } from './circuitBreaker'
 import CorrectionForm from './CorrectionForm'
+import Loading from './Loading'
 import { matchName } from './matchName'
 import ScheduleForm from './ScheduleForm'
 import ScoreEntryForm from './ScoreEntryForm'
@@ -187,6 +188,8 @@ export default function BracketDiagram({
   onChampionChange,
 }) {
   const [matches, setMatches] = useState([])
+  // False until the first load, so the diagram never shows up empty.
+  const [loaded, setLoaded] = useState(false)
   const [dispatch, setDispatch] = useState(null)
   const [holdError, setHoldError] = useState(null)
   const [connectionLost, setConnectionLost] = useState(false)
@@ -202,7 +205,9 @@ export default function BracketDiagram({
       breaker
         .execute(() => withTimeout(getPlayoffBracketMatches(playoffBracketId), REQUEST_TIMEOUT_MS))
         .then((data) => {
-          if (!cancelled) setMatches(data)
+          if (cancelled) return
+          setMatches(data)
+          setLoaded(true)
         })
         .catch(() => {})
         .finally(() => {
@@ -270,6 +275,20 @@ export default function BracketDiagram({
   useEffect(() => {
     onChampionChange?.(championId)
   }, [championId, onChampionChange])
+
+  if (!loaded) {
+    return (
+      <>
+        {connectionLost && (
+          <p role="status">
+            Connection lost — retrying automatically (checks again every {COOLDOWN_MS / 1000}s).
+          </p>
+        )}
+        <Loading label="Loading matches" rows={6} />
+      </>
+    )
+  }
+
   // Only matches with both teams known get controls: a TBD slot, a team still
   // waiting on its opponent, or a bye has nothing to score or schedule yet.
   const bothTeams = (readOnly ? [] : matches).filter(
