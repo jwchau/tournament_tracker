@@ -10,3 +10,6 @@ backend/.pytest_cache/
 # frontend
 frontend/node_modules/
 frontend/dist/
+
+# database backups (scripts/backup-db)
+backups/

@@ -1,10 +1,12 @@
+import os
 from typing import Iterator
 
 from sqlalchemy import event, inspect
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, create_engine
 
-DATABASE_URL = "sqlite:///./tournament_tracker.db"
+# The production stack points this at a file on a named volume.
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./tournament_tracker.db")
 
 
 def _set_sqlite_pragmas(dbapi_connection, connection_record) -> None:

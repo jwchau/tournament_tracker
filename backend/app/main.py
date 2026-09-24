@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
@@ -20,14 +21,27 @@ async def lifespan(app: FastAPI):
     yield
 
 
+def _allowed_origins() -> dict:
+    """Production sets FRONTEND_ORIGIN (comma-separated) and allows only that.
+
+    Dev allows the local Vite server, the tunnelled frontend, and quick tunnels.
+    """
+    configured = os.environ.get("FRONTEND_ORIGIN", "").strip()
+    if configured:
+        return {"allow_origins": [origin.strip() for origin in configured.split(",")]}
+    return {
+        "allow_origins": ["http://localhost:5173", "https://tournament.johnchau.org"],
+        "allow_origin_regex": r"https://.*\.trycloudflare\.com",
+    }
+
+
 def create_app() -> FastAPI:
     # One dependency on every route: reads are public, writes need a session.
     app = FastAPI(lifespan=lifespan, dependencies=[Depends(require_session_for_writes)])
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173", "https://tournament.johnchau.org"],
-        allow_origin_regex=r"https://.*\.trycloudflare\.com",
+        **_allowed_origins(),
         # The session cookie; this needs explicit origins, never "*".
         allow_credentials=True,
         allow_methods=["*"],

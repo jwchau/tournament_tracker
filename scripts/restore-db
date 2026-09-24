@@ -1,0 +1,18 @@
+#!/bin/sh
+# Replace the event database with a backup from backups/, e.g.
+#   scripts/restore-db backups/tournament_tracker-20260926-143005.db
+# The backend is stopped while the file is swapped, then started again. The
+# database being replaced is kept as backups/pre-restore-<timestamp>.db.
+set -e
+cd "$(dirname "$0")/.."
+export MSYS_NO_PATHCONV=1
+if [ -z "$1" ] || [ ! -f "backups/$(basename "$1")" ]; then
+  echo "usage: scripts/restore-db backups/<backup file>.db" >&2
+  exit 1
+fi
+compose="docker compose -f docker-compose.prod.yml"
+$compose stop backup backend
+status=0
+$compose run --rm --no-deps -T backend python -m app.backup restore "/backups/$(basename "$1")" || status=$?
+$compose start backend backup
+exit $status
