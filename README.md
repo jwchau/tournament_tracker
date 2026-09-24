@@ -19,38 +19,6 @@ source of truth for behaviour.
 - **Run:** Docker Compose
 - **Process:** TDD (red-green-refactor)
 
-## Status
-
-Details for each slice live in its ticket under [tickets/](tickets).
-
-| Slice | Ticket | Status |
-| ----- | ------ | ------ |
-| 00 | Project scaffolding | Done |
-| 01 | Tournament and team setup | Done |
-| 02 | Single-elimination bracket | Done |
-| 03 | Live scoring and concurrency | Done |
-| 04 | Cascading score correction | Done |
-| 05 | Double elimination | Done |
-| 06 | Manual match scheduling | Done |
-| 07 | Pools and round-robin scheduling | Done |
-| 08 | Pool-to-playoff advancement | Done |
-| 09 | Playoff court auto-dispatch | Done |
-| 10 | Frontend on Cloudflare Workers | Done |
-| 11 | Bracket pages and pool settings | Done |
-| 12 | Playoff best-of series | Done |
-| 13 | Confirm tournament settings | Done |
-| 14 | Team check-in edits | Done |
-| 15 | Tournament lifecycle and results | Done |
-| 16 | Court view for scorekeepers | Done |
-| 17 | Venue deployment | Done |
-| 18 | Dress rehearsal and v1.0.0 | In progress |
-| 19 | Access control and login | Done |
-
-The road to v1 and its release criteria are in [V1_MVP_PLAN.md](V1_MVP_PLAN.md).
-
-Unticketed work also done: client-side routing, a nav bar with back/forward,
-toast notifications, tournament deletion, and page-data caching.
-
 ## API endpoints
 
 Full interactive reference at http://localhost:8000/docs when the backend is running.

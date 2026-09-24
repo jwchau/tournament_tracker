@@ -167,6 +167,16 @@ Or copy the file to a second machine and use `scripts/restore-db` there.
 
 ## Log
 
+### Run 1 — 2026-09-24
+
+Production stack through the tunnel. The 14 teams were added through the API
+by a `rehearsal-bot` user; everything else was done in the UI.
+
 | # | Step | What happened | Bug? | Test / fix |
 | - | ---- | ------------- | ---- | ---------- |
-|   |      |               |      |            |
+| 1 | 3 | 13 teams snaked into pools of 5 / 4 / 4 (A: seeds 1, 6, 7, 12, 14; B: 2, 5, 8, 11; C: 3, 4, 9, 10). All 22 matches on courts, all 4 courts in use. | No | — |
+| 2 | 4 | Simultaneous submit on court 4: one phone saved, the other got the conflict and refetched the saved score. | No | — |
+| 3 | 4 | Some pages took a few seconds to load on the phones. The endpoints take 8–21 ms locally and 60–96 ms through the tunnel, so the delay is probably in how the frontend fetches. | Slow, post-v1 | [Ticket 20](../tickets/20-load-performance.md) |
+| 4 | 4 | Pages show empty, then suddenly fill with data. | UX, post-v1 | [Ticket 21](../tickets/21-loading-states.md) |
+| 5 | 4 | All 22 pool matches complete. Standings match the scores; ties rank by point difference, then points for. | No | — |
+| 6 | 5 | Pool matches have no **Correct** button; only bracket matches had one. Corrected Hitters vs Kill Shots 22–20 → 20–22 through the API instead. Kill Shots moved to 2nd in Pool B, Hitters to 3rd, with no other matches reset. | Yes | `PoolSchedule.test.jsx`: finished pool matches get **Correct** when signed in; the fix adds `CorrectionForm` to `PoolSchedule`. |
