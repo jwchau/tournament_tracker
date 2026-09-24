@@ -1,0 +1,9 @@
+#!/bin/sh
+# Take a consistent backup of the event database into backups/ right now,
+# with SQLite's backup API (safe while the app is running, under WAL).
+# The prod stack's `backup` service also does this every 15 minutes.
+set -e
+cd "$(dirname "$0")/.."
+# Git Bash on Windows would otherwise rewrite container paths like /backups.
+export MSYS_NO_PATHCONV=1
+docker compose -f docker-compose.prod.yml exec -T backend python -m app.backup backup

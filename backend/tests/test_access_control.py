@@ -7,6 +7,7 @@ exists and can't forget the sign-in check.
 import re
 
 import pytest
+from fastapi.testclient import TestClient
 
 from app.main import create_app
 
@@ -73,3 +74,19 @@ def test_cors_still_allows_quick_tunnels(anonymous_client):
     response = anonymous_client.get("/health", headers={"Origin": origin})
 
     assert response.headers["access-control-allow-origin"] == origin
+
+
+def test_cors_allows_only_the_frontend_origin_when_it_is_set(monkeypatch):
+    monkeypatch.setenv("FRONTEND_ORIGIN", "https://tournament.example.org")
+    client = TestClient(create_app())
+
+    def allowed(origin):
+        response = client.get("/health", headers={"Origin": origin})
+        return response.headers.get("access-control-allow-origin") == origin
+
+    assert allowed("https://tournament.example.org")
+    assert client.get(
+        "/health", headers={"Origin": "https://tournament.example.org"}
+    ).headers["access-control-allow-credentials"] == "true"
+    assert not allowed("http://localhost:5173")
+    assert not allowed("https://some-words-here.trycloudflare.com")

@@ -42,7 +42,7 @@ Details for each slice live in its ticket under [tickets/](tickets).
 | 14 | Team check-in edits | Not started |
 | 15 | Tournament lifecycle and results | Not started |
 | 16 | Court view for scorekeepers | Not started |
-| 17 | Venue deployment | Not started |
+| 17 | Venue deployment | Done |
 | 18 | Dress rehearsal and v1.0.0 | Not started |
 | 19 | Access control and login | Done |
 
@@ -133,11 +133,71 @@ The frontend can instead be deployed to Cloudflare Workers
 (`frontend/wrangler.jsonc`); see
 [tickets/10-cloudflare-workers-frontend.md](tickets/10-cloudflare-workers-frontend.md).
 
+## Running an event
+
+`docker-compose.prod.yml` runs the event-day stack: the backend without
+`--reload`, the built frontend served by nginx (deep links like `/brackets/3`
+work), secure cookies, CORS limited to the frontend origin, and the database
+on the `db_data` named volume instead of the source folder. All containers
+restart if they crash, and the backend has a healthcheck on `/health`. It uses
+the same ports as the dev stack (8000 and 5173), which the tunnel points at,
+so stop the dev stack first. The scripts below are `sh` scripts; on Windows
+run them from Git Bash.
+
+**Start** (the first build takes a few minutes):
+
+```sh
+docker compose down                                  # the dev stack, if it's running
+docker compose -f docker-compose.prod.yml up -d --build --wait
+cloudflared tunnel run tournament-tracker            # in another terminal
+```
+
+The first time only, create a user in the prod container. It prompts for the
+password:
+
+```sh
+docker compose -f docker-compose.prod.yml exec backend python -m app.users create <username>
+```
+
+Defaults suit `tournament.johnchau.org` / `tournament-api.johnchau.org`. To
+serve other hostnames, set `FRONTEND_ORIGIN` (the only origin CORS allows) and
+`VITE_API_BASE_URL` (built into the frontend, so rebuild after changing it).
+`COOKIE_SECURE=true` is the default; it only works over HTTPS, i.e. through
+the tunnel. `BACKEND_PORT` and `FRONTEND_PORT` change the host ports.
+
+**Stop:** `docker compose -f docker-compose.prod.yml down`. The database stays
+on the volume. Only `down -v` deletes it, so don't run that during an event.
+
+**Backup:** the `backup` service copies the database into `backups/` every
+15 minutes (`tournament_tracker-<UTC timestamp>.db`). It uses SQLite's backup
+API, which is safe while the app is writing under WAL. For an extra one
+right now, e.g. before a risky correction:
+
+```sh
+scripts/backup-db
+```
+
+**Restore:** pick a file from `backups/` and run:
+
+```sh
+scripts/restore-db backups/tournament_tracker-20260926-143005.db
+```
+
+This stops the backend and the backup service, checks that the file is a
+healthy SQLite database, and saves the current database as
+`backups/pre-restore-<timestamp>.db`, so a restore can itself be undone. Then
+it copies the backup in and starts both services again. Signed-in users stay
+signed in as long as their session existed when the backup was taken.
+
+Copy `backups/` somewhere off the machine after the event; nothing prunes it
+(about 100 small files per event day).
+
 ## Project layout
 
 ```
 backend/    FastAPI app and tests
 frontend/   React app and tests
+scripts/    Event-day database backup and restore
 tickets/    Implementation tickets
 V1_MVP_PLAN.md  Road to the v1 release
 ```

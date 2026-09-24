@@ -1,0 +1,56 @@
+# Event-day stack: production builds, secure cookies, and the database on a
+# named volume with a backup every 15 minutes. See "Running an event" in the
+# README. Its own project name keeps it apart from the dev stack's containers
+# and volumes; stop the dev stack first, since both use ports 8000 and 5173.
+name: tournament-tracker-prod
+
+x-backend-image: &backend-image
+  build:
+    context: ./backend
+    dockerfile: Dockerfile.prod
+  image: tournament-tracker-backend:prod
+  environment:
+    DATABASE_URL: sqlite:////data/tournament_tracker.db
+    BACKUP_DIR: /backups
+    FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-https://tournament.johnchau.org}
+    COOKIE_SECURE: ${COOKIE_SECURE:-true}
+  volumes:
+    - db_data:/data
+    - ./backups:/backups
+  restart: unless-stopped
+
+services:
+  backend:
+    <<: *backend-image
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Takes a consistent copy of the database into ./backups every 15 minutes.
+  backup:
+    <<: *backend-image
+    command: ["python", "-m", "app.backup", "backup", "--every", "900"]
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://tournament-api.johnchau.org}
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  db_data:

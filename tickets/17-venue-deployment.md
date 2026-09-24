@@ -24,9 +24,13 @@ restored. Login itself is ticket 19.
   README says how to create the first user with the ticket 19 CLI inside
   the prod container.
 - Backups: `scripts/backup-db` takes a consistent copy with SQLite's
-  `.backup` (safe under WAL) into `backups/` with a timestamp. Restore
-  steps are documented. It runs on a schedule during an event (every 15
-  minutes).
+  backup API (safe under WAL) into `backups/` with a timestamp. The
+  `sqlite3` CLI isn't in the image, so this runs `python -m app.backup` in
+  the backend container. A `backup` service in the prod stack does the same
+  on a schedule during an event (every 15 minutes), with no host cron
+  needed. `scripts/restore-db <file>` restores with the backend stopped,
+  keeping a `pre-restore-` copy of the database it replaces. Restore steps
+  are documented.
 - The README has a short "Running an event" section covering start, stop,
   backup, restore, and tunnel.
 
