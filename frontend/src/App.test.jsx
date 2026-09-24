@@ -10,6 +10,7 @@ afterEach(() => {
 })
 
 test('navigating from the main page to a tournament page and back to a team page', async () => {
+  vi.spyOn(api, 'getMe').mockResolvedValue({ id: 1, username: 'organizer' })
   vi.spyOn(api, 'listTournaments').mockResolvedValue([
     { id: 1, name: 'Spring Classic', team_count: 1 },
   ])
@@ -35,6 +36,7 @@ test('navigating from the main page to a tournament page and back to a team page
 
 const pageData = {
   '/health': { status: 'ok' },
+  '/auth/me': { id: 1, username: 'organizer' },
   '/tournaments': [{ id: 1, name: 'Spring Classic', team_count: 1 }],
   '/tournaments/1': {
     id: 1,

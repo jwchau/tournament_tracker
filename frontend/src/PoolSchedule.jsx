@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { generatePoolSchedule, getPoolMatches } from './api'
+import { useAuth } from './auth'
 import ScoreEntryForm from './ScoreEntryForm'
 import { usePolling } from './usePolling'
 
@@ -29,6 +30,7 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
   // that already have a schedule.
   const [matches, setMatches] = useState(null)
   const [error, setError] = useState(null)
+  const { user } = useAuth()
 
   usePolling(() => getPoolMatches(pool.id), setMatches, pool.id)
 
@@ -58,7 +60,7 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
 
   return (
     <>
-      {matches?.length === 0 && (
+      {user && matches?.length === 0 && (
         <form onSubmit={handleGenerate}>
           <button type="submit">Generate schedule</button>
           {error && <p>{error}</p>}
@@ -83,17 +85,18 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
                 <p>Observing: {observing.map((team) => team.name).join(', ')}</p>
               )}
               {resting.length > 0 && <p>Resting: {resting.map((team) => team.name).join(', ')}</p>}
-              {slotMatches
-                .filter((match) => match.status !== 'complete')
-                .map((match) => (
-                  <ScoreEntryForm
-                    key={match.id}
-                    match={match}
-                    team1Name={nameOf(match.team1_id)}
-                    team2Name={nameOf(match.team2_id)}
-                    onScored={handleScored}
-                  />
-                ))}
+              {user &&
+                slotMatches
+                  .filter((match) => match.status !== 'complete')
+                  .map((match) => (
+                    <ScoreEntryForm
+                      key={match.id}
+                      match={match}
+                      team1Name={nameOf(match.team1_id)}
+                      team2Name={nameOf(match.team2_id)}
+                      onScored={handleScored}
+                    />
+                  ))}
             </li>
           )
         })}

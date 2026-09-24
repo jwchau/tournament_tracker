@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { listTournaments } from './api'
+import { useAuth } from './auth'
 import { stageLabel } from './stage'
 import TournamentForm from './TournamentForm'
 
 export default function MainPage() {
   const [tournaments, setTournaments] = useState([])
+  const { user } = useAuth()
 
   useEffect(() => {
     listTournaments().then(setTournaments)
@@ -18,10 +20,12 @@ export default function MainPage() {
 
   return (
     <>
-      <section>
-        <h2>Create a tournament</h2>
-        <TournamentForm onCreated={handleCreated} />
-      </section>
+      {user && (
+        <section>
+          <h2>Create a tournament</h2>
+          <TournamentForm onCreated={handleCreated} />
+        </section>
+      )}
 
       <section>
         <h2>Tournaments</h2>

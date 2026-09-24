@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from './testUtils'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
@@ -10,7 +10,7 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-function renderAt(path) {
+function renderAt(path, options) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
@@ -18,6 +18,7 @@ function renderAt(path) {
         <Route path="/tournaments/:tournamentId/courts" element={<h2>All courts</h2>} />
       </Routes>
     </MemoryRouter>,
+    options,
   )
 }
 
@@ -162,4 +163,18 @@ test('a court the tournament does not have is not found', async () => {
   renderAt('/tournaments/3/courts/9')
 
   expect(await screen.findByText(/court not found/i)).toBeInTheDocument()
+})
+
+test('signed out, the court shows its match without a score form', async () => {
+  vi.spyOn(api, 'listCourts').mockResolvedValue(playing)
+
+  renderAt('/tournaments/1/courts/2', { user: null })
+
+  const nowPlaying = await screen.findByRole('region', { name: 'Now playing' })
+  expect(nowPlaying).toHaveTextContent('Spikers vs Diggers')
+  expect(screen.queryByLabelText('Spikers score')).not.toBeInTheDocument()
+  expect(within(nowPlaying).getByRole('link', { name: /sign in/i })).toHaveAttribute(
+    'href',
+    '/login?next=%2Ftournaments%2F1%2Fcourts%2F2',
+  )
 })

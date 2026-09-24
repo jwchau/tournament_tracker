@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 
 import { listCourts } from './api'
+import { loginPath, useAuth } from './auth'
 import ScoreEntryForm from './ScoreEntryForm'
 import SeriesForm from './SeriesForm'
 import { usePolling } from './usePolling'
@@ -19,6 +20,8 @@ export default function CourtPage() {
   const { tournamentId, court: courtNumber } = useParams()
   // null until the first load, so "not found" doesn't flash.
   const [courts, setCourts] = useState(null)
+  const { user } = useAuth()
+  const location = useLocation()
 
   const { refresh } = usePolling(() => listCourts(tournamentId), setCourts, tournamentId)
 
@@ -37,7 +40,12 @@ export default function CourtPage() {
         <section aria-labelledby="now-playing">
           <h3 id="now-playing">Now playing</h3>
           {/* Keyed by match, so the next match gets a fresh, empty form. */}
-          {current.best_of > 1 ? (
+          {!user ? (
+            <p>
+              {teams(current)} · <Link to={loginPath(location.pathname)}>Sign in</Link> to
+              enter scores.
+            </p>
+          ) : current.best_of > 1 ? (
             <SeriesForm
               key={current.id}
               match={current}

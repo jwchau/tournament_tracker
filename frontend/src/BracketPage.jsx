@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { getPlayoffBracket, getTournament, getTournamentResults, listTeams } from './api'
+import { useAuth } from './auth'
 import BracketDiagram from './BracketDiagram'
 
 function ordinal(place) {
@@ -61,6 +62,7 @@ export default function BracketPage() {
   const [tournament, setTournament] = useState(null)
   const [teams, setTeams] = useState([])
   const [notFound, setNotFound] = useState(false)
+  const { user } = useAuth()
   const [championId, setChampionId] = useState(null)
   const reportedChampion = useRef(undefined)
 
@@ -109,6 +111,7 @@ export default function BracketPage() {
         teams={teams}
         courtCount={tournament.court_count}
         bestOf={tournament.playoff_best_of ?? 1}
+        readOnly={!user}
         onChampionChange={handleChampionChange}
       />
     </>

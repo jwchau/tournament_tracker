@@ -90,3 +90,48 @@ test('after a write, a reload fetches fresh data instead of the stored copy', as
 
   expect(networkHits('/teams/10/players')).toBe(3) // load, POST, reload
 })
+
+test('every request sends the session cookie', async () => {
+  await api.getTournament(1)
+  await api.createTeam(1, { name: 'Ice Wolves' })
+  await api.deletePool(3)
+
+  for (const [, options] of fetchMock.mock.calls) {
+    expect(options.credentials).toBe('include')
+  }
+})
+
+test('a 401 from a write goes to the unauthorized handler', async () => {
+  const handler = vi.fn()
+  api.setUnauthorizedHandler(handler)
+  fetchMock.mockImplementation(() => jsonResponse({ detail: 'sign in to make changes' }, 401))
+
+  await expect(api.createTeam(1, { name: 'Ice Wolves' })).rejects.toMatchObject({ status: 401 })
+  await expect(api.deletePool(3)).rejects.toMatchObject({ status: 401 })
+
+  expect(handler).toHaveBeenCalledTimes(2)
+  api.setUnauthorizedHandler(null)
+})
+
+test('a failed sign-in is an error to show, not a redirect', async () => {
+  const handler = vi.fn()
+  api.setUnauthorizedHandler(handler)
+  fetchMock.mockImplementation(() =>
+    jsonResponse({ detail: 'invalid username or password' }, 401),
+  )
+
+  await expect(api.login({ username: 'organizer', password: 'wrong' })).rejects.toMatchObject({
+    status: 401,
+  })
+
+  expect(handler).not.toHaveBeenCalled()
+  api.setUnauthorizedHandler(null)
+})
+
+test('getMe is the signed-in user, or null when signed out', async () => {
+  fetchMock.mockImplementationOnce(() => jsonResponse({ id: 1, username: 'organizer' }))
+  expect(await api.getMe()).toEqual({ id: 1, username: 'organizer' })
+
+  fetchMock.mockImplementationOnce(() => jsonResponse({ detail: 'sign in' }, 401))
+  expect(await api.getMe()).toBeNull()
+})

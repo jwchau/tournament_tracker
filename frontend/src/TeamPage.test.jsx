@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from './testUtils'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
@@ -139,4 +139,23 @@ test('removing a player calls the delete endpoint and removes them from the list
   expect(deletePlayer).toHaveBeenCalledWith('10', 100)
   expect(await screen.findByText('Jordan Lee')).toBeInTheDocument()
   expect(screen.queryByText('Alex Kim')).not.toBeInTheDocument()
+})
+
+test('signed out, the team and roster are read-only', async () => {
+  vi.spyOn(api, 'getTeam').mockResolvedValue({ id: 10, tournament_id: 1, name: 'Ice Wolves' })
+  vi.spyOn(api, 'listPlayers').mockResolvedValue([{ id: 100, team_id: 10, name: 'Alex Kim' }])
+
+  render(
+    <MemoryRouter initialEntries={['/teams/10']}>
+      <Routes>
+        <Route path="/teams/:teamId" element={<TeamPage />} />
+      </Routes>
+    </MemoryRouter>,
+    { user: null },
+  )
+
+  expect(await screen.findByRole('heading', { name: 'Ice Wolves' })).toBeInTheDocument()
+  expect(await screen.findByText('Alex Kim')).toBeInTheDocument()
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button')).not.toBeInTheDocument()
 })

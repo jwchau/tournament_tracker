@@ -8,6 +8,7 @@ import app.playoff_routes as playoff_routes
 from app.db import configure_sqlite_engine, get_session
 from app.main import create_app
 from app.models import PlayoffBracket
+from tests.helpers import sign_in
 from tests.test_playoff_stress import Settings, _advance, _build, _play_pools
 
 
@@ -30,6 +31,8 @@ def test_simultaneous_advance_requests_create_one_set_of_brackets(tmp_path, monk
     app = create_app()
     app.dependency_overrides[get_session] = session_per_request
     setup_client = TestClient(app)
+    with Session(engine) as session:
+        sign_in(setup_client, session)
     tournament_id, pools = _build(setup_client, Settings((4, 4), 2, 2, 2))
     _play_pools(setup_client, pools, random.Random("race"))
 
@@ -49,7 +52,7 @@ def test_simultaneous_advance_requests_create_one_set_of_brackets(tmp_path, monk
     statuses = []
 
     def advance():
-        statuses.append(_advance(TestClient(app), tournament_id, "single").status_code)
+        statuses.append(_advance(TestClient(app, cookies=setup_client.cookies), tournament_id, "single").status_code)
 
     threads = [threading.Thread(target=advance) for _ in range(2)]
     for thread in threads:
