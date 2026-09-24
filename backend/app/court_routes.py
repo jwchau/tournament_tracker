@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session, SQLModel, select
 
 from app.db import get_session
-from app.dispatch import court_occupancy, is_overflow, queue
+from app.dispatch import court_lines, court_occupancy, is_overflow, queue
 from app.models import Match, PlayoffBracket, Team, Tournament
 from app.pool_routes import _pools_in_order, _tournament_or_404
 from app.pools import pool_courts
@@ -44,14 +44,18 @@ class CourtSummary(SQLModel):
     use: Literal["pool", "playoff"] | None
     # The pool's name or "Bracket N".
     label: str | None
+    # "Bracket M" while the court is lent to a bracket without courts of its
+    # own (its current match is that bracket's), otherwise None.
+    now_playing: str | None = None
     pool_id: int | None
     playoff_bracket_id: int | None
     # The earliest unfinished match on the court with both teams, or None if it's empty.
     current: CourtMatch | None
-    # A pool court's next scheduled matches; for a playoff court, the front of
-    # its bracket's queue (including any overflow brackets' matches, and
-    # leaving out held ones), which goes to whichever of the bracket's courts
-    # frees first.
+    # A pool court's next scheduled matches; for a playoff court, any matches
+    # set on it by hand behind the one playing, then the front of its
+    # bracket's queue (including any overflow brackets' matches, and leaving
+    # out held ones), which goes to whichever of the bracket's courts frees
+    # first.
     up_next: list[CourtMatch]
 
 
@@ -95,19 +99,30 @@ def list_courts(tournament_id: int, session: Session = Depends(get_session)) -> 
         for court in range(1, tournament.court_count + 1)
     }
     if brackets:
+        tiers = {bracket.id: bracket.tier for bracket in brackets}
+        lines = court_lines(session, tournament_id)
+
+        def lent_to(bracket: PlayoffBracket, current: Match | None) -> str | None:
+            if current is None or current.playoff_bracket_id == bracket.id:
+                return None
+            return f"Bracket {tiers[current.playoff_bracket_id]}"
+
         for bracket in brackets:
             # A bracket without courts of its own (overflow) waits in line on
             # the others' courts, so its matches show up in their up next.
             if is_overflow(session, bracket.id):
                 continue
-            waiting = [session.get(Match, match_id) for match_id in queue(session, bracket.id)]
-            up_next = [as_court_match(match) for match in waiting[:UP_NEXT]]
+            waiting = queue(session, bracket.id)
             for court, match_id in court_occupancy(session, bracket.id).items():
                 current = session.get(Match, match_id) if match_id is not None else None
+                # Matches set here by hand behind the one playing come before the queue.
+                line = lines.get(court, [])[1:] + waiting
+                up_next = [as_court_match(session.get(Match, next_id)) for next_id in line[:UP_NEXT]]
                 courts[court] = CourtSummary(
                     court=court,
                     use="playoff",
                     label=f"Bracket {bracket.tier}",
+                    now_playing=lent_to(bracket, current),
                     pool_id=None,
                     playoff_bracket_id=bracket.id,
                     current=as_court_match(current) if current is not None else None,

@@ -369,9 +369,9 @@ test('a best-of series is scored game by game and shows games won in its box', a
 
   render(<BracketDiagram playoffBracketId={1} teams={teams} bestOf={3} />)
 
-  const box = await screen.findByTestId('match-2-2')
-  expect(box).toHaveTextContent('Spikers · 1')
-  expect(box).toHaveTextContent('Diggers · 0')
+  const spikers = await screen.findByTestId('team1-match-2-2')
+  expect(within(spikers).getByText('1')).toBeInTheDocument()
+  expect(within(screen.getByTestId('team2-match-2-2')).getByText('0')).toBeInTheDocument()
   expect(await screen.findByText('Game 1: 21–15')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Record game 2' })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /submit score/i })).not.toBeInTheDocument()
@@ -426,4 +426,46 @@ test('a correction that removes the reset match takes it off the bracket right a
 
   expect(await screen.findByRole('region', { name: 'Champion' })).toHaveTextContent('Spikers')
   expect(screen.queryByTestId('match-grand_final-2-1')).not.toBeInTheDocument()
+})
+
+const finishedSemifinal = fiveTeamBracket.map((match) =>
+  match.id === 16
+    ? { ...match, status: 'complete', team1_score: 21, team2_score: 17, winner_id: 20, court: 1, version: 3 }
+    : match,
+)
+
+test("a finished match shows each team's final score beside it, with the winner in bold", async () => {
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(finishedSemifinal)
+
+  render(<BracketDiagram playoffBracketId={1} teams={teams} readOnly />)
+
+  const winner = await screen.findByTestId('team1-match-2-2')
+  const loser = screen.getByTestId('team2-match-2-2')
+  expect(within(winner).getByText('Spikers')).toBeInTheDocument()
+  expect(within(winner).getByText('21')).toBeInTheDocument()
+  expect(within(loser).getByText('Diggers')).toBeInTheDocument()
+  expect(within(loser).getByText('17')).toBeInTheDocument()
+  expect(winner).toHaveAttribute('font-weight', 'bold')
+  expect(loser).not.toHaveAttribute('font-weight')
+})
+
+test('an unfinished match and a bye show no scores', async () => {
+  const partlyScored = fiveTeamBracket.map((match) =>
+    match.id === 12 ? { ...match, status: 'in_progress', team1_score: 9, team2_score: 4 } : match,
+  )
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(partlyScored)
+
+  render(<BracketDiagram playoffBracketId={1} teams={teams} readOnly />)
+
+  expect(await screen.findByTestId('team1-match-1-2')).not.toHaveTextContent('9')
+  expect(screen.getByTestId('team2-match-1-2')).not.toHaveTextContent('4')
+  expect(screen.getByTestId('team1-match-1-1')).toHaveTextContent(/^Team 10$/)
+})
+
+test('a finished match no longer shows the court it was played on', async () => {
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(finishedSemifinal)
+
+  render(<BracketDiagram playoffBracketId={1} teams={teams} readOnly />)
+
+  expect(await screen.findByTestId('match-2-2')).not.toHaveTextContent(/court/i)
 })

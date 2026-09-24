@@ -176,6 +176,8 @@ test('signed out, the pool shows standings and schedule but no controls', async 
   )
 
   expect(await screen.findByText('Court 1: Spikers vs Diggers')).toBeInTheDocument()
+  // The standings load separately from the schedule, so wait for their button.
+  await screen.findByRole('button', { name: 'Refresh standings' })
   // Only refreshing, which changes nothing on the server.
   expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
     'Refresh standings',

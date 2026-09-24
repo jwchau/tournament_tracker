@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, SQLModel, func, select, update
 
 from app.db import get_session
-from app.dispatch import dispatch, redispatch
+from app.dispatch import bump_dispatched, dispatch, redispatch
 from app.models import (
     CorrectionLog,
     Game,
@@ -405,11 +405,15 @@ def schedule_match(
             raise HTTPException(
                 status_code=400, detail=f"court must be between 1 and {court_count}"
             )
+    if "court" in values:
+        values["court_set_at"] = datetime.now() if court is not None else None
     if values:
         session.execute(update(Match).where(Match.id == match_id).values(**values))
         # A court set by hand takes a playoff match out of the queue; one it
         # leaves may go to the next match waiting.
         if match.playoff_bracket_id is not None:
+            if court is not None:
+                bump_dispatched(session, match.tournament_id, court, match_id)
             dispatch(session, match.tournament_id)
         session.commit()
         session.refresh(match)
@@ -447,6 +451,7 @@ def hold_match(
     values = {"on_hold": data.on_hold}
     if data.on_hold:
         values["court"] = None
+        values["court_set_at"] = None
     result = session.execute(
         update(Match)
         .where(Match.id == match_id, Match.version == data.version)
