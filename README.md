@@ -1,4 +1,4 @@
-# Tournament Tracker
+﻿# Tournament Tracker
 
 A self-hosted tournament management tool covering the full lifecycle of a
 bracket-and-pool tournament: team registration, pool play (round-robin) with
@@ -43,7 +43,7 @@ Details for each slice live in its ticket under [tickets/](tickets).
 | 15 | Tournament lifecycle and results | Done |
 | 16 | Court view for scorekeepers | Done |
 | 17 | Venue deployment | Done |
-| 18 | Dress rehearsal and v1.0.0 | Not started |
+| 18 | Dress rehearsal and v1.0.0 | In progress |
 | 19 | Access control and login | Done |
 
 The road to v1 and its release criteria are in [V1_MVP_PLAN.md](V1_MVP_PLAN.md).
