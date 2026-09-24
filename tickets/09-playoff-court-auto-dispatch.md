@@ -24,6 +24,20 @@ dynamic (unlike pools' upfront-known schedule).
   queue position, and each in-progress match's assigned court; manual
   override (slice 06's fields) remains available as an escape hatch.
 
+- Decisions made while building it:
+  - A match that a score correction resets gives up its court and its
+    place in the queue; if it's ready again straight away it queues from
+    the back.
+  - A court set by hand takes the match out of the queue and occupies that
+    court. Clearing a ready match's court by hand puts it back in the
+    queue at its original place. Pending matches are never dispatched.
+  - A finished match keeps the court it was played on; only unfinished
+    matches occupy a court.
+  - With more brackets than courts, the later brackets get no courts and
+    their matches wait until given one by hand.
+  - Changing the court count (only possible before play starts)
+    re-dispatches every unfinished playoff match.
+
 ## Out of scope
 
 Any cross-bracket court sharing (explicitly rejected — each bracket has

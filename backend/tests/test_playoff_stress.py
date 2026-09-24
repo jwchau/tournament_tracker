@@ -156,17 +156,46 @@ def _best_of(client, match):
     return client.get(f"/tournaments/{match['tournament_id']}").json()["playoff_best_of"]
 
 
+def _unfinished(matches):
+    return [
+        m
+        for m in matches
+        if m["status"] in ("ready", "in_progress") and m["team1_id"] and m["team2_id"]
+    ]
+
+
+def assert_dispatch_consistent(client, tournament_id):
+    """Each tier's unfinished matches sit on distinct courts of its own, and
+    none waits in the queue while one of its tier's courts is free."""
+    tier_courts = []
+    for bracket in client.get(f"/tournaments/{tournament_id}/playoff-brackets").json():
+        matches = _tier_matches(client, bracket["id"])
+        status = client.get(f"/playoff-brackets/{bracket['id']}/dispatch").json()
+        courts = [entry["court"] for entry in status["courts"]]
+        on_court = [m["court"] for m in _unfinished(matches) if m["court"] is not None]
+        waiting = [m["id"] for m in _unfinished(matches) if m["court"] is None]
+        assert len(on_court) == len(set(on_court)), f"tier {bracket['tier']} double-booked"
+        assert set(on_court) <= set(courts), f"tier {bracket['tier']} off its courts"
+        assert sorted(status["queue"]) == sorted(waiting)
+        assert not status["queue"] or None not in [e["match_id"] for e in status["courts"]]
+        assert all(m["court"] is None for m in matches if m["status"] == "pending")
+        tier_courts.append(set(courts))
+    assert sum(len(courts) for courts in tier_courts) == len(set().union(*tier_courts))
+
+
 def _play_out(client, bracket_id, rng):
-    """Score ready matches at random until nothing is left to play."""
+    """Score matches at random until nothing is left to play, preferring ones on a court.
+
+    A tier with no courts of its own (more tiers than courts) is played from its queue.
+    """
+    tournament_id = client.get(f"/playoff-brackets/{bracket_id}").json()["tournament_id"]
     for _ in range(500):
-        playable = [
-            m
-            for m in _tier_matches(client, bracket_id)
-            if m["status"] in ("ready", "in_progress") and m["team1_id"] and m["team2_id"]
-        ]
+        playable = _unfinished(_tier_matches(client, bracket_id))
         if not playable:
             return
-        assert _play_step(client, rng.choice(playable), rng).status_code in (200, 201)
+        on_court = [m for m in playable if m["court"] is not None]
+        assert _play_step(client, rng.choice(on_court or playable), rng).status_code in (200, 201)
+        assert_dispatch_consistent(client, tournament_id)
     raise AssertionError("tier never finished")
 
 

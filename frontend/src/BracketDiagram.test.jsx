@@ -252,6 +252,28 @@ test('shows each match court and time and offers a schedule editor only once bot
   expect(screen.queryByText(/TBD/, { selector: 'p, h4, legend, span' })).not.toBeInTheDocument()
 })
 
+test('shows the court each match was dispatched to and the queue position of those waiting', async () => {
+  const dispatched = eightTeamBracket.map((match) => ({
+    ...match,
+    ...{
+      1: { court: 1, ready_order: 1 },
+      2: { court: 2, ready_order: 2, status: 'in_progress', team1_score: 5, team2_score: 3 },
+      // Match 4 became ready before match 3, so it's first in line.
+      3: { court: null, ready_order: 4 },
+      4: { court: null, ready_order: 3 },
+    }[match.id],
+  }))
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(dispatched)
+
+  render(<BracketDiagram playoffBracketId={1} readOnly />)
+
+  expect(await screen.findByTestId('match-1-1')).toHaveTextContent('Court 1')
+  expect(screen.getByTestId('match-1-2')).toHaveTextContent('Court 2')
+  expect(screen.getByTestId('match-1-4')).toHaveTextContent('Waiting for a court · #1')
+  expect(screen.getByTestId('match-1-3')).toHaveTextContent('Waiting for a court · #2')
+  expect(screen.getByTestId('match-2-1')).not.toHaveTextContent(/waiting|court/i)
+})
+
 test('a saved schedule shows up in the bracket right away', async () => {
   vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
   vi.spyOn(api, 'scheduleMatch').mockImplementation((id, { court, scheduledTime }) =>

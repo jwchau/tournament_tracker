@@ -147,6 +147,9 @@ class Match(SQLModel, table=True):
     loser_next_slot: int | None = None
     scheduled_time: datetime | None = None
     court: int | None = None
+    # A playoff match's place in its bracket's court queue: the order in
+    # which the bracket's matches became ready (see app.dispatch).
+    ready_order: int | None = None
     version: int = 1
 
 

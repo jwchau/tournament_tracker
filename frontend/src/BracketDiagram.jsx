@@ -33,11 +33,29 @@ function slotLabel(teamsById, teamId, status) {
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-// "Court 2 · Sat 10:30". Times are venue-local with no timezone: parsing an
-// ISO string without an offset yields that same wall-clock time everywhere.
-function scheduleLabel(match) {
+// Match id -> place in line for a court (1 = next). The bracket's courts are
+// dispatched first come, first served: a match with both teams, not yet
+// finished and without a court is waiting, in the order it became ready.
+function queuePositions(matches) {
+  const waiting = matches
+    .filter(
+      (match) =>
+        (match.status === 'ready' || match.status === 'in_progress') &&
+        match.team1_id != null &&
+        match.team2_id != null &&
+        match.court == null,
+    )
+    .sort((a, b) => (a.ready_order ?? Infinity) - (b.ready_order ?? Infinity) || a.id - b.id)
+  return Object.fromEntries(waiting.map((match, index) => [match.id, index + 1]))
+}
+
+// "Court 2 · Sat 10:30", or "Waiting for a court · #2" while queued. Times
+// are venue-local with no timezone: parsing an ISO string without an offset
+// yields that same wall-clock time everywhere.
+function scheduleLabel(match, queuePosition) {
   const parts = []
   if (match.court != null) parts.push(`Court ${match.court}`)
+  if (queuePosition != null) parts.push(`Waiting for a court · #${queuePosition}`)
   if (match.scheduled_time) {
     const time = new Date(match.scheduled_time)
     const clock = match.scheduled_time.slice(11, 16)
@@ -217,6 +235,7 @@ export default function BracketDiagram({
   const playable = bothTeams.filter((match) => match.status !== 'complete')
   const correctable = bothTeams.filter((match) => match.status === 'complete')
   const { positions, labels, width, height } = layoutBracket(matches)
+  const queued = queuePositions(matches)
 
   return (
     <>
@@ -286,7 +305,7 @@ export default function BracketDiagram({
               )
             })}
             <text y={LINE_HEIGHT * 3} fontSize="11">
-              {scheduleLabel(match)}
+              {scheduleLabel(match, queued[match.id])}
             </text>
           </g>
         ))}

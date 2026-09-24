@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, SQLModel, func, select, update
 
 from app.db import get_session
+from app.dispatch import dispatch, redispatch
 from app.models import (
     CorrectionLog,
     Game,
@@ -124,6 +125,8 @@ def update_tournament(
         setattr(tournament, field, value)
 
     session.add(tournament)
+    if "court_count" in changed_settings:
+        redispatch(session, tournament_id)
     session.commit()
     session.refresh(tournament)
     return _detail(session, tournament)
@@ -365,6 +368,10 @@ def schedule_match(
             )
     if values:
         session.execute(update(Match).where(Match.id == match_id).values(**values))
+        # A court set by hand takes a playoff match out of the queue; one it
+        # leaves may go to the next match waiting.
+        if match.playoff_bracket_id is not None:
+            dispatch(session, match.playoff_bracket_id)
         session.commit()
         session.refresh(match)
     return match

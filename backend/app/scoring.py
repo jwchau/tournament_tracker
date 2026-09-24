@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from sqlalchemy import case, or_
 from sqlmodel import Session, delete, select, update
 
+from app.dispatch import dispatch
 from app.models import CorrectionLog, Game, Match
 
 
@@ -72,6 +73,8 @@ def submit_score(
         _place_team(session, match.loser_next_match_id, match.loser_next_slot, loser_id)
     if complete and _forces_bracket_reset(match, winner_id):
         _create_bracket_reset(session, match)
+    if match.playoff_bracket_id is not None:
+        dispatch(session, match.playoff_bracket_id)
 
     session.commit()
     session.refresh(match)
@@ -138,6 +141,9 @@ def correct_score(
         reset_matches.append(stale_reset)
     if winner_id != old_winner_id and _forces_bracket_reset(match, winner_id):
         _create_bracket_reset(session, match)
+
+    if match.playoff_bracket_id is not None:
+        dispatch(session, match.playoff_bracket_id)
 
     log.reset_match_ids = [reset.id for reset in reset_matches]
     session.add(log)
@@ -216,7 +222,11 @@ def _reset_plan(
 
 
 def _unplay(session: Session, match: Match, slots: list[int]) -> None:
-    """Empty the given slots and clear the match's result, including any series games."""
+    """Empty the given slots and clear the match's result, including any series games.
+
+    It also gives up its court and its place in the court queue: if it's
+    ready again once its slots are refilled, it queues from the back.
+    """
     session.execute(delete(Game).where(Game.match_id == match.id))
     _update_or_conflict(
         session,
@@ -227,6 +237,8 @@ def _unplay(session: Session, match: Match, slots: list[int]) -> None:
         team2_score=None,
         winner_id=None,
         status="pending",
+        court=None,
+        ready_order=None,
     )
 
 

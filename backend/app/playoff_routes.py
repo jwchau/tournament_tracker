@@ -11,6 +11,7 @@ from app.bracket import (
     validate_teams_for_bracket,
 )
 from app.db import get_session
+from app.dispatch import court_occupancy, dispatch, queue
 from app.models import CorrectionLog, Match, Player, PlayoffBracket, Team, Tournament
 from app.pool_routes import _pool_matches, _pools_in_order, _tournament_or_404
 from app.playoffs import playoff_tiers
@@ -181,6 +182,9 @@ def _create_playoffs(
         session.flush()
         matches = _save_matches(session, tournament_id, generate_bracket(team_ids, format), bracket.id)
         created.append((bracket, matches))
+    # Only once every tier exists, since the court split depends on how many there are.
+    for bracket, _ in created:
+        dispatch(session, bracket.id)
     session.commit()
     for bracket, matches in created:
         for row in [bracket, *matches]:
@@ -266,6 +270,32 @@ def get_playoff_bracket(
     if bracket is None:
         raise HTTPException(status_code=404, detail="Playoff bracket not found")
     return _summaries(session, [bracket])[0]
+
+
+class CourtOccupancy(SQLModel):
+    court: int
+    match_id: int | None
+
+
+class DispatchStatus(SQLModel):
+    courts: list[CourtOccupancy]
+    queue: list[int]
+
+
+@router.get("/playoff-brackets/{bracket_id}/dispatch", response_model=DispatchStatus)
+def get_bracket_dispatch(
+    bracket_id: int, session: Session = Depends(get_session)
+) -> DispatchStatus:
+    """The bracket's courts with the match on each, and the matches waiting for one."""
+    if session.get(PlayoffBracket, bracket_id) is None:
+        raise HTTPException(status_code=404, detail="Playoff bracket not found")
+    return DispatchStatus(
+        courts=[
+            CourtOccupancy(court=court, match_id=match_id)
+            for court, match_id in court_occupancy(session, bracket_id).items()
+        ],
+        queue=queue(session, bracket_id),
+    )
 
 
 @router.get("/playoff-brackets/{bracket_id}/matches", response_model=list[Match])
