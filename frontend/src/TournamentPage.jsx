@@ -28,6 +28,7 @@ function ConfigForm({ tournamentId, tournament, onSaved }) {
   const [courtCount, setCourtCount] = useState(tournament.court_count)
   const [gamesPerPairing, setGamesPerPairing] = useState(tournament.games_per_pairing ?? 1)
   const [targetPoolSize, setTargetPoolSize] = useState(tournament.target_pool_size ?? 4)
+  const [playoffBestOf, setPlayoffBestOf] = useState(tournament.playoff_best_of ?? 1)
   const [reviewing, setReviewing] = useState(false)
   const notify = useNotify()
   const locked = tournament.settings_locked
@@ -49,6 +50,7 @@ function ConfigForm({ tournamentId, tournament, onSaved }) {
       court_count: Number(courtCount),
       games_per_pairing: Number(gamesPerPairing),
       target_pool_size: Number(targetPoolSize),
+      playoff_best_of: Number(playoffBestOf),
     })
     if (confirmed) {
       notify('Tournament settings saved')
@@ -101,6 +103,21 @@ function ConfigForm({ tournamentId, tournament, onSaved }) {
         </span>
       ))}
 
+      <label htmlFor="playoff-best-of">Playoff best-of</label>
+      <select
+        id="playoff-best-of"
+        value={playoffBestOf}
+        // Every playoff match is played to this many games; it's fixed once brackets exist.
+        disabled={locked || tournament.stage === 'playoffs'}
+        onChange={(event) => setPlayoffBestOf(event.target.value)}
+      >
+        {[1, 3, 5, 7].map((count) => (
+          <option key={count} value={count}>
+            {count}
+          </option>
+        ))}
+      </select>
+
       <button type="submit">{confirmed ? 'Save' : 'Save and confirm settings'}</button>
       {locked && <p>Settings are locked once play has started; only the name can change.</p>}
 
@@ -116,6 +133,8 @@ function ConfigForm({ tournamentId, tournament, onSaved }) {
                 {label}: {value}
               </span>
             ))}
+            <br />
+            Playoff best-of: {playoffBestOf}
           </>
         }
         confirmLabel="Confirm"
@@ -227,7 +246,12 @@ export default function TournamentPage() {
 
           <section>
             <h3>Playoffs</h3>
-            <PlayoffsPanel tournamentId={tournamentId} teams={teams} hasPools={hasPools} />
+            <PlayoffsPanel
+              tournamentId={tournamentId}
+              teams={teams}
+              hasPools={hasPools}
+              bestOf={tournament.playoff_best_of ?? 1}
+            />
           </section>
         </>
       )}

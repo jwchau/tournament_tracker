@@ -66,6 +66,39 @@ test('previews how many matches a correction will reset before committing it', a
   })
 })
 
+test('a series is corrected game by game, sending every corrected game', async () => {
+  const series = { ...match, team1_score: 2, team2_score: 0, version: 6 }
+  vi.spyOn(api, 'listGames').mockResolvedValue([
+    { number: 1, team1_score: 21, team2_score: 15 },
+    { number: 2, team1_score: 21, team2_score: 16 },
+  ])
+  const preview = vi.spyOn(api, 'previewCorrection').mockResolvedValue({ reset_matches: [] })
+  const correctScore = vi
+    .spyOn(api, 'correctScore')
+    .mockResolvedValue({ match: series, reset_matches: [] })
+
+  render(<CorrectionForm match={series} bestOf={3} team1Name="Spikers" team2Name="Diggers" />)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Correct Spikers vs Diggers' }))
+  const dialog = screen.getByRole('dialog', { name: 'Correct Spikers vs Diggers' })
+  expect(await within(dialog).findByLabelText('Game 2 Diggers score')).toHaveValue(16)
+  fireEvent.change(within(dialog).getByLabelText('Game 2 Spikers score'), { target: { value: '12' } })
+  fireEvent.change(within(dialog).getByLabelText('Game 2 Diggers score'), { target: { value: '21' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Add game' }))
+  fireEvent.change(within(dialog).getByLabelText('Game 3 Spikers score'), { target: { value: '21' } })
+  fireEvent.change(within(dialog).getByLabelText('Game 3 Diggers score'), { target: { value: '9' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: /review correction/i }))
+
+  const games = [
+    { team1Score: 21, team2Score: 15 },
+    { team1Score: 12, team2Score: 21 },
+    { team1Score: 21, team2Score: 9 },
+  ]
+  await waitFor(() => expect(preview).toHaveBeenCalledWith(7, { games }))
+  fireEvent.click(await screen.findByRole('button', { name: /apply correction/i }))
+  await waitFor(() => expect(correctScore).toHaveBeenCalledWith(7, { games, version: 6 }))
+})
+
 test('names losers-bracket and grand final matches in the preview', async () => {
   vi.spyOn(api, 'previewCorrection').mockResolvedValue({
     reset_matches: [

@@ -15,7 +15,7 @@ import { useNotify } from './NotificationContext'
 // A tournament with pools advances from pool play into tiered brackets; one
 // without pools generates a single bracket of every team. Either happens once,
 // and can be undone until the first playoff score.
-export default function PlayoffsPanel({ tournamentId, teams, hasPools }) {
+export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 1 }) {
   const [brackets, setBrackets] = useState(null)
   const [blocker, setBlocker] = useState('Checking pool play…')
   const [format, setFormat] = useState('single')
@@ -75,7 +75,7 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools }) {
           <section key={bracket.id}>
             <h4>Bracket {bracket.tier}</h4>
             <Link to={`/brackets/${bracket.id}`}>Open Bracket {bracket.tier}</Link>
-            <BracketDiagram playoffBracketId={bracket.id} teams={teams} readOnly />
+            <BracketDiagram playoffBracketId={bracket.id} teams={teams} bestOf={bestOf} readOnly />
           </section>
         ))}
         {resettable && (

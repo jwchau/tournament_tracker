@@ -275,6 +275,27 @@ test('a saved schedule shows up in the bracket right away', async () => {
   expect(await screen.findByText('Court 3 · Sat 09:15')).toBeInTheDocument()
 })
 
+test('a best-of series is scored game by game and shows games won in its box', async () => {
+  const inSeries = fiveTeamBracket.map((match) =>
+    match.id === 16
+      ? { ...match, status: 'in_progress', team1_score: 1, team2_score: 0, version: 2 }
+      : match,
+  )
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(inSeries)
+  vi.spyOn(api, 'listGames').mockImplementation(async (matchId) =>
+    matchId === 16 ? [{ number: 1, team1_score: 21, team2_score: 15 }] : [],
+  )
+
+  render(<BracketDiagram playoffBracketId={1} teams={teams} bestOf={3} />)
+
+  const box = await screen.findByTestId('match-2-2')
+  expect(box).toHaveTextContent('Spikers · 1')
+  expect(box).toHaveTextContent('Diggers · 0')
+  expect(await screen.findByText('Game 1: 21–15')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Record game 2' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /submit score/i })).not.toBeInTheDocument()
+})
+
 test('stops polling after 3 consecutive failures and resumes after the cooldown', async () => {
   vi.useFakeTimers()
   const loadMatches = vi.spyOn(api, 'getPlayoffBracketMatches').mockRejectedValue(new Error('network down'))

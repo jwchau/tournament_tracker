@@ -7,6 +7,7 @@ from app.db import drop_tierless_bracket_matches, init_db
 from app.playoff_routes import router as playoff_router
 from app.pool_routes import router as pool_router
 from app.routers import router
+from app.series_routes import router as series_router
 
 
 @asynccontextmanager
@@ -34,5 +35,6 @@ def create_app() -> FastAPI:
     app.include_router(router)
     app.include_router(pool_router)
     app.include_router(playoff_router)
+    app.include_router(series_router)
 
     return app

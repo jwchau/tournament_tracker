@@ -168,15 +168,38 @@ export function submitScore(matchId, { team1Score, team2Score, version, complete
   })
 }
 
-export function previewCorrection(matchId, { team1Score, team2Score }) {
-  return postJson(`/matches/${matchId}/correct/preview`, {
+// A series is corrected by sending every game ({team1Score, team2Score}) instead of one score.
+function correctionBody({ team1Score, team2Score, games }) {
+  if (games) {
+    return {
+      games: games.map((game) => ({ team1_score: game.team1Score, team2_score: game.team2Score })),
+    }
+  }
+  return { team1_score: team1Score, team2_score: team2Score }
+}
+
+export function previewCorrection(matchId, correction) {
+  return postJson(`/matches/${matchId}/correct/preview`, correctionBody(correction))
+}
+
+export function correctScore(matchId, { version, ...correction }) {
+  return patchJson(`/matches/${matchId}/correct`, { ...correctionBody(correction), version })
+}
+
+export function listGames(matchId) {
+  return getJson(`/matches/${matchId}/games`)
+}
+
+export function addGame(matchId, { team1Score, team2Score, version }) {
+  return postJson(`/matches/${matchId}/games`, {
     team1_score: team1Score,
     team2_score: team2Score,
+    version,
   })
 }
 
-export function correctScore(matchId, { team1Score, team2Score, version }) {
-  return patchJson(`/matches/${matchId}/correct`, {
+export function editGame(matchId, number, { team1Score, team2Score, version }) {
+  return patchJson(`/matches/${matchId}/games/${number}`, {
     team1_score: team1Score,
     team2_score: team2Score,
     version,

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Literal
 
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
@@ -14,6 +15,7 @@ class Tournament(SQLModel, table=True):
     court_count: int = 1
     games_per_pairing: int = Field(default=1, sa_column_kwargs={"server_default": "1"})
     target_pool_size: int = Field(default=4, sa_column_kwargs={"server_default": "4"})
+    playoff_best_of: int = Field(default=1, sa_column_kwargs={"server_default": "1"})
     settings_confirmed: bool = Field(default=False, sa_column_kwargs={"server_default": "0"})
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -29,6 +31,7 @@ class TournamentUpdate(SQLModel):
     court_count: int | None = None
     games_per_pairing: int | None = Field(default=None, ge=1)
     target_pool_size: int | None = Field(default=None, ge=2)
+    playoff_best_of: Literal[1, 3, 5, 7] | None = None
 
 
 class TournamentDetail(SQLModel):
@@ -41,6 +44,7 @@ class TournamentDetail(SQLModel):
     court_count: int
     games_per_pairing: int
     target_pool_size: int
+    playoff_best_of: int
     settings_confirmed: bool
     created_at: datetime
     settings_locked: bool
@@ -56,6 +60,7 @@ class TournamentSummary(SQLModel):
     court_count: int
     games_per_pairing: int
     target_pool_size: int
+    playoff_best_of: int
     settings_confirmed: bool
     created_at: datetime
     team_count: int
@@ -143,6 +148,16 @@ class Match(SQLModel, table=True):
     scheduled_time: datetime | None = None
     court: int | None = None
     version: int = 1
+
+
+class Game(SQLModel, table=True):
+    """One game of a best-of playoff series; the match itself holds games won."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    match_id: int = Field(foreign_key="match.id")
+    number: int
+    team1_score: int
+    team2_score: int
 
 
 class CorrectionLog(SQLModel, table=True):
