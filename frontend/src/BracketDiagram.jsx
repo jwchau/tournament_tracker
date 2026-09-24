@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { getPlayoffBracketMatches } from './api'
+import { getBracketDispatch, getPlayoffBracketMatches, holdMatch } from './api'
 import { createCircuitBreaker } from './circuitBreaker'
 import CorrectionForm from './CorrectionForm'
 import { matchName } from './matchName'
@@ -33,11 +33,24 @@ function slotLabel(teamsById, teamId, status) {
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-// "Court 2 · Sat 10:30". Times are venue-local with no timezone: parsing an
-// ISO string without an offset yields that same wall-clock time everywhere.
-function scheduleLabel(match) {
+// Match id -> place in line for a court (1 = next), from the bracket's
+// dispatch queue. A bracket's line can include overflow brackets' matches
+// (brackets without courts of their own), which count toward the place.
+function queuePositions(dispatch) {
+  return Object.fromEntries((dispatch?.queue ?? []).map((id, index) => [id, index + 1]))
+}
+
+// "Court 2 · Sat 10:30", "Waiting for a court · #2" while queued (or
+// "Waiting (any court)" in an overflow bracket), or "On hold". Times are
+// venue-local with no timezone: parsing an ISO string without an offset
+// yields that same wall-clock time everywhere.
+function scheduleLabel(match, queuePosition, overflow) {
   const parts = []
+  if (match.on_hold) parts.push('On hold')
   if (match.court != null) parts.push(`Court ${match.court}`)
+  if (queuePosition != null) {
+    parts.push(`${overflow ? 'Waiting (any court)' : 'Waiting for a court'} · #${queuePosition}`)
+  }
   if (match.scheduled_time) {
     const time = new Date(match.scheduled_time)
     const clock = match.scheduled_time.slice(11, 16)
@@ -158,6 +171,8 @@ export default function BracketDiagram({
   onChampionChange,
 }) {
   const [matches, setMatches] = useState([])
+  const [dispatch, setDispatch] = useState(null)
+  const [holdError, setHoldError] = useState(null)
   const [connectionLost, setConnectionLost] = useState(false)
 
   useEffect(() => {
@@ -177,6 +192,12 @@ export default function BracketDiagram({
         .finally(() => {
           if (!cancelled) setConnectionLost(breaker.getState() === 'open')
         })
+      // Queue places only; the bracket still works without them.
+      getBracketDispatch(playoffBracketId)
+        .then((data) => {
+          if (!cancelled) setDispatch(data)
+        })
+        .catch(() => {})
     }
 
     refresh()
@@ -192,6 +213,23 @@ export default function BracketDiagram({
     setMatches((current) =>
       current.map((match) => (match.id === updated.id ? updated : match)),
     )
+  }
+
+  // Holding or releasing moves other matches on and off courts, so reload both.
+  async function handleHold(match, onHold) {
+    try {
+      replaceMatch(await holdMatch(match.id, { onHold, version: match.version }))
+      setHoldError(null)
+    } catch (failure) {
+      const body = await failure?.json?.().catch(() => null)
+      setHoldError(body?.detail ?? "Couldn't change the hold. Please refresh and try again.")
+    }
+    getPlayoffBracketMatches(playoffBracketId)
+      .then(setMatches)
+      .catch(() => {})
+    getBracketDispatch(playoffBracketId)
+      .then(setDispatch)
+      .catch(() => {})
   }
 
   function handleCorrected({ match: corrected, reset_matches: resetMatches }) {
@@ -224,12 +262,26 @@ export default function BracketDiagram({
   const playable = bothTeams.filter((match) => match.status !== 'complete')
   const correctable = bothTeams.filter((match) => match.status === 'complete')
   const { positions, labels, width, height } = layoutBracket(matches)
+  const queued = queuePositions(dispatch)
+  const overflow = dispatch?.overflow ?? false
+  // Only a match nobody has started can be held; a held one is released before it's scored.
+  const holdable = playable.filter(
+    (match) => !match.on_hold && match.team1_score == null && match.team2_score == null,
+  )
+  const held = playable.filter((match) => match.on_hold)
+  const scoreable = playable.filter((match) => !match.on_hold)
 
   return (
     <>
       {connectionLost && (
         <p role="status">
           Connection lost — retrying automatically (checks again every {COOLDOWN_MS / 1000}s).
+        </p>
+      )}
+      {overflow && (
+        <p>
+          This bracket has no courts of its own: its matches take any court that frees up, in
+          turn with the other brackets.
         </p>
       )}
       {champion && (
@@ -293,7 +345,7 @@ export default function BracketDiagram({
               )
             })}
             <text y={LINE_HEIGHT * 3} fontSize="11">
-              {scheduleLabel(match)}
+              {scheduleLabel(match, queued[match.id], overflow)}
             </text>
           </g>
         ))}
@@ -327,7 +379,22 @@ export default function BracketDiagram({
           onSaved={replaceMatch}
         />
       ))}
-      {playable.map((match) =>
+      {(holdable.length > 0 || held.length > 0) && (
+        <section aria-label="Holds">
+          {holdError && <p>{holdError}</p>}
+          {holdable.map((match) => (
+            <button key={match.id} type="button" onClick={() => handleHold(match, true)}>
+              Hold {matchName(match)}
+            </button>
+          ))}
+          {held.map((match) => (
+            <button key={match.id} type="button" onClick={() => handleHold(match, false)}>
+              Release {matchName(match)}
+            </button>
+          ))}
+        </section>
+      )}
+      {scoreable.map((match) =>
         bestOf > 1 ? (
           <SeriesForm
             key={match.id}

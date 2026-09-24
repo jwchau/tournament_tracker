@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, SQLModel, func, select, update
 
 from app.db import get_session
+from app.dispatch import dispatch, redispatch
 from app.models import (
     CorrectionLog,
     Game,
@@ -124,6 +125,8 @@ def update_tournament(
         setattr(tournament, field, value)
 
     session.add(tournament)
+    if "court_count" in changed_settings:
+        redispatch(session, tournament_id)
     session.commit()
     session.refresh(tournament)
     return _detail(session, tournament)
@@ -391,6 +394,11 @@ def schedule_match(
 
     values = data.model_dump(exclude_unset=True)
     court = values.get("court")
+    if court is not None and match.on_hold:
+        raise HTTPException(
+            status_code=400,
+            detail="this match is on hold; release it before putting it on a court",
+        )
     if court is not None:
         court_count = session.get(Tournament, match.tournament_id).court_count
         if not 1 <= court <= court_count:
@@ -399,8 +407,60 @@ def schedule_match(
             )
     if values:
         session.execute(update(Match).where(Match.id == match_id).values(**values))
+        # A court set by hand takes a playoff match out of the queue; one it
+        # leaves may go to the next match waiting.
+        if match.playoff_bracket_id is not None:
+            dispatch(session, match.tournament_id)
         session.commit()
         session.refresh(match)
+    return match
+
+
+class HoldUpdate(SQLModel):
+    on_hold: bool
+    version: int
+
+
+@router.patch("/matches/{match_id}/hold", response_model=Match)
+def hold_match(
+    match_id: int, data: HoldUpdate, session: Session = Depends(get_session)
+) -> Match:
+    """Keep a playoff match off courts (e.g. a team isn't there yet), or release it.
+
+    Holding takes an unplayed match off its court, which goes to the next
+    match waiting. Releasing puts it back in the queue in its original place.
+    """
+    match = session.get(Match, match_id)
+    if match is None:
+        raise HTTPException(status_code=404, detail="Match not found")
+    if match.playoff_bracket_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="only playoff matches can be held; pool matches keep their schedule",
+        )
+    started = match.team1_score is not None or match.team2_score is not None
+    if data.on_hold and (started or match.status == "complete"):
+        raise HTTPException(
+            status_code=400, detail="this match has a score, so it can't be put on hold"
+        )
+
+    values = {"on_hold": data.on_hold}
+    if data.on_hold:
+        values["court"] = None
+    result = session.execute(
+        update(Match)
+        .where(Match.id == match_id, Match.version == data.version)
+        .values(**values, version=Match.version + 1)
+    )
+    if result.rowcount == 0:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="version conflict: match was updated by someone else, please refetch and retry",
+        )
+    dispatch(session, match.tournament_id)
+    session.commit()
+    session.refresh(match)
     return match
 
 
