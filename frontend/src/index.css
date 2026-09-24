@@ -286,7 +286,7 @@ code {
   width: 85%;
 }
 
-.loading-heading {
+.loading-bar.loading-heading {
   width: 40%;
   height: 1.6em;
 }

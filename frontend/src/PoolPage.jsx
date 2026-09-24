@@ -69,7 +69,12 @@ export default function PoolPage() {
 
       <section>
         <h3>Standings</h3>
-        {matchesKey !== null && <PoolStandings poolId={pool.id} refreshKey={matchesKey} />}
+        {matchesKey === null ? (
+          // Standings follow the schedule, so they start loading once it has.
+          <Loading label="Loading standings" rows={4} />
+        ) : (
+          <PoolStandings poolId={pool.id} refreshKey={matchesKey} />
+        )}
       </section>
 
       <section>
