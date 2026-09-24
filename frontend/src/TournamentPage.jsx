@@ -223,6 +223,9 @@ export default function TournamentPage() {
     <>
       <h2>{tournament.name}</h2>
       {tournament.stage && <p>Stage: {stageLabel(tournament.stage)}</p>}
+      <p>
+        <Link to={`/tournaments/${tournamentId}/courts`}>Courts (scorekeeper view)</Link>
+      </p>
 
       {tournament.stage === 'complete' && <Results tournamentId={tournamentId} />}
 
