@@ -161,6 +161,23 @@ signed in as long as their session existed when the backup was taken.
 Copy `backups/` somewhere off the machine after the event; nothing prunes it
 (about 100 small files per event day).
 
+## Demoing the app
+
+To demo the app in a clean, throwaway browser (no cookies, cache or
+extensions from your own browser), use Playwright's recorder:
+
+```sh
+npx playwright codegen https://tournament.johnchau.org
+```
+
+It opens a fresh browser next to the Playwright Inspector, which writes
+each click and keystroke down as test code. That's handy for turning a
+demo into an end-to-end test later. The first run may ask to install
+Playwright's browsers (`npx playwright install chromium`). Signing in there
+is real: it creates a session and makes real changes on whatever stack the
+URL points at, so demo on a scratch tournament. Point it at
+`http://localhost:5173` to demo the dev stack instead.
+
 ## Project layout
 
 ```
