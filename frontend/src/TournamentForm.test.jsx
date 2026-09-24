@@ -28,3 +28,26 @@ test('submitting the form creates a tournament, notifies the caller, and clears 
   expect(input).toHaveValue('')
   expect(api.createTournament).toHaveBeenCalledWith({ name: 'Spring Classic' })
 })
+
+test('a tournament being created cannot be created twice', async () => {
+  let finish
+  const createTournament = vi
+    .spyOn(api, 'createTournament')
+    .mockReturnValue(new Promise((resolve) => (finish = resolve)))
+
+  render(<TournamentForm />)
+
+  fireEvent.change(screen.getByLabelText(/tournament name/i), {
+    target: { value: 'Spring Classic' },
+  })
+  const form = screen.getByRole('button', { name: /create/i }).closest('form')
+  fireEvent.submit(form)
+  fireEvent.submit(form)
+
+  expect(createTournament).toHaveBeenCalledTimes(1)
+  expect(screen.getByRole('button', { name: 'Creating…' })).toBeDisabled()
+
+  finish({ id: 1, name: 'Spring Classic' })
+
+  expect(await screen.findByRole('button', { name: 'Create' })).toBeEnabled()
+})

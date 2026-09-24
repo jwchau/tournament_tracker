@@ -63,6 +63,39 @@ test('advancing once pools are complete shows each tier bracket', async () => {
   expect(api.getPlayoffBracketMatches).toHaveBeenCalledWith(31)
 })
 
+test('shows a loading placeholder until the brackets arrive', () => {
+  vi.spyOn(api, 'listPlayoffBrackets').mockReturnValue(new Promise(() => {}))
+  vi.spyOn(api, 'getPlayoffReadiness').mockReturnValue(new Promise(() => {}))
+
+  renderPanel()
+
+  expect(screen.getByRole('status', { name: 'Loading playoffs' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /advance to playoffs/i })).not.toBeInTheDocument()
+})
+
+test('advancing cannot be sent twice while it is in progress', async () => {
+  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([])
+  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: true, reason: null })
+  let finish
+  const advance = vi
+    .spyOn(api, 'advanceToPlayoffs')
+    .mockReturnValue(new Promise((resolve) => (finish = resolve)))
+
+  renderPanel()
+
+  const button = await screen.findByRole('button', { name: /advance to playoffs/i })
+  await waitFor(() => expect(button).toBeEnabled())
+  fireEvent.click(button)
+  fireEvent.click(button)
+
+  expect(advance).toHaveBeenCalledTimes(1)
+  expect(screen.getByRole('button', { name: 'Advancing…' })).toBeDisabled()
+
+  finish([{ id: 30, tournament_id: 5, tier: 1, format: 'single', has_scores: false }])
+
+  expect(await screen.findByText('Advanced to playoffs')).toBeInTheDocument()
+})
+
 test('a tournament without pools generates one bracket instead of advancing', async () => {
   vi.spyOn(api, 'listPlayoffBrackets')
     .mockResolvedValueOnce([])

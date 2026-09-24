@@ -51,6 +51,30 @@ test('lists the games so far and records the next one', async () => {
   expect(onScored).toHaveBeenCalledWith(updated)
 })
 
+test('a game being recorded cannot be sent twice', async () => {
+  vi.spyOn(api, 'listGames').mockResolvedValue([{ number: 1, team1_score: 21, team2_score: 15 }])
+  let finish
+  const addGame = vi
+    .spyOn(api, 'addGame')
+    .mockReturnValue(new Promise((resolve) => (finish = resolve)))
+  vi.spyOn(api, 'getMatch').mockResolvedValue({ ...series, team2_score: 1, version: 5 })
+
+  renderForm()
+
+  fireEvent.change(await screen.findByLabelText('Game 2 Aces score'), { target: { value: '18' } })
+  fireEvent.change(screen.getByLabelText('Game 2 Blockers score'), { target: { value: '21' } })
+  const form = screen.getByRole('button', { name: 'Record game 2' }).closest('form')
+  fireEvent.submit(form)
+  fireEvent.submit(form)
+
+  expect(addGame).toHaveBeenCalledTimes(1)
+  expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled()
+
+  finish({ number: 2 })
+
+  expect(await screen.findByText(/best of 3 · 1–1/)).toBeInTheDocument()
+})
+
 test('a recorded game can be fixed while the series is unfinished', async () => {
   vi.spyOn(api, 'listGames').mockResolvedValue([{ number: 1, team1_score: 21, team2_score: 15 }])
   const editGame = vi.spyOn(api, 'editGame').mockResolvedValue({ number: 1 })
