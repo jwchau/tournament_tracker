@@ -45,11 +45,11 @@ Gaps before a real event:
 
 ## Release criteria
 
-- [ ] Every ticket above is Done.
-- [ ] Backend, stress, and frontend tests pass, and lint is clean.
-- [ ] The rehearsal script in ticket 18 runs end to end on the production setup, with two phones scoring at once.
-- [ ] The database can be restored from a backup taken during the rehearsal.
-- [ ] `v1.0.0` is tagged on main, with release notes.
+- [x] Every ticket above is Done.
+- [x] Backend, stress, and frontend tests pass, and lint is clean (no errors; 2 fast-refresh warnings remain from before).
+- [x] The rehearsal script in ticket 18 runs end to end on the production setup, with two phones scoring at once. See the log in [docs/rehearsal.md](docs/rehearsal.md).
+- [x] The database can be restored from a backup taken during the rehearsal.
+- [x] `v1.0.0` is tagged on main, with release notes.
 
 ## Not in v1
 

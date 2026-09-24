@@ -189,3 +189,9 @@ by a `rehearsal-bot` user; everything else was done in the UI.
 | 13 | 8 | Restored the mid-playoff backup into a `tt-scratch` stack on port 8100. Its completed matches were identical to those at backup time (tier 1: 12 of 14, tier 2: 3 of 14), all 22 pool matches were complete, and the pool correction was kept. The scratch stack was then removed; the event volume wasn't touched. | No | — |
 | 14 | 9 | Stage Complete. Bracket 1: Setters champion, Kill Shots runner-up. Bracket 2: Pancakes champion, Spikers runner-up. Placings list all 13 teams. | No | — |
 | 15 | 10 | `/nope` and `/teams/99999` showed an empty page on `tournament.johnchau.org`. That site serves the Cloudflare Workers build of `main` (bundle `index-Cu389IOH.js`), not this branch. The branch preview and the local prod container (`index-BWCRXdoP.js`) include the not-found pages. Frontend fixes from this run (pool **Correct**, not-found pages, failure notices) weren't public during the rehearsal. | Deployment | README notes where the public frontend comes from. Re-check step 10 after merging. |
+| 16 | 10 | After merging to `main`, the public site served the new bundle. `/nope` showed "Page not found" and `/teams/99999` showed "Team not found". With the production backend stopped, the API answered 502 and the header showed "Backend status: error"; the backend was then restarted. | No | — |
+
+**Result:** the script ran end to end on the production stack with no manual
+database edits. Three bugs were fixed test-first (entries 6, 7 and 12), and
+two post-v1 tickets were opened (20 and 21). Afterwards, `rehearsal-bot`'s
+password was reset to a random value that wasn't kept.
