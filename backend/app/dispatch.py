@@ -10,8 +10,13 @@ number first.
 With more brackets than courts, the later brackets own no courts. Their
 matches are overflow: any bracket's court that frees up goes to whichever
 has waited longest, its own bracket's matches or the overflow ones, so a
-bracket without courts is never starved. A bracket that owns courts never
-uses another's.
+bracket without courts is never starved. A bracket that owns courts
+doesn't use another's while that one is still playing, but once a bracket
+is finished (every match complete) its courts are lent to every bracket
+still playing. A lent court takes the earliest round waiting (grand finals
+last), then the longest waiting; a bracket's own courts stay first come,
+first served. If a correction reopens a finished bracket, its courts go
+back to it as they free up.
 
 A match keeps its court once it's complete (it was played there) but only
 unfinished matches occupy one. A court set by hand is left alone: it takes
@@ -54,6 +59,36 @@ def _waiting(tournament_id: int):
         Match.team1_id.is_not(None),
         Match.team2_id.is_not(None),
     )
+
+
+def _finished_brackets(session: Session, tournament_id: int) -> set[int]:
+    """The tournament's playoff brackets with every match complete."""
+    rows = session.exec(
+        select(Match.playoff_bracket_id, Match.status).where(
+            Match.tournament_id == tournament_id, Match.playoff_bracket_id.is_not(None)
+        )
+    ).all()
+    unfinished = {bracket_id for bracket_id, status in rows if status != "complete"}
+    return {bracket_id for bracket_id, _ in rows} - unfinished
+
+
+def _lent_queue(session: Session, tournament_id: int) -> list[int]:
+    """Ids of the matches in line for a finished bracket's courts: every
+    waiting match of the brackets still playing, earliest round first."""
+    matches = session.exec(
+        select(Match).where(
+            Match.id.in_(_waiting(tournament_id)),
+            Match.court.is_(None),
+            Match.on_hold.is_(False),
+        )
+    ).all()
+    return [
+        match.id
+        for match in sorted(
+            matches,
+            key=lambda m: (m.bracket == "grand_final", m.round, m.ready_order or 0, m.id),
+        )
+    ]
 
 
 def _court_priority(match: Match) -> tuple:
@@ -125,11 +160,14 @@ def queue(session: Session, bracket_id: int) -> list[int]:
 
     For a bracket with courts that's its own waiting matches merged with
     every overflow bracket's; for an overflow bracket, just the overflow
-    matches, which take whichever court frees first. Held matches aren't
+    matches, which take whichever court frees first; for a finished bracket,
+    the other brackets' matches its lent courts take. Held matches aren't
     in line.
     """
     tournament_id = _tournament_of(session, bracket_id)
     courts = _courts_by_bracket(session, tournament_id)
+    if courts[bracket_id] and bracket_id in _finished_brackets(session, tournament_id):
+        return _lent_queue(session, tournament_id)
     eligible = [other for other, owned in courts.items() if not owned]
     if courts[bracket_id]:
         eligible.append(bracket_id)
@@ -175,8 +213,14 @@ def dispatch(session: Session, tournament_id: int) -> None:
     for order, match_id in enumerate(newly_ready, start=(last or 0) + 1):
         session.execute(update(Match).where(Match.id == match_id).values(ready_order=order))
 
+    session.flush()
     occupied = _occupied_courts(session, tournament_id)
-    for bracket_id, courts in _courts_by_bracket(session, tournament_id).items():
+    # Brackets still playing fill their own courts before finished ones lend theirs.
+    finished = _finished_brackets(session, tournament_id)
+    courts_by_bracket = sorted(
+        _courts_by_bracket(session, tournament_id).items(), key=lambda item: item[0] in finished
+    )
+    for bracket_id, courts in courts_by_bracket:
         for court in courts:
             if court in occupied:
                 continue

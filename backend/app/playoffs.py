@@ -1,3 +1,5 @@
+from fractions import Fraction
+
 from app.pools import StandingsRow
 
 
@@ -11,7 +13,9 @@ def playoff_tiers(
 
     Each tier's list is its seed order: teams from different pools never
     played each other, so they're ranked on points, then point differential,
-    then points scored. Teams level on all three keep pool order.
+    then points scored. Each is taken per match played, since pools of
+    different sizes play different numbers of matches. Teams level on all
+    three keep pool order.
     """
     tiers: list[list[StandingsRow]] = [[] for _ in range(bracket_count)]
     for standings in pool_standings:
@@ -19,11 +23,15 @@ def playoff_tiers(
             tier = min(index // advance_per_pool, bracket_count - 1)
             tiers[tier].append(row)
     return [
-        [
-            row.team_id
-            for row in sorted(
-                tier, key=lambda row: (-row.points, -row.point_diff, -row.points_for)
-            )
-        ]
-        for tier in tiers
+        [row.team_id for row in sorted(tier, key=_per_match_rank)] for tier in tiers
     ]
+
+
+def _per_match_rank(row: StandingsRow) -> tuple[Fraction, Fraction, Fraction]:
+    # A team with no matches (a pool of one) ranks as if it played one.
+    played = max(row.played, 1)
+    return (
+        -Fraction(row.points, played),
+        -Fraction(row.point_diff, played),
+        -Fraction(row.points_for, played),
+    )

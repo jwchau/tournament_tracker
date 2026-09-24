@@ -1,4 +1,4 @@
-# Tournament Tracker
+﻿# Tournament Tracker
 
 A self-hosted tournament management tool covering the full lifecycle of a
 bracket-and-pool tournament: team registration, pool play (round-robin) with
@@ -18,38 +18,6 @@ source of truth for behaviour.
 - **Frontend:** React, Vite, Vitest + React Testing Library
 - **Run:** Docker Compose
 - **Process:** TDD (red-green-refactor)
-
-## Status
-
-Details for each slice live in its ticket under [tickets/](tickets).
-
-| Slice | Ticket | Status |
-| ----- | ------ | ------ |
-| 00 | Project scaffolding | Done |
-| 01 | Tournament and team setup | Done |
-| 02 | Single-elimination bracket | Done |
-| 03 | Live scoring and concurrency | Done |
-| 04 | Cascading score correction | Done |
-| 05 | Double elimination | Done |
-| 06 | Manual match scheduling | Done |
-| 07 | Pools and round-robin scheduling | Done |
-| 08 | Pool-to-playoff advancement | Done |
-| 09 | Playoff court auto-dispatch | Done |
-| 10 | Frontend on Cloudflare Workers | Done |
-| 11 | Bracket pages and pool settings | Done |
-| 12 | Playoff best-of series | Done |
-| 13 | Confirm tournament settings | Done |
-| 14 | Team check-in edits | Done |
-| 15 | Tournament lifecycle and results | Done |
-| 16 | Court view for scorekeepers | Done |
-| 17 | Venue deployment | Done |
-| 18 | Dress rehearsal and v1.0.0 | Not started |
-| 19 | Access control and login | Done |
-
-The road to v1 and its release criteria are in [V1_MVP_PLAN.md](V1_MVP_PLAN.md).
-
-Unticketed work also done: client-side routing, a nav bar with back/forward,
-toast notifications, tournament deletion, and page-data caching.
 
 ## API endpoints
 
@@ -145,6 +113,12 @@ the same ports as the dev stack (8000 and 5173), which the tunnel points at,
 so stop the dev stack first. The scripts below are `sh` scripts; on Windows
 run them from Git Bash.
 
+> **Where the public frontend comes from:** `tournament.johnchau.org` is
+> served by the Cloudflare Workers deploy of `main`, not by this stack's
+> frontend container (found in the dress rehearsal). Backend changes go
+> live when this stack is rebuilt; frontend changes go live only when
+> they're merged to `main`. Merge before the event.
+
 **Start** (the first build takes a few minutes):
 
 ```sh
@@ -192,6 +166,23 @@ signed in as long as their session existed when the backup was taken.
 
 Copy `backups/` somewhere off the machine after the event; nothing prunes it
 (about 100 small files per event day).
+
+## Demoing the app
+
+To demo the app in a clean, throwaway browser (no cookies, cache or
+extensions from your own browser), use Playwright's recorder:
+
+```sh
+npx playwright codegen https://tournament.johnchau.org
+```
+
+It opens a fresh browser next to the Playwright Inspector, which writes
+each click and keystroke down as test code. That's handy for turning a
+demo into an end-to-end test later. The first run may ask to install
+Playwright's browsers (`npx playwright install chromium`). Signing in there
+is real: it creates a session and makes real changes on whatever stack the
+URL points at, so demo on a scratch tournament. Point it at
+`http://localhost:5173` to demo the dev stack instead.
 
 ## Project layout
 

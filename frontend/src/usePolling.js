@@ -15,11 +15,13 @@ const REFRESH_THROTTLE_MS = 3000
  *
  * With `auto: false` nothing is scheduled: it loads when `key` changes or on
  * a manual refresh, for data that only changes when something else does.
+ *
+ * `onError` hears about each failed fetch, e.g. to notice a missing id.
  */
-export function usePolling(load, onData, key, { auto = true } = {}) {
-  const latest = useRef({ load, onData })
+export function usePolling(load, onData, key, { auto = true, onError } = {}) {
+  const latest = useRef({ load, onData, onError })
   useEffect(() => {
-    latest.current = { load, onData }
+    latest.current = { load, onData, onError }
   })
   const refreshRef = useRef(() => Promise.resolve())
 
@@ -39,7 +41,9 @@ export function usePolling(load, onData, key, { auto = true } = {}) {
         .then((data) => {
           if (!cancelled) latest.current.onData(data)
         })
-        .catch(() => {})
+        .catch((error) => {
+          if (!cancelled) latest.current.onError?.(error)
+        })
     }
 
     // Nobody is looking at a hidden tab, so stop polling until it's shown.

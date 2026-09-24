@@ -71,7 +71,7 @@ test('says so when the bracket does not exist', async () => {
 
   renderAt(99)
 
-  expect(await screen.findByText('Bracket not found.')).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Bracket not found' })).toBeInTheDocument()
 })
 
 test('signed out, the bracket is read-only', async () => {

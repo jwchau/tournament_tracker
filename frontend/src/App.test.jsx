@@ -127,3 +127,14 @@ test('revisiting team and pool pages loads their data from the cache', async () 
   expect(hits('/teams/10/players')).toBe(1)
   expect(hits('/pools/7')).toBe(1)
 })
+
+test('an unknown address shows a not-found page with a way home', async () => {
+  vi.spyOn(api, 'getMe').mockResolvedValue(null)
+  window.history.pushState({}, '', '/no-such-page')
+
+  render(<App />)
+
+  expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: /all tournaments/i })).toHaveAttribute('href', '/')
+  window.history.pushState({}, '', '/')
+})

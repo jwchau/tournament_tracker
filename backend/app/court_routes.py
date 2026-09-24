@@ -44,8 +44,9 @@ class CourtSummary(SQLModel):
     use: Literal["pool", "playoff"] | None
     # The pool's name or "Bracket N".
     label: str | None
-    # "Bracket M" while the court is lent to a bracket without courts of its
-    # own (its current match is that bracket's), otherwise None.
+    # "Bracket M" while the court is lent to another bracket (one without
+    # courts of its own, or any bracket once this one is finished) and its
+    # current match is that bracket's, otherwise None.
     now_playing: str | None = None
     pool_id: int | None
     playoff_bracket_id: int | None

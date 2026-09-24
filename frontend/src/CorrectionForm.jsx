@@ -75,7 +75,7 @@ export default function CorrectionForm({
     } catch (failure) {
       setError(
         failure?.status === 409
-          ? 'This match was updated elsewhere. Wait for the bracket to refresh, then try again.'
+          ? 'This match was updated elsewhere. Wait for the page to refresh, then try again.'
           : "Couldn't apply this correction. Please try again.",
       )
     }

@@ -66,3 +66,17 @@ test('a court lent to a bracket without courts says whose match it is playing', 
     'Bracket 1 · now playing Bracket 2',
   )
 })
+
+test('a tournament that does not exist is not found', async () => {
+  vi.spyOn(api, 'listCourts').mockRejectedValue({ status: 404 })
+
+  render(
+    <MemoryRouter initialEntries={['/tournaments/999/courts']}>
+      <Routes>
+        <Route path="/tournaments/:tournamentId/courts" element={<CourtsPage />} />
+      </Routes>
+    </MemoryRouter>,
+  )
+
+  expect(await screen.findByRole('heading', { name: 'Tournament not found' })).toBeInTheDocument()
+})

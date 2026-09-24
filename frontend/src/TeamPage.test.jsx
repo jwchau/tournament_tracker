@@ -159,3 +159,12 @@ test('signed out, the team and roster are read-only', async () => {
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   expect(screen.queryByRole('button')).not.toBeInTheDocument()
 })
+test('says so when the team does not exist', async () => {
+  vi.spyOn(api, 'getTeam').mockRejectedValue({ status: 404 })
+  vi.spyOn(api, 'listPlayers').mockRejectedValue({ status: 404 })
+
+  renderAt(999)
+
+  expect(await screen.findByRole('heading', { name: 'Team not found' })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: /all tournaments/i })).toHaveAttribute('href', '/')
+})

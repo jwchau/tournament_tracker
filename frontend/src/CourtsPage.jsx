@@ -3,14 +3,21 @@ import { Link, useParams } from 'react-router-dom'
 
 import { listCourts } from './api'
 import { courtLabel } from './courtLabel'
+import { isNotFound } from './failure'
+import NotFound from './NotFound'
 import { usePolling } from './usePolling'
 
 // Every court as a big tap target, so a scorekeeper can find theirs on a phone.
 export default function CourtsPage() {
   const { tournamentId } = useParams()
   const [courts, setCourts] = useState([])
+  const [notFound, setNotFound] = useState(false)
 
-  usePolling(() => listCourts(tournamentId), setCourts, tournamentId)
+  usePolling(() => listCourts(tournamentId), setCourts, tournamentId, {
+    onError: (error) => setNotFound(isNotFound(error)),
+  })
+
+  if (notFound) return <NotFound thing="Tournament" />
 
   return (
     <div className="court-page">

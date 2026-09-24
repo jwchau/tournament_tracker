@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { autoAssignPools, createPool, listPools, updateTeam } from './api'
 import { useAuth } from './auth'
+import { useNotifyFailure } from './useNotifyFailure'
 
 function courtsLabel(courts) {
   if (courts.length === 0) return 'no court (add courts in settings)'
@@ -18,6 +19,7 @@ export default function PoolsPanel({
 }) {
   const [pools, setPoolsState] = useState([])
   const [newPoolName, setNewPoolName] = useState('')
+  const notifyFailure = useNotifyFailure()
   const { user } = useAuth()
 
   function setPools(next) {
@@ -31,7 +33,7 @@ export default function PoolsPanel({
         setPoolsState(loaded)
         onPoolsChanged?.(loaded)
       })
-      .catch(() => {})
+      .catch((error) => notifyFailure(error, "Couldn't load the pools"))
     // Only reload when the tournament changes, not when the parent re-renders.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tournamentId])

@@ -4,7 +4,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { deletePool, getPool, listTeams } from './api'
 import { useAuth } from './auth'
 import ConfirmModal from './ConfirmModal'
+import { isNotFound } from './failure'
+import NotFound from './NotFound'
 import { useNotify } from './NotificationContext'
+import { useNotifyFailure } from './useNotifyFailure'
 import PoolSchedule from './PoolSchedule'
 import PoolStandings from './PoolStandings'
 
@@ -27,6 +30,7 @@ export default function PoolPage() {
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const navigate = useNavigate()
   const notify = useNotify()
+  const notifyFailure = useNotifyFailure()
   const { user } = useAuth()
 
   useEffect(() => {
@@ -35,7 +39,10 @@ export default function PoolPage() {
         setPool(loaded)
         return listTeams(loaded.tournament_id).then(setTeams)
       })
-      .catch(() => setNotFound(true))
+      .catch((error) =>
+        isNotFound(error) ? setNotFound(true) : notifyFailure(error, "Couldn't load the pool"),
+      )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [poolId])
 
   async function handleDelete() {
@@ -50,7 +57,7 @@ export default function PoolPage() {
     }
   }
 
-  if (notFound) return <p>Pool not found.</p>
+  if (notFound) return <NotFound thing="Pool" />
   if (!pool) return null
 
   return (

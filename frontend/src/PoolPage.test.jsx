@@ -108,7 +108,7 @@ test('says so when the pool does not exist', async () => {
 
   renderAt(999)
 
-  expect(await screen.findByText(/pool not found/i)).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Pool not found' })).toBeInTheDocument()
 })
 
 test('standings are refetched only when the polled matches change', async () => {
@@ -202,4 +202,12 @@ test('signed out, an unscheduled pool has no generate button', async () => {
   // Let the schedule load: signed in, the generate button would show now.
   await act(async () => {})
   expect(screen.queryByRole('button', { name: /generate schedule/i })).not.toBeInTheDocument()
+})
+test('a pool that fails to load for another reason is not called missing', async () => {
+  vi.spyOn(api, 'getPool').mockRejectedValue({ status: 500, json: () => Promise.reject() })
+
+  renderAt(7)
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't load the pool/i)
+  expect(screen.queryByText(/not found/i)).not.toBeInTheDocument()
 })

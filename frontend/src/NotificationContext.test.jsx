@@ -68,3 +68,45 @@ test('renders an error notification with an alert role', () => {
 
   expect(screen.getByRole('alert')).toHaveTextContent('Failed to generate bracket')
 })
+
+// A request whose failure nothing handled, as the browser reports it.
+function unhandledRejection(reason) {
+  const event = new Event('unhandledrejection')
+  event.reason = reason
+  act(() => {
+    window.dispatchEvent(event)
+  })
+}
+
+function refused(status, detail) {
+  return { status, json: () => Promise.resolve({ detail }) }
+}
+
+test('a failed request nothing handled shows the reason as an error', async () => {
+  vi.useRealTimers()
+  render(<NotificationProvider />)
+
+  unhandledRejection(refused(400, 'Pool A has no schedule yet'))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Pool A has no schedule yet')
+})
+
+test('an unhandled network failure says the server could not be reached', async () => {
+  vi.useRealTimers()
+  render(<NotificationProvider />)
+
+  unhandledRejection(new TypeError('Failed to fetch'))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't reach the server/i)
+})
+
+test('an unhandled sign-in refusal is left to the sign-in redirect', async () => {
+  vi.useRealTimers()
+  render(<NotificationProvider />)
+
+  unhandledRejection(refused(401, 'Not signed in'))
+  unhandledRejection(new Error('not a request'))
+  await act(() => Promise.resolve())
+
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})

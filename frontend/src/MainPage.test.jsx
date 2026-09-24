@@ -4,6 +4,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
 import MainPage from './MainPage'
+import { NotificationProvider } from './NotificationContext'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -102,4 +103,18 @@ test('a new tournament starts in the draft stage in the list', async () => {
 
   const created = (await screen.findByRole('link', { name: /winter cup/i })).closest('li')
   expect(created).toHaveTextContent('Draft')
+})
+
+test('says so when the tournaments fail to load', async () => {
+  vi.spyOn(api, 'listTournaments').mockRejectedValue(new TypeError('Failed to fetch'))
+
+  render(
+    <MemoryRouter>
+      <NotificationProvider>
+        <MainPage />
+      </NotificationProvider>
+    </MemoryRouter>,
+  )
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't reach the server/i)
 })

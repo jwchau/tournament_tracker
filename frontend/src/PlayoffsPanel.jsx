@@ -12,6 +12,7 @@ import { useAuth } from './auth'
 import BracketDiagram from './BracketDiagram'
 import ConfirmModal from './ConfirmModal'
 import { useNotify } from './NotificationContext'
+import { useNotifyFailure } from './useNotifyFailure'
 
 // A tournament with pools advances from pool play into tiered brackets; one
 // without pools generates a single bracket of every team. Either happens once,
@@ -24,15 +25,17 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
   const [format, setFormat] = useState('single')
   const [confirmingReset, setConfirmingReset] = useState(false)
   const notify = useNotify()
+  const notifyFailure = useNotifyFailure()
   const { user } = useAuth()
 
   useEffect(() => {
     listPlayoffBrackets(tournamentId)
       .then(setBrackets)
-      .catch(() => {})
+      .catch((error) => notifyFailure(error, "Couldn't load the playoff brackets"))
     getPlayoffReadiness(tournamentId)
       .then(({ reason }) => setBlocker(reason))
-      .catch(() => {})
+      .catch(() => setBlocker("Couldn't check whether pool play is finished. Reload to try again."))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tournamentId])
 
   async function handleAdvance() {
