@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
+import { NotificationProvider } from './NotificationContext'
 import TeamPage from './TeamPage'
 
 afterEach(() => {
@@ -12,12 +13,84 @@ afterEach(() => {
 function renderAt(teamId) {
   return render(
     <MemoryRouter initialEntries={[`/teams/${teamId}`]}>
-      <Routes>
-        <Route path="/teams/:teamId" element={<TeamPage />} />
-      </Routes>
+      <NotificationProvider>
+        <Routes>
+          <Route path="/teams/:teamId" element={<TeamPage />} />
+          <Route path="/tournaments/:tournamentId" element={<h2>Tournament page</h2>} />
+        </Routes>
+      </NotificationProvider>
     </MemoryRouter>,
   )
 }
+
+function mockAces() {
+  vi.spyOn(api, 'getTeam').mockResolvedValue({ id: 10, tournament_id: 1, name: 'Aces', seed: 3 })
+  vi.spyOn(api, 'listPlayers').mockResolvedValue([])
+}
+
+function refusal(detail) {
+  return { json: () => Promise.resolve({ detail }) }
+}
+
+test('editing the seed saves it', async () => {
+  mockAces()
+  const updateTeam = vi
+    .spyOn(api, 'updateTeam')
+    .mockResolvedValue({ id: 10, tournament_id: 1, name: 'Aces', seed: 1 })
+
+  renderAt(10)
+
+  fireEvent.change(await screen.findByLabelText('Seed'), { target: { value: '1' } })
+  fireEvent.click(screen.getByRole('button', { name: /save/i }))
+
+  expect(await screen.findByText('Team updated')).toBeInTheDocument()
+  expect(updateTeam).toHaveBeenCalledWith('10', { name: 'Aces', seed: 1 })
+  expect(screen.getByLabelText('Seed')).toHaveValue(1)
+})
+
+test('a refused seed change shows the reason', async () => {
+  mockAces()
+  vi.spyOn(api, 'updateTeam').mockRejectedValue(
+    refusal('play has started, so seeds can no longer change'),
+  )
+
+  renderAt(10)
+
+  fireEvent.change(await screen.findByLabelText('Seed'), { target: { value: '1' } })
+  fireEvent.click(screen.getByRole('button', { name: /save/i }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/play has started/)
+})
+
+test('deleting the team asks first, then returns to the tournament', async () => {
+  mockAces()
+  const deleteTeam = vi.spyOn(api, 'deleteTeam').mockResolvedValue(undefined)
+
+  renderAt(10)
+
+  fireEvent.click(await screen.findByRole('button', { name: /delete team/i }))
+  expect(screen.getByRole('dialog', { name: /delete team/i })).toHaveTextContent(/Aces/)
+  expect(deleteTeam).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+
+  expect(await screen.findByText('Tournament page')).toBeInTheDocument()
+  expect(deleteTeam).toHaveBeenCalledWith('10')
+})
+
+test('a team that cannot be deleted says why and stays open', async () => {
+  mockAces()
+  vi.spyOn(api, 'deleteTeam').mockRejectedValue(
+    refusal("brackets already exist, so teams can't be deleted"),
+  )
+
+  renderAt(10)
+
+  fireEvent.click(await screen.findByRole('button', { name: /delete team/i }))
+  fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/brackets already exist/)
+  expect(screen.getByDisplayValue('Aces')).toBeInTheDocument()
+})
 
 test('loads the team and its roster', async () => {
   vi.spyOn(api, 'getTeam').mockResolvedValue({ id: 10, tournament_id: 1, name: 'Ice Wolves' })

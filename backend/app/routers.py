@@ -248,6 +248,14 @@ def update_team(
         raise HTTPException(status_code=404, detail="Team not found")
 
     changes = data.model_dump(exclude_unset=True)
+    if (
+        "seed" in changes
+        and changes["seed"] != team.seed
+        and _play_has_started(session, team.tournament_id)
+    ):
+        raise HTTPException(
+            status_code=400, detail="play has started, so seeds can no longer change"
+        )
     pool_id = changes.get("pool_id")
     if pool_id is not None:
         pool = session.get(Pool, pool_id)
@@ -259,6 +267,32 @@ def update_team(
     session.commit()
     session.refresh(team)
     return team
+
+
+@router.delete("/teams/{team_id}", status_code=204)
+def delete_team(team_id: int, session: Session = Depends(get_session)) -> None:
+    """Remove a team and its roster, e.g. a no-show at check-in."""
+    team = session.get(Team, team_id)
+    if team is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+    if session.exec(
+        select(PlayoffBracket.id).where(PlayoffBracket.tournament_id == team.tournament_id)
+    ).first() is not None:
+        raise HTTPException(
+            status_code=400, detail="brackets already exist, so teams can't be deleted"
+        )
+    if team.pool_id is not None and session.exec(
+        select(Match.id).where(Match.pool_id == team.pool_id)
+    ).first() is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="this team's pool already has a schedule; re-run auto-assign or delete the pool first",
+        )
+
+    for player in session.exec(select(Player).where(Player.team_id == team_id)).all():
+        session.delete(player)
+    session.delete(team)
+    session.commit()
 
 
 @router.post("/teams/{team_id}/players", response_model=Player, status_code=201)
