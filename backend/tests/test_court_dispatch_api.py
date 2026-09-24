@@ -155,16 +155,16 @@ def test_a_court_set_by_hand_overrides_dispatch(client):
     ids = _bracket(client, 8, court_count=2)
     r1 = [ids[("winners", 1, position)] for position in range(1, 5)]
 
-    # Sending the third match to court 2 by hand takes it out of the queue.
+    # Sending the third match to court 2 by hand takes it out of the queue, and
+    # the unstarted match dispatched there goes back to the front of the line.
     client.patch(f"/matches/{r1[2]}/schedule", json={"court": 2})
-    assert _dispatch(client, r1[0])["queue"] == [r1[3]]
+    assert _court(client, r1[2]) == 2
+    assert _court(client, r1[1]) is None
+    assert _dispatch(client, r1[0])["queue"] == [r1[1], r1[3]]
 
-    # Court 2 is still busy with it when the match there finishes...
-    _complete(client, r1[1])
-    assert _court(client, r1[3]) is None
-    # ...so the queue moves on when court 1 frees instead.
+    # It takes the next court that frees.
     _complete(client, r1[0])
-    assert _court(client, r1[3]) == 1
+    assert _court(client, r1[1]) == 1
 
 
 def test_moving_a_match_off_its_court_by_hand_lets_the_queue_take_it(client):
@@ -173,7 +173,61 @@ def test_moving_a_match_off_its_court_by_hand_lets_the_queue_take_it(client):
 
     client.patch(f"/matches/{r1[0]}/schedule", json={"court": 2})
 
-    assert _court(client, r1[2]) == 1
+    # Court 2's unstarted match is bumped, and as the longest waiting it takes court 1.
+    assert _court(client, r1[1]) == 1
+    assert _court(client, r1[2]) is None
+
+
+def _start(client, match_id):
+    match = _get(client, match_id)
+    client.patch(
+        f"/matches/{match_id}/score",
+        json={"team1_score": 3, "team2_score": 2, "version": match["version"]},
+    )
+
+
+def test_a_started_match_keeps_its_court_and_a_match_set_there_by_hand_plays_next(client):
+    ids = _bracket(client, 8, court_count=2)
+    r1 = [ids[("winners", 1, position)] for position in range(1, 5)]
+    _start(client, r1[1])
+
+    client.patch(f"/matches/{r1[3]}/schedule", json={"court": 2})
+
+    # Both are on court 2: the one under way plays on, the hand-set one waits.
+    assert (_court(client, r1[1]), _court(client, r1[3])) == (2, 2)
+    courts = _dispatch(client, r1[0])["courts"]
+    assert {"court": 2, "match_id": r1[1]} in courts
+    # When it finishes the hand-set match takes the court, ahead of the queue.
+    _complete(client, r1[1])
+    courts = _dispatch(client, r1[0])["courts"]
+    assert {"court": 2, "match_id": r1[3]} in courts
+    assert _court(client, r1[2]) is None
+
+
+def test_matches_set_by_hand_on_one_court_play_in_the_order_they_were_set(client):
+    ids = _bracket(client, 8, court_count=1)
+    r1 = [ids[("winners", 1, position)] for position in range(1, 5)]
+    _start(client, r1[0])
+
+    client.patch(f"/matches/{r1[3]}/schedule", json={"court": 1})
+    client.patch(f"/matches/{r1[2]}/schedule", json={"court": 1})
+
+    _complete(client, r1[0])
+    assert _dispatch(client, r1[0])["courts"] == [{"court": 1, "match_id": r1[3]}]
+    _complete(client, r1[3])
+    assert _dispatch(client, r1[0])["courts"] == [{"court": 1, "match_id": r1[2]}]
+
+
+def test_a_hand_set_court_is_recorded_and_cleared_with_the_court(client):
+    ids = _bracket(client, 8, court_count=2)
+    first = ids[("winners", 1, 1)]
+    assert _get(client, first)["court_set_at"] is None
+
+    client.patch(f"/matches/{first}/schedule", json={"court": 2})
+    assert _get(client, first)["court_set_at"] is not None
+
+    client.patch(f"/matches/{first}/schedule", json={"court": None})
+    assert _get(client, first)["court_set_at"] is None
 
 
 def test_changing_the_court_count_before_play_redistributes_the_courts(client):

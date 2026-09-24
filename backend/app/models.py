@@ -181,6 +181,10 @@ class Match(SQLModel, table=True):
     loser_next_slot: int | None = None
     scheduled_time: datetime | None = None
     court: int | None = None
+    # When the court was set by hand; None for a court from dispatch (or no
+    # court). Hand-set matches on a court play before dispatched ones, in
+    # the order they were set (see app.dispatch).
+    court_set_at: datetime | None = None
     # A playoff match's place in the court queue: the order in which the
     # tournament's playoff matches became ready (see app.dispatch).
     ready_order: int | None = None

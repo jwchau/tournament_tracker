@@ -186,3 +186,19 @@ def test_a_court_playing_its_own_bracket_has_nothing_extra_to_say(client):
     [court] = _courts(client, tournament_id)
 
     assert (court["label"], court["now_playing"]) == ("Bracket 1", None)
+
+
+def test_a_match_set_by_hand_behind_the_one_playing_is_up_next_on_that_court(client):
+    ids = _bracket(client, 8, court_count=1)
+    r1 = [ids[("winners", 1, position)] for position in range(1, 5)]
+    playing = _get(client, r1[0])
+    client.patch(
+        f"/matches/{r1[0]}/score",
+        json={"team1_score": 3, "team2_score": 2, "version": playing["version"]},
+    )
+    client.patch(f"/matches/{r1[3]}/schedule", json={"court": 1})
+
+    [court] = _courts(client, playing["tournament_id"])
+
+    assert court["current"]["id"] == r1[0]
+    assert _ids(court["up_next"]) == [r1[3], r1[1], r1[2]]

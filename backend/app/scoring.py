@@ -244,6 +244,7 @@ def _unplay(session: Session, match: Match, slots: list[int]) -> None:
         winner_id=None,
         status="pending",
         court=None,
+        court_set_at=None,
         ready_order=None,
     )
 

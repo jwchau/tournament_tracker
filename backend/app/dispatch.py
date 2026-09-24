@@ -15,9 +15,14 @@ uses another's.
 
 A match keeps its court once it's complete (it was played there) but only
 unfinished matches occupy one. A court set by hand is left alone: it takes
-the match out of the queue and occupies that court like any other. A match
+the match out of the queue and occupies that court like any other. It can
+double-book a court: a match already under way there plays on, then the
+hand-set matches in the order they were set; an unstarted dispatched match
+there goes back to the front of the queue instead. A match
 on hold is skipped until it's released, then waits in its original place.
 """
+
+from datetime import datetime
 
 from sqlmodel import Session, func, select, update
 
@@ -51,19 +56,59 @@ def _waiting(tournament_id: int):
     )
 
 
-def _occupied_courts(session: Session, tournament_id: int) -> dict[int, int]:
-    """Court -> the unfinished playoff match on it (the earliest ready, if hand-doubled)."""
-    rows = session.exec(
-        select(Match.court, Match.id)
-        .where(
+def _court_priority(match: Match) -> tuple:
+    """Who plays first on a court with several matches: one already under
+    way, then those set there by hand in the order they were set, then the
+    dispatched one."""
+    started = match.team1_score is not None or match.team2_score is not None
+    by_hand = match.court_set_at is not None
+    return (not started, not by_hand, match.court_set_at or datetime.max, match.ready_order or 0, match.id)
+
+
+def court_lines(session: Session, tournament_id: int) -> dict[int, list[int]]:
+    """Court -> the unfinished playoff matches on it, the one playing now first."""
+    matches = session.exec(
+        select(Match).where(
             Match.tournament_id == tournament_id,
             Match.playoff_bracket_id.is_not(None),
             Match.status.in_(UNFINISHED),
             Match.court.is_not(None),
         )
-        .order_by(Match.ready_order.desc(), Match.id.desc())
     ).all()
-    return dict(rows)
+    lines: dict[int, list[Match]] = {}
+    for match in matches:
+        lines.setdefault(match.court, []).append(match)
+    return {
+        court: [match.id for match in sorted(line, key=_court_priority)]
+        for court, line in lines.items()
+    }
+
+
+def _occupied_courts(session: Session, tournament_id: int) -> dict[int, int]:
+    """Court -> the unfinished playoff match playing on it."""
+    return {court: line[0] for court, line in court_lines(session, tournament_id).items()}
+
+
+def bump_dispatched(session: Session, tournament_id: int, court: int, set_by_hand: int) -> None:
+    """Send an unstarted dispatched match back to the queue when a match is set on its court by hand.
+
+    It keeps its ready order, so it's at the front of the line for the next
+    free court. A match already under way keeps the court. Uncommitted.
+    """
+    session.execute(
+        update(Match)
+        .where(
+            Match.tournament_id == tournament_id,
+            Match.playoff_bracket_id.is_not(None),
+            Match.status.in_(UNFINISHED),
+            Match.court == court,
+            Match.id != set_by_hand,
+            Match.court_set_at.is_(None),
+            Match.team1_score.is_(None),
+            Match.team2_score.is_(None),
+        )
+        .values(court=None)
+    )
 
 
 def _tournament_of(session: Session, bracket_id: int) -> int:
@@ -156,6 +201,6 @@ def redispatch(session: Session, tournament_id: int) -> None:
             Match.playoff_bracket_id.is_not(None),
             Match.status.in_(UNFINISHED),
         )
-        .values(court=None)
+        .values(court=None, court_set_at=None)
     )
     dispatch(session, tournament_id)
