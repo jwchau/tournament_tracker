@@ -113,6 +113,12 @@ the same ports as the dev stack (8000 and 5173), which the tunnel points at,
 so stop the dev stack first. The scripts below are `sh` scripts; on Windows
 run them from Git Bash.
 
+> **Where the public frontend comes from:** `tournament.johnchau.org` is
+> served by the Cloudflare Workers deploy of `main`, not by this stack's
+> frontend container (found in the dress rehearsal). Backend changes go
+> live when this stack is rebuilt; frontend changes go live only when
+> they're merged to `main`. Merge before the event.
+
 **Start** (the first build takes a few minutes):
 
 ```sh
