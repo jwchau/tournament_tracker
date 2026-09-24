@@ -178,3 +178,21 @@ test('signed out, the court shows its match without a score form', async () => {
     '/login?next=%2Ftournaments%2F1%2Fcourts%2F2',
   )
 })
+
+test('a court lent to a bracket without courts says so, without changing where its queue goes', async () => {
+  vi.spyOn(api, 'listCourts').mockResolvedValue([
+    {
+      court: 1,
+      use: 'playoff',
+      label: 'Bracket 1',
+      now_playing: 'Bracket 2',
+      current: first,
+      up_next: [second],
+    },
+  ])
+
+  renderAt('/tournaments/3/courts/1')
+
+  expect(await screen.findByText('Bracket 1 · now playing Bracket 2')).toBeInTheDocument()
+  expect(screen.getByText(/next free Bracket 1 court/)).toBeInTheDocument()
+})

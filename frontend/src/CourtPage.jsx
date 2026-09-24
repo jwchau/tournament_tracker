@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 
 import { listCourts } from './api'
 import { loginPath, useAuth } from './auth'
+import { courtLabel } from './courtLabel'
 import ScoreEntryForm from './ScoreEntryForm'
 import SeriesForm from './SeriesForm'
 import { usePolling } from './usePolling'
@@ -34,7 +35,7 @@ export default function CourtPage() {
     <div className="court-page">
       <Link to={`/tournaments/${tournamentId}/courts`}>All courts</Link>
       <h2>Court {court.court}</h2>
-      {court.label && <p>{court.label}</p>}
+      {court.label && <p>{courtLabel(court)}</p>}
 
       {current ? (
         <section aria-labelledby="now-playing">

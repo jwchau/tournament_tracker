@@ -44,6 +44,9 @@ class CourtSummary(SQLModel):
     use: Literal["pool", "playoff"] | None
     # The pool's name or "Bracket N".
     label: str | None
+    # "Bracket M" while the court is lent to a bracket without courts of its
+    # own (its current match is that bracket's), otherwise None.
+    now_playing: str | None = None
     pool_id: int | None
     playoff_bracket_id: int | None
     # The earliest unfinished match on the court with both teams, or None if it's empty.
@@ -95,6 +98,13 @@ def list_courts(tournament_id: int, session: Session = Depends(get_session)) -> 
         for court in range(1, tournament.court_count + 1)
     }
     if brackets:
+        tiers = {bracket.id: bracket.tier for bracket in brackets}
+
+        def lent_to(bracket: PlayoffBracket, current: Match | None) -> str | None:
+            if current is None or current.playoff_bracket_id == bracket.id:
+                return None
+            return f"Bracket {tiers[current.playoff_bracket_id]}"
+
         for bracket in brackets:
             # A bracket without courts of its own (overflow) waits in line on
             # the others' courts, so its matches show up in their up next.
@@ -108,6 +118,7 @@ def list_courts(tournament_id: int, session: Session = Depends(get_session)) -> 
                     court=court,
                     use="playoff",
                     label=f"Bracket {bracket.tier}",
+                    now_playing=lent_to(bracket, current),
                     pool_id=None,
                     playoff_bracket_id=bracket.id,
                     current=as_court_match(current) if current is not None else None,

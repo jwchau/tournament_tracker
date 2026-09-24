@@ -157,3 +157,32 @@ def test_a_bracket_without_courts_waits_in_line_on_the_courts_it_shares(client):
     assert (court["use"], court["label"]) == ("playoff", "Bracket 1")
     assert court["current"]["id"] == first_final["id"]
     assert _ids(court["up_next"]) == [second_final["id"]]
+
+
+def test_a_shared_court_names_the_bracket_it_is_playing(client):
+    # Bracket 2 owns no courts; once bracket 1's final finishes, court 1 plays bracket 2's.
+    tournament_id, [pool], _ = _setup(
+        client, [4], advance_per_pool=2, playoff_bracket_count=2, court_count=1
+    )
+    _play(client, pool["id"])
+    tier_one, tier_two = _advance(client, tournament_id).json()
+    [first_final] = client.get(f"/playoff-brackets/{tier_one['id']}/matches").json()
+    [second_final] = client.get(f"/playoff-brackets/{tier_two['id']}/matches").json()
+    _complete(client, first_final["id"])
+
+    [court] = _courts(client, tournament_id)
+
+    assert court["current"]["id"] == second_final["id"]
+    assert (court["label"], court["now_playing"]) == ("Bracket 1", "Bracket 2")
+
+
+def test_a_court_playing_its_own_bracket_has_nothing_extra_to_say(client):
+    tournament_id, [pool], _ = _setup(
+        client, [4], advance_per_pool=2, playoff_bracket_count=2, court_count=1
+    )
+    _play(client, pool["id"])
+    _advance(client, tournament_id)
+
+    [court] = _courts(client, tournament_id)
+
+    assert (court["label"], court["now_playing"]) == ("Bracket 1", None)
