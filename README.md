@@ -39,7 +39,7 @@ Details for each slice live in its ticket under [tickets/](tickets).
 | 12 | Playoff best-of series | Done |
 | 13 | Confirm tournament settings | Done |
 | 14 | Team check-in edits | Not started |
-| 15 | Tournament lifecycle and results | Not started |
+| 15 | Tournament lifecycle and results | Done |
 | 16 | Court view for scorekeepers | Not started |
 | 17 | Venue deployment | Not started |
 | 18 | Dress rehearsal and v1.0.0 | Not started |
@@ -56,7 +56,7 @@ Full interactive reference at http://localhost:8000/docs when the backend is run
 
 | Resource | Endpoints |
 | -------- | --------- |
-| Tournaments | `GET/POST /tournaments`, `GET/PATCH/DELETE /tournaments/{id}` |
+| Tournaments | `GET/POST /tournaments`, `GET/PATCH/DELETE /tournaments/{id}`, `GET /tournaments/{id}/results` |
 | Teams | `GET/POST /tournaments/{id}/teams`, `GET/PATCH /teams/{id}` |
 | Players | `GET/POST /teams/{id}/players`, `DELETE /teams/{id}/players/{playerId}` |
 | Pools | `GET/POST /tournaments/{id}/pools`, `POST /tournaments/{id}/pools/auto-assign`, `GET/PATCH/DELETE /pools/{id}`, `POST /pools/{id}/generate-schedule`, `GET /pools/{id}/matches`, `GET /pools/{id}/standings` |

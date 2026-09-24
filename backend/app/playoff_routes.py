@@ -12,9 +12,10 @@ from app.bracket import (
 )
 from app.db import get_session
 from app.models import CorrectionLog, Match, Player, PlayoffBracket, Team, Tournament
-from app.pool_routes import _pool_matches, _pools_in_order, _tournament_or_404
+from app.pool_routes import _pool_matches, _pools_in_order, _tournament_or_404, pre_playoff_stage
 from app.playoffs import playoff_tiers
 from app.pools import pool_standings
+from app.results import placings
 from app.settings import require_confirmed_settings
 
 router = APIRouter()
@@ -151,7 +152,7 @@ def reset_playoff_brackets(tournament_id: int, session: Session = Depends(get_se
     session.flush()
     for bracket in brackets:
         session.delete(bracket)
-    tournament.stage = "draft"
+    tournament.stage = pre_playoff_stage(session, tournament_id)
     session.add(tournament)
     session.commit()
 
@@ -167,7 +168,7 @@ def _create_playoffs(
     """
     claimed = session.execute(
         update(Tournament)
-        .where(Tournament.id == tournament_id, Tournament.stage != "playoffs")
+        .where(Tournament.id == tournament_id, Tournament.stage.not_in(("playoffs", "complete")))
         .values(stage="playoffs", format=format)
     )
     if claimed.rowcount == 0:
@@ -277,3 +278,63 @@ def list_playoff_bracket_matches(
     return list(
         session.exec(select(Match).where(Match.playoff_bracket_id == bracket_id)).all()
     )
+
+
+class PlacedTeam(SQLModel):
+    team_id: int
+    name: str
+
+
+class EliminatedGroup(SQLModel):
+    bracket: str
+    round: int
+    teams: list[PlacedTeam]
+
+
+class TierResult(SQLModel):
+    tier: int
+    playoff_bracket_id: int
+    format: str
+    champion: PlacedTeam
+    runner_up: PlacedTeam
+    eliminated: list[EliminatedGroup]
+
+
+@router.get("/tournaments/{tournament_id}/results", response_model=list[TierResult])
+def tournament_results(
+    tournament_id: int, session: Session = Depends(get_session)
+) -> list[TierResult]:
+    """Each playoff tier's final placings, once every tier has a champion."""
+    if _tournament_or_404(session, tournament_id).stage != "complete":
+        raise HTTPException(status_code=400, detail="the tournament isn't complete yet")
+    names = dict(
+        session.exec(select(Team.id, Team.name).where(Team.tournament_id == tournament_id)).all()
+    )
+
+    def placed(team_id: int) -> PlacedTeam:
+        return PlacedTeam(team_id=team_id, name=names[team_id])
+
+    results = []
+    for bracket in session.exec(
+        select(PlayoffBracket)
+        .where(PlayoffBracket.tournament_id == tournament_id)
+        .order_by(PlayoffBracket.tier)
+    ).all():
+        matches = session.exec(select(Match).where(Match.playoff_bracket_id == bracket.id)).all()
+        final = placings(list(matches))
+        results.append(
+            TierResult(
+                tier=bracket.tier,
+                playoff_bracket_id=bracket.id,
+                format=bracket.format,
+                champion=placed(final.champion_id),
+                runner_up=placed(final.runner_up_id),
+                eliminated=[
+                    EliminatedGroup(
+                        bracket=section, round=round_, teams=[placed(t) for t in team_ids]
+                    )
+                    for section, round_, team_ids in final.eliminated
+                ],
+            )
+        )
+    return results

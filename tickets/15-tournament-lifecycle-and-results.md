@@ -18,10 +18,14 @@ reaches `draft` or `playoffs`. Show who won once it's over.
 - A correction that un-decides a champion moves the stage back to
   `playoffs`.
 - Resetting brackets (existing `DELETE /tournaments/{id}/playoff-brackets`)
-  goes back to `pool_play` if there are pools, or `draft` if there aren't.
+  goes back to `pool_play` if any pool has a schedule, or `draft` if none
+  does (the same rule as above, so pools without schedules count as draft).
 - `GET /tournaments/{id}/results` returns each tier's final placings:
   champion, runner-up, and the rest grouped by the round they went out in.
-  It returns `400` until the stage is `complete`.
+  It returns `400` until the stage is `complete`. A team goes out in the
+  round of its last loss (its losers-bracket loss in double elimination);
+  byes aren't losses. Groups are listed latest round first, as
+  `{bracket, round, teams}`.
 
 ### Frontend
 
@@ -30,6 +34,8 @@ reaches `draft` or `playoffs`. Show who won once it's over.
 - Once complete, a Results section at the top of the tournament page lists
   each tier's champion and runner-up. It links to the full placings on each
   bracket page.
+- Once complete, each bracket page lists its tier's full placings (1st,
+  2nd, then each elimination round sharing a place).
 
 ## Out of scope
 
@@ -54,3 +60,4 @@ back to playoffs, then return to complete when the final is re-decided.
   - Stage labels on the list and the tournament page.
   - The Results section appears only when complete, with each tier's
     champion and runner-up.
+  - The bracket page's placings appear only when complete.

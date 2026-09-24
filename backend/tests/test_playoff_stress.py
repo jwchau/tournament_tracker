@@ -194,6 +194,7 @@ def assert_tier_plays_to_one_champion(client, bracket_id, format, team_ids, rng)
     champions = [team for team, count in losses.items() if count <= unbeaten_limit]
     assert len(champions) == 1, f"champions: {champions}, losses: {losses}"
     assert all(count == eliminated_at for team, count in losses.items() if team != champions[0])
+    return champions[0]
 
 
 def assert_advanced_correctly(client, tournament_id, pools, settings, format, rng):
@@ -221,8 +222,13 @@ def assert_advanced_correctly(client, tournament_id, pools, settings, format, rn
             if m["bracket"] == "winners" and m["round"] == 1
         }
         assert first_round == expected_first_round(seeds), f"tier {bracket['tier']} seeding"
-    for bracket, seeds in zip(brackets, tiers):
+    champions = [
         assert_tier_plays_to_one_champion(client, bracket["id"], format, seeds, rng)
+        for bracket, seeds in zip(brackets, tiers)
+    ]
+    assert client.get(f"/tournaments/{tournament_id}").json()["stage"] == "complete"
+    results = client.get(f"/tournaments/{tournament_id}/results").json()
+    assert [tier["champion"]["team_id"] for tier in results] == champions
 
 
 # --- valid scenarios --------------------------------------------------------
@@ -362,7 +368,7 @@ def test_refused_settings_explain_why_and_create_nothing(client, settings, reaso
     assert not readiness["ready"] and reason in readiness["reason"]
     assert response.status_code == 400 and reason in response.json()["detail"]
     assert client.get(f"/tournaments/{tournament_id}/playoff-brackets").json() == []
-    assert client.get(f"/tournaments/{tournament_id}").json()["stage"] == "draft"
+    assert client.get(f"/tournaments/{tournament_id}").json()["stage"] == "pool_play"
 
 
 def test_one_unplayed_pool_match_blocks_advancing(client):

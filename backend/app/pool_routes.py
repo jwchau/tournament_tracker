@@ -101,6 +101,7 @@ def auto_assign_pools(
     for team in teams:
         team.pool_id = assignment[team.id]
         session.add(team)
+    _sync_pool_stage(session, tournament)
     session.commit()
     for team in teams:
         session.refresh(team)
@@ -125,6 +126,24 @@ def _pool_matches(session: Session, pool_id: int) -> list[Match]:
 def _any_scored(matches: list[Match]) -> bool:
     """Whether any of these matches has a score, so its results must be kept."""
     return any(m.team1_score is not None or m.team2_score is not None for m in matches)
+
+
+def pre_playoff_stage(session: Session, tournament_id: int) -> str:
+    """`pool_play` once any pool has a schedule, else `draft`."""
+    scheduled = session.exec(
+        select(Match.id).where(Match.tournament_id == tournament_id, Match.pool_id.is_not(None))
+    ).first()
+    return "draft" if scheduled is None else "pool_play"
+
+
+def _sync_pool_stage(session: Session, tournament: Tournament) -> None:
+    """Move between draft and pool play as schedules come and go, uncommitted.
+
+    Leaves a tournament already in playoffs alone.
+    """
+    if tournament.stage in ("draft", "pool_play"):
+        tournament.stage = pre_playoff_stage(session, tournament.id)
+        session.add(tournament)
 
 
 @router.post("/pools/{pool_id}/generate-schedule", response_model=list[Match], status_code=201)
@@ -174,6 +193,7 @@ def generate_pool_schedule(pool_id: int, session: Session = Depends(get_session)
                     status="ready",
                 )
             )
+    _sync_pool_stage(session, tournament)
     session.commit()
     return _pool_matches(session, pool.id)
 
@@ -243,6 +263,7 @@ def delete_pool(pool_id: int, session: Session = Depends(get_session)) -> None:
         team.pool_id = None
         session.add(team)
     session.delete(pool)
+    _sync_pool_stage(session, session.get(Tournament, pool.tournament_id))
     session.commit()
 
 
