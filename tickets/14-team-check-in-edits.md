@@ -13,14 +13,15 @@ up, and fix a team's seed before pools are drawn.
   (`400`) once the team is in a pool that has a generated schedule, or once
   playoff brackets exist.
 - `PATCH /teams/{id}` also accepts `seed` (ge=1). Changing it is refused
-  once the tournament's settings are locked (play has started).
-- Team list responses stay ordered by seed.
+  once the tournament's settings are locked (play has started). The name
+  stays editable.
 
 ### Frontend
 
 - The team page gets a "Delete team" button behind a `ConfirmModal`. After
   deleting, it goes back to the tournament page.
-- The team page lets the organizer edit the seed next to the name.
+- The team page lets the organizer edit the seed next to the name. Only
+  a changed seed is sent, so renaming still works after play starts.
 - The backend's refusal reason is shown as an error notification.
 
 ## Out of scope

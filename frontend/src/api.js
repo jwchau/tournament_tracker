@@ -132,11 +132,16 @@ export function getTeam(teamId) {
   return getCachedJson(`/teams/${teamId}`)
 }
 
-export function updateTeam(teamId, { name, poolId }) {
+export function updateTeam(teamId, { name, seed, poolId }) {
   const body = {}
   if (name !== undefined) body.name = name
+  if (seed !== undefined) body.seed = seed
   if (poolId !== undefined) body.pool_id = poolId
   return patchJson(`/teams/${teamId}`, body)
+}
+
+export function deleteTeam(teamId) {
+  return deleteRequest(`/teams/${teamId}`)
 }
 
 export function createPlayer(teamId, { name }) {

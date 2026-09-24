@@ -98,6 +98,7 @@ class TeamCreate(SQLModel):
 
 class TeamUpdate(SQLModel):
     name: str | None = None
+    seed: int | None = Field(default=None, ge=1)
     pool_id: int | None = None
 
 
