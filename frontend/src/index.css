@@ -49,8 +49,7 @@
   --error-ring: rgba(234, 149, 87, 0.3);
   --scrim: rgba(0, 0, 0, 0.5);
   --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.3);
-  /* The court view's flip cards: a lighter top half and a dark hinge seam, on ink in both themes. */
-  --flip-top: rgba(255, 255, 255, 0.06);
+  /* The court view's flip cards: a dark hinge seam, on ink in both themes. */
   --flip-seam: rgba(0, 0, 0, 0.7);
 
   --display: 'Unbounded', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -1329,6 +1328,17 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   pointer-events: none;
 }
 
+/* The card's outline, over its halves, so it reads against the panel. */
+.flip-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  pointer-events: none;
+}
+
 .flip-face {
   position: absolute;
   inset: 0;
@@ -1360,7 +1370,7 @@ table[aria-label='Standings'] tr.advancing td:first-child {
 
 .flip-top {
   clip-path: inset(0 0 50% 0);
-  background: linear-gradient(var(--flip-top), var(--flip-top)), var(--ink);
+  background: linear-gradient(var(--band-ghost), var(--band-ghost)), var(--ink);
 }
 
 .flip-bottom {

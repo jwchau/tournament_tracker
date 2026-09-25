@@ -641,7 +641,6 @@ Dark is the default. When the device is in light mode (`prefers-color-scheme: li
 | `--toast` | `#232323` | same | Toast fill. Toasts stay dark in both themes, like the band |
 | `--status-idle` | `#999999` | same | The health dot before the first check |
 | `--error-ring` | `rgba(234,149,87,.3)` | same | The 3px halo on the health error dot |
-| `--flip-top` | `rgba(255,255,255,.06)` | same | The lighter top half of a flip card, laid over `--ink` |
 | `--flip-seam` | `rgba(0,0,0,.7)` | same | The dark hinge seam across a flip card and a score chip |
 | `--gutter` | 16px | 24px from 768px, 40px from 1024px | Horizontal page padding |
 | `--section-gap` | 32px | 48px from 768px, 56px from 1024px | Space between page sections |
@@ -726,7 +725,7 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
   - **Swap sides** (`.swap-sides`, only while a match is on): a `--band-ghost` toggle (hover `--band-ghost-hover`) with a 20px SVG and the label. `aria-pressed="true"` adds a 1px inset `--band-accent` edge. Below 768px it is a 48px icon-only square with the label visually hidden. It reverses the columns on screen only; scores stay with their teams, and the choice is remembered per court on the device (`localStorage`, `court-sides:<tournament>:<court>`).
 - **Flip scoreboard** (`.flip-board`, `FlipBoard.jsx`):
   - Two equal columns, 12px apart, in the 640px centered column. Each column (`.flip-column`) is a `--panel` card, 16px radius, `--elevation-3`, 12px padding and a 10px internal gap (12px 4px 4px on phones, so the card takes the full width). The team name sits on top in Manrope 700 18/24, at least 48px tall.
-  - **Flip card** (`.flip-card`): `--ink` in both themes, 12px radius, the numeral in `--band-text`. The top half is lighter (`--flip-top` over `--ink`); a 3px `--flip-seam` seam crosses the middle. Each half is the whole numeral clipped to its half, stacked in one grid cell so they line up exactly.
+  - **Flip card** (`.flip-card`): `--ink` in both themes, 12px radius, the numeral in `--band-text`. The top half is lighter (`--band-ghost` over `--ink`, the same lift as the score chips); a 3px `--flip-seam` seam crosses the middle, and a 1px `--hairline` ring outlines the card against its panel. Each half is the whole numeral clipped to its half, stacked in one grid cell so they line up exactly.
   - **The flip**: when a score changes (a tap, a typed value or another device), the old top half folds down over the hinge (`flip-fold`, 90ms ease-in, `rotateX` 0 to -90deg) and then the new bottom half drops into place (`flip-drop`, 90ms ease-out after a 90ms delay, from `rotateX(90deg)`): 180ms in all, with `perspective: 600px`. Reduced motion skips both, and the new number simply shows.
   - **Typing**: a number input lies over the card with transparent text. On focus it shows its digits in `--band-text` on `--ink`, with an `--ember-solid` caret and a 2px inset `--band-accent` ring.
   - A new match comes onto the board with `match-in`: 320ms on `--ease`, from opacity .4 and 24px lower.
@@ -746,7 +745,7 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
 - **Courts list** (`.court-list`, `CourtsPage.jsx`):
   - A grid of `repeat(auto-fill, minmax(min(100%, 300px), 1fr))` with a 12px gap; each whole tile is the link to that court.
   - A busy court's tile (`.court-link`): `--panel`, 16px radius, `--elevation-3`, 16px padding, 8px gap. Hover swaps the elevation for a 1px inset `--accent-text` ring (200ms). The head is the court name in Unbounded 24/28 and its label in Inter 500 14.7/21; a series adds "Best of N · Games x–y" in the same label style.
-  - One line per team: the name at weight 600 in `--text`, and a **score chip** (`.court-link-chip`), a small flip card: `--ink` with a `--band-ghost` top half (stronger than `--flip-top`, so it reads at chip size), a 1px `--flip-seam` seam at .7, a `--hairline` ring, 8px radius, at least 64px wide, padding 4px 10px, the score in Unbounded 700 28/40 `--band-text`.
+  - One line per team: the name at weight 600 in `--text`, and a **score chip** (`.court-link-chip`), a small flip card: `--ink` with a `--band-ghost` top half, as on the large card, a 1px `--flip-seam` seam at .7, a `--hairline` ring, 8px radius, at least 64px wide, padding 4px 10px, the score in Unbounded 700 28/40 `--band-text`.
   - A free court (`[data-free]`) has no board: one outlined line, transparent with a 1px inset `--hairline` edge (hover `--accent-text`), and "Free" pushed to the right in Inter 500 14.7/21.
 - **Buttons and fields**:
   - The default button is a ghost fill with 12px radius, at least 48px tall, padding 12px 20px, in DM Sans 500.
