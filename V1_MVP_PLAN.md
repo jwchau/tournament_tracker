@@ -1,68 +1,76 @@
-# v1 MVP Release Plan
+# Tournament Tracker Plan
 
-## Goal
+## v1 summary
 
-Run one real tournament day from start to finish at a venue:
+v1 set out to run one real tournament day at a venue. The organizer sets up
+on a laptop, scorekeepers score from their phones, and anyone with the link
+follows along. It shipped as `v1.0.0` after a full dress rehearsal on the
+production setup (tickets 00–19, log in [docs/rehearsal.md](docs/rehearsal.md)).
 
-- The organizer sets everything up on a laptop.
-- Scorekeepers enter scores from their phones.
-- Anyone with the link can follow pools and brackets.
+It covers:
 
-v1 is a proof of concept. It needs to survive one real event, not scale.
+- settings, team check-in, and pools with round-robin schedules and standings
+- tiered single- or double-elimination playoffs with best-of series
+- court auto-dispatch, and live scoring from several phones
+- cascading corrections, and results
+- username login, where reads are public and writes need an account
+- a production build with backups every 15 minutes
 
-## Where we are
+Since v1:
 
-Tickets 00–08 and 10–13 are done. The whole lifecycle works through the API
-and the UI: settings, teams, pools, round-robin schedules, standings, tiered
-playoffs (single or double elimination, best-of series), live scoring with
-conflict detection, and cascading corrections.
+- Loading placeholders came in with ticket 21.
+- The Kiln overhaul restyled the tournament page, court view, courts list,
+  pool page and bracket page (PRs #32–#36). Scoring now happens only on each
+  court's live scoreboard, including best-of games.
+- Every scenario in [docs/manual-tests.md](docs/manual-tests.md) passed.
 
-Gaps before a real event:
+Still out of scope: real-time push (pages poll), player stats, roles and
+self sign-up, printable exports, and hosting the backend anywhere but the
+organizer's machine.
 
-| Gap | Why it matters on the day | Ticket |
-| --- | ------------------------- | ------ |
-| Teams can't be deleted and seeds can't be edited | No-shows and late seed changes are normal at check-in | 14 |
-| `stage` never becomes `pool_play` or `complete`, and there's no results view | Nobody can see who won, and the tournament never ends | 15 |
-| Playoff courts are assigned by hand | The organizer becomes the bottleneck once brackets start | 09 |
-| Scorekeepers have to find their match through tournament → pool/bracket pages | Too slow on a phone. Scorekeepers think in courts, not pools | 16 |
-| No login: anyone with the URL can change or delete anything | A spectator or a mistyped link can wreck the event | 19 |
-| The app runs on dev servers, and there's no backup | A crash or bad correction can't be undone | 17 |
-| The app has never been through a full event run | Unknown bugs show up on the day | 18 |
+## Next: feedback tickets
 
-## Release tickets (in order)
+Build these in order: 22 → 23 → 24 → 25 → 26. Ticket 23 is the foundation
+the later ones need.
 
-1. **[14 — Team check-in edits](tickets/14-team-check-in-edits.md):** delete a team, edit its seed. Small, and unblocks realistic rehearsal data.
-2. **[15 — Tournament lifecycle and results](tickets/15-tournament-lifecycle-and-results.md):** real stage transitions and a results summary.
-3. **[09 — Playoff court auto-dispatch](tickets/09-playoff-court-auto-dispatch.md):** already written; the largest remaining piece.
-4. **[16 — Court view for scorekeepers](tickets/16-court-view-for-scorekeepers.md):** one phone-friendly page per court. Needs 09 for playoff courts.
-5. **[19 — Access control and login](tickets/19-access-control-and-login.md):** username and password login, with passwords hashed in SQLite. Signed-in users can make changes; everyone else is read-only.
-6. **[17 — Venue deployment](tickets/17-venue-deployment.md):** production build, secure cookies, and database backups.
-7. **[18 — Dress rehearsal and v1.0.0](tickets/18-dress-rehearsal-and-release.md):** play a full mock event, fix what breaks, tag the release.
+1. **[22 — Team count](tickets/22-team-count.md):** the number of teams next
+   to "Teams" on the tournament page.
+2. **[23 — Pool refs](tickets/23-pool-refs.md):**
+   - Refs are stored on the server, one per court, chosen from the same
+     pool's idle teams.
+   - Organizers can override a ref, and existing pools are backfilled.
+   - "Observing" becomes Resting.
+3. **[24 — Bracket refs](tickets/24-bracket-refs.md):**
+   - A ref is chosen when a match gets a court, by the agreed order.
+   - A ref who's called to play is replaced.
+   - Overrides go in the match panel.
+4. **[25 — Refs on courts](tickets/25-refs-on-courts.md):** refs shown on the
+   court view and the courts list.
+5. **[26 — Pool grid by slot](tickets/26-pool-grid-by-slot.md):** slots
+   across, teams down, with playing, ref and rest cells. It replaces the
+   team-against-team grid.
 
-14, 15, and 19 are independent of each other. 16 comes after 09, and 17 after 19, because production cookies need to be `Secure`.
+## Then: restyle the rest to match design.md and PRODUCT.md
 
-19 touches every write route and form. Doing it earlier makes later tickets write auth-aware tests from the start. The cost is that more of the existing tests have to be touched at once.
+These still use the pre-overhaul look. Each one gets the Kiln treatment, with
+its own review and a design.md "As shipped" update:
 
-## Release criteria
+- **Pages:** the main page (tournament list and create form), the team page
+  (roster, players, seed and pool edits), the account page, and the login page.
+- **Forms:**
+  - `TournamentForm` (create a tournament)
+  - `CorrectionForm` (its button and dialog, used on the pool schedule and in
+    the bracket match panel)
+  - `ScheduleForm` (court and time, in the match panel)
+  - `TeamForm` and `PlayerForm`
+  - the settings form in the tournament page's Manage drawer
+- **Shared pieces:**
+  - `ConfirmModal`: its actions are all ghost buttons, so give it a
+    primary/danger action.
+  - `NotFound` and `ErrorBoundary` pages.
+- **Clean-up:** remove `ScoreEntryForm`, now unused because scoring moved to
+  the court view, and `SeriesForm`'s old non-board mode. Keep
+  `GameScoreInputs`, which `CorrectionForm` uses.
 
-- [x] Every ticket above is Done.
-- [x] Backend, stress, and frontend tests pass, and lint is clean (no errors; 2 fast-refresh warnings remain from before).
-- [x] The rehearsal script in ticket 18 runs end to end on the production setup, with two phones scoring at once. See the log in [docs/rehearsal.md](docs/rehearsal.md).
-- [x] The database can be restored from a backup taken during the rehearsal.
-- [x] `v1.0.0` is tagged on main, with release notes.
-
-## Not in v1
-
-- Real-time push (WebSocket/SSE). Pages keep polling.
-- Player stats or match participation. Rosters are names only.
-- Pool corrections that regenerate already-built playoff brackets.
-- End-to-end browser tests (Playwright).
-- Roles, two-factor auth, self sign-up, or per-tournament permissions. Every signed-in user can do everything (ticket 19).
-- Editing pools or schedules after play starts, other than through corrections.
-- Printable schedules and exports.
-- Hosting the backend anywhere other than the organizer's machine.
-
-## Open decisions
-
-- **Who can read (19):** the ticket leaves every `GET` public, so spectators don't need an account. If you want the whole app private, it's a one-line change to the dependency and a login redirect on every page.
-- **Auto-dispatch (09):** it's the biggest remaining ticket. If the event date forces a cut, the fallback is to keep manual court entry and have the court view (16) show only pool courts plus manually assigned playoff matches.
+Suggested order: main page and create form first (the first thing an
+organizer sees), then the team page, then the forms, then login and account.
