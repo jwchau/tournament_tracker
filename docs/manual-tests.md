@@ -1,0 +1,201 @@
+# Manual test walkthrough: Kiln overhaul
+
+Scenarios to walk through by hand after the Kiln UI overhaul (tournament page,
+court view and courts list, pool page). Each one lists its setup, what to do,
+and what should happen. Tick the box when it passes; note anything odd under
+the scenario.
+
+Use the dev stack (`docker compose up -d`, app on http://localhost:5173) unless
+a scenario says production. Scenarios marked **phone** are worth doing on a
+real phone outdoors; the rest can use a desktop browser, with devtools device
+mode (390×844) for the phone widths.
+
+Sign in as the organizer for the signed-in scenarios. For signed-out ones, use
+a private window.
+
+---
+
+## 1. Tournament page
+
+- [ ] **Stage and courts at a glance**
+  - Setup: any tournament in pool play.
+  - Do: open the tournament page.
+  - Expect: an ink band with the name in large type, a "Stage: Pool play" chip and a Courts link; standings cards follow, with the top N places of each pool tinted amber and their rank in amber.
+
+- [ ] **Manage drawer**
+  - Do: signed in, tap Manage. Then press Escape, then open it again and tap the dark backdrop.
+  - Expect: the drawer slides in from the right with Settings, Add a team and Delete tournament; Escape and the backdrop both close it. Signed out, there is no Manage button.
+
+- [ ] **Unconfirmed settings open the drawer**
+  - Setup: a new tournament whose settings aren't confirmed.
+  - Expect: the Manage drawer opens by itself on the page.
+
+- [ ] **Bracket-only tournament**
+  - Setup: a tournament that went straight to a bracket (no pools).
+  - Expect: no Standings section at all; the Playoffs section leads.
+
+- [ ] **Playoffs first once playoffs start**
+  - Setup: a tournament that advanced from pools to playoffs.
+  - Expect: bracket cards come before standings; on desktop two brackets sit side by side; on a phone they stack and a wide bracket scrolls sideways inside its card.
+
+- [ ] **Team count wording**
+  - Expect: a team with one player reads "(1 player)", more read "(N players)".
+
+- [ ] **Results**
+  - Setup: a complete tournament.
+  - Expect: a Results section with one card per bracket: the bracket's name as the heading, "Champion:" with the name in large type, the runner-up, and a Full placings link.
+
+- [ ] **Phone app bar**
+  - Do: open any page at phone width.
+  - Expect: the app bar stays on one row (logo mark only, arrows, your name, Sign out, status dot); hovering the dot on desktop shows "Backend status: connected".
+
+## 2. Courts list
+
+- [ ] **Every court as a tile**
+  - Setup: a tournament with matches on some courts and at least one free court.
+  - Expect: each busy court shows both teams, each with a small ink score chip (0 before the first point); a free court is a single outlined line reading "Free".
+
+- [ ] **Running scores**
+  - Do: score a few points on a court (section 3), then reload the courts list.
+  - Expect: that court's chips show the running score.
+
+- [ ] **Best-of court**
+  - Setup: a playoff court with a best-of-3 match under way.
+  - Expect: a "Best of 3 · Games 1–0" line, and the chips show the game in play.
+
+## 3. Court view: single-game match (**phone**)
+
+- [ ] **First screen**
+  - Do: open a court with a match on it, signed in.
+  - Expect: the court number on the ink strip, two tall columns with each team's name and score, +1 under each (large), −1 under that, and Finish match at the bottom of the screen. Up next is below, off the first screen.
+
+- [ ] **Score rally by rally**
+  - Do: tap +1 a few times for each team.
+  - Expect: the number flips each time (the top half folds down); "Saving…" then "Saved" appears under the board. Quick taps are saved together.
+
+- [ ] **Spectator sees it live**
+  - Do: open the same court signed out on a second device while scoring on the first.
+  - Expect: within about 10 seconds the spectator's numbers flip to the new score.
+
+- [ ] **−1 stops at zero**
+  - Expect: −1 is disabled when a team has 0.
+
+- [ ] **Type a score**
+  - Do: tap a number and type a new score.
+  - Expect: the digits show while typing, and the score saves like a tap.
+
+- [ ] **Tied match can't finish**
+  - Expect: at a tie, Finish match is an outlined, disabled button with "A match can't finish tied." above it; it turns ember once the score isn't tied.
+
+- [ ] **Finish match**
+  - Do: tap Finish match, then Keep playing; then Finish match and Finish.
+  - Expect: a confirm dialog with the final score. Keep playing closes it with nothing saved. Finish records the result and the board slides to the court's next match at 0–0.
+
+- [ ] **Swap sides**
+  - Do: tap the swap icon on the strip, add a point, reload the page.
+  - Expect: the teams trade places; the point goes to the team you tapped; after reload it's still swapped on this device only (another phone isn't affected).
+
+- [ ] **Lost signal**
+  - Do: turn on airplane mode, tap +1, wait a second.
+  - Expect: "Couldn't save the score. Check your connection." with Try again. Turn the connection back on and tap Try again (or add another point): it saves.
+
+- [ ] **Two scorekeepers on one court**
+  - Do: open the same court signed in on two devices; score on one, then tap +1 on the other before it refreshes.
+  - Expect: the second device shows "Someone else updated this match." with Refetch latest; Refetch shows the other device's score.
+
+- [ ] **Empty court**
+  - Setup: a court with nothing left to play.
+  - Expect: "Nothing left to play on this court right now." and no Swap sides button.
+
+- [ ] **Playoff court note**
+  - Setup: a playoff court with a queue.
+  - Expect: under Up next, "These go to the next free Bracket N court, which may not be this one."
+
+- [ ] **Light mode in sun**
+  - Do: set the phone to light mode outdoors.
+  - Expect: the score cards stay dark with a light top half and a dark seam; everything readable at arm's length.
+
+## 4. Court view: best-of match
+
+- [ ] **Game in play is saved**
+  - Setup: a playoff with best-of 3 and a match on a court.
+  - Do: tap +1 a few times.
+  - Expect: "Saving…" then "Saved"; a spectator device shows the running game score and "Best of 3 · games 0–0".
+
+- [ ] **Survives a reload**
+  - Do: reload mid-game.
+  - Expect: the game's running score comes back from the server.
+
+- [ ] **Record a game**
+  - Do: finish a game (untied) and tap Record game 1.
+  - Expect: game 1 appears under the board with the winner's score in amber; the board resets to 0–0 for game 2; the tally reads 1–0.
+
+- [ ] **Fix a recorded game**
+  - Do: tap Fix game 1, change a score, save.
+  - Expect: the Save button is a quiet grey (not ember); the game updates.
+
+- [ ] **Series decided**
+  - Do: record games until one team has a majority.
+  - Expect: the court moves on to its next match, and the winner advances in the bracket.
+
+- [ ] **Correction clears the game in play**
+  - Setup: a downstream match with a game in play.
+  - Do: correct an earlier match so the downstream match is reset.
+  - Expect: the reset match starts again at 0–0 with no leftover game score.
+
+## 5. Pool page
+
+- [ ] **Sheet layout**
+  - Setup: a pool in pool play.
+  - Expect: the pool name large on the ink strip, then standings (advancing places amber), then the Results grid, then the Schedule. On desktop, standings and grid side by side.
+
+- [ ] **Results grid**
+  - Expect: teams lettered A, B, C… down and across; the diagonal hatched; a finished match is a dark chip with the winner's score in amber, read from each row's side (A vs B shows 17–21, B vs A shows 21–17); matches to come read "S3 / Ct 1"; the current slot's cells are outlined.
+
+- [ ] **Jump between grid and schedule**
+  - Do: tap a result in the grid.
+  - Expect: the page scrolls to that match in the schedule, and the row is filled and outlined; scroll back up and both of that pairing's grid cells are outlined. Tapping the team names in a schedule row jumps back to the grid.
+
+- [ ] **Current-slot selection**
+  - Do: tap an appointment cell in the current slot.
+  - Expect: it shows both its thin Now outline and the thicker selection outline.
+
+- [ ] **Scoring links**
+  - Expect: unfinished matches show "Score on Court N" signed in, "Watch Court N" signed out, and the link opens that court's scoreboard. Finished matches show Correct (signed in only). There are no score forms on the pool page.
+
+- [ ] **Now slot**
+  - Expect: the first slot with unfinished matches is outlined and marked "Now".
+
+- [ ] **Five or more teams**
+  - Setup: a pool with 5+ teams.
+  - Expect: on a phone the grid scrolls sideways inside its panel; nothing else on the page scrolls sideways. Observing and Resting lines appear under slots where teams sit out.
+
+- [ ] **More than one game per pairing**
+  - Setup: a tournament set to 2 games per pairing.
+  - Expect: each grid cell stacks both matches, split by a thin line, each linking to its own match.
+
+- [ ] **No schedule yet**
+  - Setup: a pool with teams and no schedule.
+  - Expect: signed in, "No schedule yet…" with Generate schedule; signed out, "The schedule hasn't been made yet." Generating shows the grid and slots.
+
+- [ ] **Correct a result**
+  - Do: correct a finished match from the schedule.
+  - Expect: the grid, the schedule row and the standings all update.
+
+- [ ] **Delete pool**
+  - Do: signed in, Delete pool at the bottom, then confirm.
+  - Expect: a confirm dialog; a pool with scored matches refuses with a message; an empty one returns to the tournament.
+
+## 6. Across the app
+
+- [ ] **Reduced motion**
+  - Do: turn on reduced motion in the OS.
+  - Expect: no flips, slides or drawer animation; scores simply change.
+
+- [ ] **Keyboard**
+  - Do: tab through the court view and pool page.
+  - Expect: every control shows a visible focus ring; the score numbers can be typed into.
+
+- [ ] **Production after an upgrade**
+  - Do: after the next production deploy, open a court on https://tournament.johnchau.org and score a point.
+  - Expect: it saves, and the backups folder still gets a copy every 15 minutes.

@@ -1,10 +1,14 @@
 import { act, fireEvent, render, screen } from './testUtils'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { afterEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
 import { NotificationProvider } from './NotificationContext'
 import PoolPage from './PoolPage'
+
+beforeEach(() => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({ id: 3, name: 'Cup', advance_per_pool: 2 })
+})
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -93,7 +97,7 @@ test('shows the pool with its courts, schedule, standings, and a link back', asy
 
   expect(await screen.findByRole('heading', { name: 'Pool A' })).toBeInTheDocument()
   expect(screen.getByText('Courts 1, 2')).toBeInTheDocument()
-  expect(await screen.findByText('Court 1: Spikers vs Diggers')).toBeInTheDocument()
+  expect(await screen.findByText('Spikers vs Diggers')).toBeInTheDocument()
   // Standings mount once the first matches arrive, so wait for them too.
   expect(await screen.findByRole('table', { name: /standings/i })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: /back to tournament/i })).toHaveAttribute(
@@ -195,7 +199,7 @@ test('signed out, the pool shows standings and schedule but no controls', async 
     { user: null },
   )
 
-  expect(await screen.findByText('Court 1: Spikers vs Diggers')).toBeInTheDocument()
+  expect(await screen.findByText('Spikers vs Diggers')).toBeInTheDocument()
   // The standings load separately from the schedule, so wait for their button.
   await screen.findByRole('button', { name: 'Refresh standings' })
   // Only refreshing, which changes nothing on the server.

@@ -1,0 +1,76 @@
+{
+  "title": "Pool page layout",
+  "seed": "33d13465",
+  "dealt": [3, 5, 7],
+  "question": "Kiln stays the look, standings lead, and scoring happens on the court. Pick how the pool page lays out its schedule, steer one, or re-roll.",
+  "options": [
+    {
+      "id": "slot-deck",
+      "label": "Slot cards",
+      "kicker": "THE ROLL",
+      "lineage": "the rotation cards a pool captain holds, one per round",
+      "thesis": "Standings, then the schedule as a row of slot cards you swipe through, opening on the slot being played now.",
+      "palette": ["#1A1A1A", "#E68435", "#DFAE4E", "#EEECE9"],
+      "materials": ["ink band", "ranked table", "swipeable slot cards", "flip-card score chips"],
+      "viewport": "Ink band with the pool name and its courts; the standings table with advancing places in amber; below, one wide slot card in view (Slot 3 · Now) with each court's match, score chips and a 'Score on Court 1' link, then who observes and rests; neighbouring slots peek at the edges.",
+      "risk": "Only one slot is visible at a time, so reading the whole day means swiping.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 16,
+        "regions": [
+          { "label": "Pool A · Courts 1, 2", "x": 0, "y": 0, "w": 12, "h": 2 },
+          { "label": "standings", "x": 0, "y": 2, "w": 12, "h": 6 },
+          { "label": "slot 2", "x": 0, "y": 8, "w": 1, "h": 7 },
+          { "label": "Slot 3 · Now: courts, scores, score on court", "x": 1, "y": 8, "w": 10, "h": 7, "accent": true },
+          { "label": "slot 4", "x": 11, "y": 8, "w": 1, "h": 7 },
+          { "label": "● ● ○ ○", "x": 4, "y": 15, "w": 4, "h": 1 }
+        ]
+      }
+    },
+    {
+      "id": "team-rows",
+      "label": "Team by team",
+      "lineage": "a player asking 'when do we play next?'",
+      "thesis": "Standings where each team's row opens to its own matches: results played, and the next one with slot and court.",
+      "palette": ["#1A1A1A", "#E68435", "#DFAE4E", "#EEECE9"],
+      "materials": ["ink band", "expanding standings rows", "compact slot list"],
+      "viewport": "Ink band; the standings table with a 'Next: Slot 3 · Court 2' line under each team, and tapping a team opens its results and remaining matches; a compact slot-by-slot list follows for the whole schedule.",
+      "risk": "The schedule as a whole is secondary; an organizer scanning the day reads the compact list lower down.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 16,
+        "regions": [
+          { "label": "Pool A · Courts 1, 2", "x": 0, "y": 0, "w": 12, "h": 2 },
+          { "label": "1 Setters · next Slot 3 Ct 1", "x": 0, "y": 2, "w": 12, "h": 1 },
+          { "label": "2 Beach Bums (open): results + next", "x": 0, "y": 3, "w": 12, "h": 4, "accent": true },
+          { "label": "3 Side Outs · next …", "x": 0, "y": 7, "w": 12, "h": 1 },
+          { "label": "4 Sand Sharks · next …", "x": 0, "y": 8, "w": 12, "h": 1 },
+          { "label": "schedule (compact slots)", "x": 0, "y": 10, "w": 12, "h": 6 }
+        ]
+      }
+    },
+    {
+      "id": "pool-sheet",
+      "label": "Pool sheet",
+      "lineage": "the printed round-robin sheet taped to the scorer's table",
+      "thesis": "Standings, then the classic round-robin grid: every team against every other, each cell the result or when they play.",
+      "palette": ["#1A1A1A", "#E68435", "#DFAE4E", "#EEECE9"],
+      "materials": ["ink band", "ranked table", "team-by-team grid", "slot list"],
+      "viewport": "Ink band; standings; then a grid with teams down and across, each cell a score (winner's side in amber) or 'Slot 3 · Ct 1' for matches to come, the current slot's cells lit; the slot list with observing and resting follows.",
+      "risk": "A grid of 5+ teams gets tight on a phone; it scrolls sideways inside its card there.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 16,
+        "regions": [
+          { "label": "Pool A · Courts 1, 2", "x": 0, "y": 0, "w": 12, "h": 2 },
+          { "label": "standings", "x": 0, "y": 2, "w": 12, "h": 5 },
+          { "label": "team × team grid", "x": 0, "y": 7, "w": 12, "h": 5, "accent": true },
+          { "label": "slots: courts · observing · resting", "x": 0, "y": 12, "w": 12, "h": 4 }
+        ]
+      }
+    }
+  ],
+  "reroll": true,
+  "steer": true,
+  "buildPath": { "value": "code", "toggle": false }
+}

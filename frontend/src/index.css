@@ -1775,6 +1775,401 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   font: 500 14.7px/21px var(--ui);
 }
 
+/* ---------- Pool page: the round-robin sheet ---------- */
+
+.pool-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* The pool's name outranks its three section heads, at the board-title scale. */
+.pool-page .court-strip h2 {
+  font-size: 32px;
+  line-height: 36px;
+}
+
+@media (min-width: 768px) {
+  .pool-page .court-strip h2 {
+    font-size: 48px;
+    line-height: 48px;
+  }
+}
+
+.pool-sheet {
+  display: grid;
+  gap: var(--section-gap);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Desktop: standings and the results grid side by side, the schedule below. */
+@media (min-width: 1024px) {
+  .pool-sheet {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 32px;
+  }
+
+  .pool-schedule,
+  .pool-sheet > .setup-note,
+  .pool-sheet > .pool-generate,
+  .pool-sheet > .loading {
+    grid-column: 1 / -1;
+  }
+}
+
+.pool-manage {
+  border-top: 1px solid var(--hairline);
+  padding-top: 16px;
+}
+
+/* The grid: teams down and across, each cell a result or an appointment. */
+.grid-scroll {
+  overflow-x: auto;
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: var(--elevation-3);
+  padding: 10px;
+}
+
+.results-grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.results-grid thead th {
+  font: 700 14px/20px var(--display);
+  color: var(--muted);
+  text-align: center;
+  padding: 0 0 2px;
+}
+
+.results-grid abbr {
+  text-decoration: none;
+}
+
+.results-grid tbody th {
+  font: 600 15px/20px var(--ui);
+  color: var(--text);
+  text-align: left;
+  padding-right: 6px;
+  min-width: 96px;
+}
+
+.grid-number {
+  display: inline-block;
+  min-width: 1.4em;
+  font: 700 14px/20px var(--display);
+  color: var(--muted);
+}
+
+.results-grid td {
+  min-width: 64px;
+  height: 52px;
+  padding: 0;
+  border-radius: 10px;
+  background: var(--surface-2);
+  vertical-align: middle;
+}
+
+/* A team against itself: an empty hatched cell, like the struck box on a paper sheet. */
+.results-grid td.grid-self {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--hairline) 0 2px,
+    transparent 2px 9px
+  );
+}
+
+.grid-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 6px 4px;
+  border-radius: 10px;
+  color: var(--text);
+  text-decoration: none;
+  text-align: center;
+  font: 700 17px/22px var(--display);
+  transition: background 200ms ease-in-out;
+}
+
+.grid-entry + .grid-entry {
+  border-top: 1px solid var(--hairline);
+}
+
+.grid-entry:hover {
+  background: var(--ghost-hover);
+}
+
+/* A result is a small flip card, the court scoreboard's numerals at a glance;
+   an appointment stays a quiet cell, so the two read apart. */
+.grid-entry.grid-result {
+  position: relative;
+  overflow: hidden;
+  color: var(--band-text);
+  background: linear-gradient(180deg, var(--band-ghost) 50%, transparent 50%), var(--ink);
+}
+
+.grid-entry.grid-result::after,
+.score-chip::after {
+  content: '';
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 1px;
+  background: var(--flip-seam);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.grid-result .score-won,
+.score-chip.score-won {
+  color: var(--amber);
+}
+
+
+/* The slot being played now, in the grid as in the schedule. */
+.grid-entry.grid-now {
+  box-shadow: inset 0 0 0 1px var(--accent-text);
+}
+
+/* On an ink chip the ring takes the band accent, in either theme. */
+.grid-entry.grid-result.grid-now {
+  box-shadow: inset 0 0 0 1px var(--band-accent);
+}
+
+/* The chosen pairing, both of its cells: an outline outside the cell, so a
+   current-slot cell shows its Now ring and the selection together. */
+.grid-entry[aria-current],
+.grid-entry.grid-now[aria-current] {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+
+@media (max-width: 639px) {
+  .grid-entry[aria-current],
+  .grid-entry.grid-now[aria-current] {
+    outline-offset: 1px;
+  }
+}
+
+.grid-when {
+  font: 500 13px/16px var(--ui);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.grid-entry .score-pair {
+  white-space: nowrap;
+}
+
+/* Phones: narrower cells, so a pool of four fits without scrolling sideways. */
+@media (max-width: 639px) {
+  .grid-scroll {
+    padding: 6px;
+  }
+
+  .results-grid {
+    border-spacing: 4px;
+  }
+
+  .results-grid tbody th {
+    min-width: 0;
+    font-size: 14px;
+    padding-right: 2px;
+  }
+
+  .results-grid td {
+    min-width: 54px;
+  }
+
+  .grid-entry {
+    font-size: 14px;
+    padding: 6px 2px;
+  }
+
+  /* Readable in sun: slot over court, not a smaller line. */
+  .grid-when > [aria-hidden] > span {
+    display: block;
+  }
+}
+
+.score-won {
+  color: var(--amber-text);
+}
+
+/* The schedule, slot by slot. */
+.slot-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 14px 16px;
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: var(--elevation-3);
+}
+
+.slot[data-now] {
+  box-shadow: inset 0 0 0 1px var(--accent-text), var(--elevation-3);
+}
+
+.slot h4 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 700 18px/24px var(--display);
+}
+
+.now-chip {
+  font: 600 13px/20px var(--ui);
+  color: var(--accent-text);
+  padding: 2px 10px;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px var(--accent-text);
+}
+
+/* Rows inside the slot's panel, split by hairlines; a row is only filled
+   while it's the chosen pairing. */
+.slot-matches {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.slot-match {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 4px;
+  border-radius: 12px;
+  scroll-margin-top: 96px;
+}
+
+.slot-match + .slot-match {
+  border-top: 1px solid var(--hairline);
+  border-radius: 0;
+}
+
+.slot-match[aria-current],
+.slot-match:target {
+  background: var(--ghost);
+  box-shadow: inset 0 0 0 2px var(--accent-text);
+  border-radius: 12px;
+  padding-inline: 10px;
+  animation: target-in 600ms var(--ease);
+}
+
+@keyframes target-in {
+  from {
+    background: var(--ghost-active);
+  }
+}
+
+.slot-match > :nth-child(n + 4) {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+/* Wider screens: the link or Correct sits at the end of the match's row. */
+@media (min-width: 768px) {
+  .slot-match {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+  }
+
+  .slot-match > :nth-child(n + 4) {
+    grid-column: auto;
+    justify-self: end;
+  }
+}
+
+.court-tag {
+  font: 600 13px/18px var(--ui);
+  color: var(--band-text);
+  background: var(--ink);
+  padding: 5px 9px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+/* The pairing's name leads back to its cell in the grid. */
+.slot-teams {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  font: 600 16px/22px var(--ui);
+  color: var(--text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.slot-teams:hover {
+  color: var(--accent-text);
+  text-decoration: underline;
+}
+
+.slot-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* One small flip card per team, as on the courts list. */
+.score-chip {
+  position: relative;
+  min-width: 44px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--band-ghost) 50%, transparent 50%), var(--ink);
+  box-shadow: 0 0 0 1px var(--hairline);
+  color: var(--band-text);
+  font: 700 20px/34px var(--display);
+  text-align: center;
+  overflow: hidden;
+}
+
+.score-sep {
+  color: var(--muted);
+  font: 700 16px/1 var(--display);
+}
+
+/* A match still in play: its running score, not a result yet. */
+.slot-score[data-live] .score-chip {
+  color: var(--band-muted);
+}
+
+.slot-court-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  font: 500 16px/24px var(--nav);
+  color: var(--accent-text);
+}
+
+.slot-idle {
+  font: 400 14px/20px var(--ui);
+  color: var(--muted);
+}
+
+.pool-generate {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
 /* ---------- Loading placeholders (Loading.jsx) ---------- */
 
 .loading {

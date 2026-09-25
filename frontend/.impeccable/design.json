@@ -21,11 +21,14 @@
     "frontend/src/SaveStatus.jsx",
     "frontend/src/useRunningScore.js",
     "frontend/src/swapSides.js",
+    "frontend/src/PoolPage.jsx",
+    "frontend/src/PoolSchedule.jsx",
     "frontend/index.html"
   ],
   "scope": [
     "app shell",
     "tournament page /tournaments/:id",
+    "pool page /pools/:id",
     "courts list /tournaments/:id/courts",
     "court view /tournaments/:id/courts/:court"
   ],
@@ -36,24 +39,24 @@
   "tokens": {
     "color": {
       "--ground": { "dark": "linear-gradient(180deg, #1c1c1c 0%, #161616 100%)", "light": "linear-gradient(180deg, #ffffff 0%, #f6f4f1 100%)" },
-      "--ink": { "dark": "linear-gradient(180deg, #151515 0%, #0e0e0e 100%)", "light": "linear-gradient(180deg, #151515 0%, #0e0e0e 100%)", "role": "app bar, board head, court strip, flip cards, score chips" },
-      "--panel": { "dark": "linear-gradient(180deg, #262626 0%, #1f1f1f 100%)", "light": "linear-gradient(180deg, #ffffff 0%, #f6f4f1 100%)" },
+      "--ink": { "dark": "linear-gradient(180deg, #151515 0%, #0e0e0e 100%)", "light": "linear-gradient(180deg, #151515 0%, #0e0e0e 100%)", "role": "app bar, board head, court strip, flip cards, score chips, grid result chips, court tags" },
+      "--panel": { "dark": "linear-gradient(180deg, #262626 0%, #1f1f1f 100%)", "light": "linear-gradient(180deg, #ffffff 0%, #f6f4f1 100%)", "role": "cards, scoreboard columns, court tiles, results-grid panel, schedule slots" },
       "--surface": { "dark": "#1a1a1a", "light": "#ffffff" },
-      "--surface-2": { "dark": "#232323", "light": "#f6f4f1" },
+      "--surface-2": { "dark": "#232323", "light": "#f6f4f1", "role": "chips, rows, results-grid cells (appointments)" },
       "--surface-3": { "dark": "#2b2b2b", "light": "#e0e0e0" },
       "--text": { "dark": "#eeece9", "light": "#111111" },
       "--muted": { "dark": "#a3a3a3", "light": "#333333" },
       "--subtle": { "dark": "#999999", "light": "#333333" },
-      "--accent-text": { "dark": "#ea9557", "light": "#9e5019" },
+      "--accent-text": { "dark": "#ea9557", "light": "#9e5019", "role": "links, focus edge, errors, tile hover ring, Now chip, current-slot rings, selected pairing" },
       "--border": { "dark": "#4d4d4d", "light": "#e0e0e0" },
-      "--hairline": { "dark": "rgba(255, 255, 255, 0.1)", "light": "rgba(0, 0, 0, 0.1)" },
+      "--hairline": { "dark": "rgba(255, 255, 255, 0.1)", "light": "rgba(0, 0, 0, 0.1)", "role": "rules and strokes, including the hatched grid diagonal and schedule row rules" },
       "--field-border": { "dark": "#4d4d4d", "light": "#4d4d4d" },
-      "--ghost": { "dark": "rgba(255, 255, 255, 0.1)", "light": "rgba(0, 0, 0, 0.1)" },
+      "--ghost": { "dark": "rgba(255, 255, 255, 0.1)", "light": "rgba(0, 0, 0, 0.1)", "role": "button fill; selected schedule row" },
       "--ghost-hover": { "dark": "rgba(255, 255, 255, 0.15)", "light": "rgba(0, 0, 0, 0.15)" },
       "--ghost-active": { "dark": "rgba(255, 255, 255, 0.2)", "light": "rgba(0, 0, 0, 0.2)" },
-      "--amber": { "dark": "#dfae4e", "light": "#dfae4e" },
+      "--amber": { "dark": "#dfae4e", "light": "#dfae4e", "role": "amber on ink: winner's score in grid result chips and schedule score chips" },
       "--amber-tint": { "dark": "rgba(223, 174, 78, 0.1)", "light": "rgba(223, 174, 78, 0.2)" },
-      "--amber-text": { "dark": "#dfae4e", "light": "#9e5019", "role": "advancing places, winning scores (bracket and series games), champion label" },
+      "--amber-text": { "dark": "#dfae4e", "light": "#9e5019", "role": "amber on light grounds: advancing places, winning scores (bracket and series games), champion label" },
       "--ember": { "dark": "linear-gradient(135deg, #ee9148 0%, #d8742c 100%)", "light": "same", "role": "primary action only" },
       "--ember-hover": { "dark": "linear-gradient(135deg, #f29a52 0%, #e0803a 100%)", "light": "same" },
       "--ember-active": { "dark": "linear-gradient(135deg, #d57a33 0%, #c66a25 100%)", "light": "same" },
@@ -61,17 +64,17 @@
       "--ember-solid": { "dark": "#e68435", "light": "same", "role": "caret and accent-color, including the flip-card typing caret" },
       "--ember-glow": { "dark": "radial-gradient(circle at 80% 20%, rgba(230, 132, 53, 0.14) 0%, rgba(230, 132, 53, 0) 60%)", "light": "same", "role": "board-head band only" },
       "--selection": { "dark": "rgba(230, 132, 53, 0.4)", "light": "same", "role": "::selection background" },
-      "--band-text": { "dark": "#eeece9", "light": "#eeece9", "role": "text on ink, including flip numerals and score chips" },
-      "--band-muted": { "dark": "#a3a3a3", "light": "#a3a3a3" },
+      "--band-text": { "dark": "#eeece9", "light": "#eeece9", "role": "text on ink, including flip numerals, score chips, grid result chips, court tags" },
+      "--band-muted": { "dark": "#a3a3a3", "light": "#a3a3a3", "role": "muted text on ink; running (unfinished) scores in schedule chips" },
       "--band-accent": { "dark": "#ea9557", "light": "#ea9557", "role": "accent on ink: stage-chip dot, Courts/All courts links, health error dot, pressed Swap sides edge, flip-card typing ring, toast error edge" },
-      "--band-ghost": { "dark": "rgba(255, 255, 255, 0.1)", "light": "rgba(255, 255, 255, 0.1)", "role": "ghost fills on ink; toast ring; score-chip top half" },
+      "--band-ghost": { "dark": "rgba(255, 255, 255, 0.1)", "light": "rgba(255, 255, 255, 0.1)", "role": "ghost fills on ink; toast ring; top half of score chips and grid result chips" },
       "--band-ghost-hover": { "dark": "rgba(255, 255, 255, 0.15)", "light": "rgba(255, 255, 255, 0.15)" },
       "--band-divider": { "dark": "rgba(255, 255, 255, 0.08)", "light": "rgba(255, 255, 255, 0.08)", "role": "app bar bottom rule" },
       "--toast": { "dark": "#232323", "light": "#232323", "role": "toast fill; dark in both themes" },
       "--status-idle": { "dark": "#999999", "light": "#999999", "role": "health dot before the first check" },
       "--error-ring": { "dark": "rgba(234, 149, 87, 0.3)", "light": "rgba(234, 149, 87, 0.3)", "role": "3px halo on the health error dot" },
       "--scrim": { "dark": "rgba(0, 0, 0, 0.5)", "light": "rgba(0, 0, 0, 0.5)", "role": "behind the Manage drawer and the modal" },
-      "--flip-seam": { "dark": "rgba(0, 0, 0, 0.7)", "light": "rgba(0, 0, 0, 0.7)", "role": "hinge seam on flip cards (3px) and score chips (1px at .7)" }
+      "--flip-seam": { "dark": "rgba(0, 0, 0, 0.7)", "light": "rgba(0, 0, 0, 0.7)", "role": "hinge seam on flip cards (3px), score chips and grid result chips (1px at .7)" }
     },
     "effect": {
       "--focus": "0 0 0 3px rgba(230, 132, 53, 0.4)",
@@ -90,22 +93,24 @@
       "maxWidth": "1200px",
       "courtColumn": "640px"
     },
-    "radius": { "field": "0px", "focus": "4px", "tile": "8px", "scoreChip": "8px", "button": "12px", "flipCard": "12px", "row": "12px", "iconButton": "14px", "card": "16px" },
+    "radius": { "field": "0px", "focus": "4px", "tile": "8px", "scoreChip": "8px", "courtTag": "8px", "gridCell": "10px", "button": "12px", "chip": "12px", "flipCard": "12px", "row": "12px", "iconButton": "14px", "card": "16px" },
     "motion": {
       "--ease": "cubic-bezier(0.22, 1, 0.36, 1)",
       "state": "200ms ease-in-out",
       "enter": "300ms var(--ease)",
       "match-in": "320ms var(--ease), from opacity 0.4 and translate 0 24px",
+      "target-in": "600ms var(--ease), background from --ghost-active",
       "flip": "flip-fold 90ms ease-in (rotateX 0 to -90deg), then flip-drop 90ms ease-out after 90ms (from rotateX 90deg); 180ms total, perspective 600px",
       "reducedMotion": "all animation and transition off"
     }
   },
   "type": {
-    "tournament-name": { "selector": "h2.board-title", "family": "--display", "weight": 700, "size": "32px", "lineHeight": "36px", "from768": { "size": "48px", "lineHeight": "48px" }, "tracking": "-0.02em" },
+    "tournament-name": { "selector": "h2.board-title, .pool-page .court-strip h2", "family": "--display", "weight": 700, "size": "32px", "lineHeight": "36px", "from768": { "size": "48px", "lineHeight": "48px" }, "tracking": "-0.02em" },
     "section-head": { "selector": "h3", "family": "--display", "weight": 700, "size": "24px", "lineHeight": "28px", "from768": { "size": "28px", "lineHeight": "32px" }, "tracking": "-0.01em" },
     "card-head": { "selector": ".pool-card-head h4, .results-list strong, .manage-panel-head h3, .modal h2", "family": "--display", "weight": 700, "size": "22px", "lineHeight": "26.4px" },
     "court-strip-name": { "selector": ".court-strip h2", "family": "--display", "weight": 700, "size": "28px", "lineHeight": "32px" },
     "court-tile-name": { "selector": ".court-link-head strong", "family": "--display", "weight": 700, "size": "24px", "lineHeight": "28px" },
+    "slot-head": { "selector": ".slot h4", "family": "--display", "weight": 700, "size": "18px", "lineHeight": "24px" },
     "scoreboard-numeral": {
       "selector": ".flip-half",
       "family": "--display",
@@ -119,6 +124,9 @@
       "typing": "min(54cqi, 128px) on the overlaid input"
     },
     "score-chip": { "selector": ".court-link-chip", "family": "--display", "weight": 700, "size": "28px", "lineHeight": "40px", "tracking": "-0.02em", "numeric": "tabular-nums" },
+    "schedule-score-chip": { "selector": ".score-chip", "family": "--display", "weight": 700, "size": "20px", "lineHeight": "34px", "separator": ".score-sep 16px --muted" },
+    "grid-score": { "selector": ".grid-entry", "family": "--display", "weight": 700, "size": "17px", "lineHeight": "22px", "phone": "14px", "numeric": "tabular-nums" },
+    "grid-letter": { "selector": ".results-grid thead th, .grid-number", "family": "--display", "weight": 700, "size": "14px", "lineHeight": "20px", "color": "--muted" },
     "up-next-number": { "selector": ".up-next-list > li::before", "family": "--display", "weight": 700, "size": "16px", "color": "--muted", "numeric": "tabular-nums" },
     "brand": { "selector": ".brand", "family": "--display", "weight": 700, "size": "16px" },
     "body": { "selector": ":root", "family": "--ui", "weight": 400, "size": "16.8px", "lineHeight": "25.2px" },
@@ -129,8 +137,13 @@
     "court-label": { "selector": ".court-strip-label, .court-link-label, .court-link-free, .save-status", "family": "--ui", "weight": 500, "size": "14.7px", "lineHeight": "21px" },
     "series-tally": { "selector": ".series-tally", "family": "--ui", "weight": 600, "size": "16px", "lineHeight": "24px", "color": "--muted", "numeric": "tabular-nums" },
     "court-row": { "selector": ".game-line, .up-next-list > li", "family": "--ui", "weight": 500, "size": "16px", "lineHeight": "24px" },
-    "note": { "selector": ".section-note, .finish-note", "family": "--ui", "weight": 400, "size": "14px", "lineHeight": "20px" },
-    "button-nav": { "selector": "button, .nav-bar, .board-meta, .disclosure > summary, .manage-toggle, .court-strip-link", "family": "--nav", "weight": 500, "size": "16px", "lineHeight": "24px" },
+    "grid-row-name": { "selector": ".results-grid tbody th", "family": "--ui", "weight": 600, "size": "15px", "lineHeight": "20px", "phone": "14px" },
+    "appointment": { "selector": ".grid-when", "family": "--ui", "weight": 500, "size": "13px", "lineHeight": "16px", "color": "--muted" },
+    "court-tag": { "selector": ".court-tag", "family": "--ui", "weight": 600, "size": "13px", "lineHeight": "18px", "color": "--band-text" },
+    "now-chip": { "selector": ".now-chip", "family": "--ui", "weight": 600, "size": "13px", "lineHeight": "20px", "color": "--accent-text" },
+    "slot-teams": { "selector": ".slot-teams", "family": "--ui", "weight": 600, "size": "16px", "lineHeight": "22px" },
+    "note": { "selector": ".section-note, .finish-note, .slot-idle", "family": "--ui", "weight": 400, "size": "14px", "lineHeight": "20px" },
+    "button-nav": { "selector": "button, .nav-bar, .board-meta, .disclosure > summary, .manage-toggle, .court-strip-link, .slot-court-link", "family": "--nav", "weight": 500, "size": "16px", "lineHeight": "24px" },
     "primary-action": { "selector": ".btn-primary, button[type='submit']", "family": "--emphasis", "weight": 700, "size": "16px", "lineHeight": "24px" },
     "team-name": { "selector": ".flip-team", "family": "--emphasis", "weight": 700, "size": "18px", "lineHeight": "24px" },
     "score-step": { "selector": ".flip-plus, .flip-minus", "family": "--emphasis", "weight": 700, "size": { "plus": "24px", "minus": "18px" }, "lineHeight": 1, "numeric": "tabular-nums" }
@@ -140,13 +153,14 @@
     "board-head": { "selector": ".board-head", "fill": "--ember-glow over --ink", "text": "--band-text", "link": "--band-accent", "bleed": "full, rounded 0 0 16px 16px from 1200px" },
     "stage-chip": { "selector": ".stage-chip", "radius": "12px", "fill": "--band-ghost", "font": "label", "dot": "8px --band-accent" },
     "pool-card": { "selector": ".pool-grid > .pool-card", "grid": "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", "gap": "16px", "fill": "--panel", "radius": "16px", "shadow": "--elevation-3", "padding": "20px", "usedFor": ["pools", "playoff bracket tiers"] },
-    "standings": { "selector": "table[aria-label='Standings']", "advancing": { "row": "background --amber-tint", "rank": "--amber-text, weight 700", "sideStripe": false }, "key": ".advance-note" },
+    "standings": { "selector": "table[aria-label='Standings']", "advancing": { "row": "background --amber-tint", "rank": "--amber-text, weight 700", "sideStripe": false }, "key": ".advance-note", "usedOn": ["tournament page", "pool page"] },
     "results-card": { "selector": ".results-list > li", "treatment": "same as pool-card, gap 6px", "championLabel": "--amber-text, Inter 600 14/20", "championName": "card-head" },
     "manage-drawer": { "selector": "details.manage", "toggle": "--band-ghost", "panel": "fixed right, min(480px, 100%), --surface", "scrim": "--scrim", "enter": "drawer-in 300ms --ease", "sectionGap": "32px" },
     "toast": { "fill": "--toast", "shadow": "0 0 0 1px --band-ghost, --shadow-float", "error": "inset 1px --band-accent, --shadow-float", "enter": "toast-in 300ms --ease" },
     "bracket-diagram": { "selector": ".bracket-svg", "nameSize": "16px", "metaSize": "14px", "metaColor": "--muted", "winningScore": "--amber-text", "matchWidth": 176, "roundGap": 60, "box": "--surface-3 with --hairline stroke", "connector": "--border 1.5px" },
     "court-strip": {
       "selector": ".court-strip",
+      "usedOn": ["court view", "courts list", "pool page"],
       "fill": "--ink, no glow",
       "text": "--band-text",
       "label": "--band-muted, Inter 500 14.7/21",
@@ -154,6 +168,7 @@
       "pull": "margin-top -24px, padding 12px --gutter",
       "corners": "0 0 16px 16px from 1200px",
       "courtView": ".court-strip-narrow: padding-inline max(var(--gutter), calc((100% - 640px) / 2)); one row below 768px",
+      "poolPage": "pool name at tournament-name scale (32/36, 48/48 from 768px); label lists the pool's courts; link Back to tournament",
       "swapSides": { "selector": ".swap-sides", "fill": "--band-ghost, hover --band-ghost-hover", "pressed": "inset 1px --band-accent", "icon": "20px SVG", "phone": "48px icon-only square below 768px, label visually hidden", "behaviour": "reverses columns on screen only; remembered per court in localStorage court-sides:<tournament>:<court>" }
     },
     "flip-board": {
@@ -184,27 +199,59 @@
       "free": { "selector": ".court-link[data-free]", "fill": "transparent", "outline": "inset 1px --hairline, hover --accent-text", "label": "Free, right-aligned, court-label" }
     },
     "empty-court": { "selector": ".setup-note", "text": "Nothing left to play on this court right now." },
+    "pool-page": {
+      "selector": ".pool-page",
+      "files": ["frontend/src/PoolPage.jsx", "frontend/src/PoolSchedule.jsx"],
+      "order": ["court strip", "standings", "results grid", "schedule", "danger zone (signed in)"],
+      "sheet": { "selector": ".pool-sheet", "gap": "--section-gap", "mobile": "one column", "from1024": "standings and results grid in two equal columns, column-gap 32px; schedule full width below" },
+      "resultsGrid": {
+        "selector": ".grid-scroll > table.results-grid",
+        "panel": { "fill": "--panel", "radius": "16px", "shadow": "--elevation-3", "padding": "10px (6px below 640px)", "overflowX": "auto" },
+        "cell": { "spacing": "6px (4px below 640px)", "minWidth": "64px (54px below 640px)", "height": "52px", "radius": "10px", "fill": "--surface-2" },
+        "headings": "teams lettered A, B, C… (column abbr titled with the team name; grid-number before each row name), never read as ranks",
+        "self": { "selector": "td.grid-self", "fill": "repeating-linear-gradient 135deg, --hairline 2px on 7px off" },
+        "entry": { "selector": ".grid-entry", "link": "to the match row in the schedule", "hover": "--ghost-hover", "type": "grid-score" },
+        "result": { "selector": ".grid-entry.grid-result", "fill": "--band-ghost top half over --ink", "seam": "1px --flip-seam at 0.7", "text": "--band-text", "winner": "--amber" },
+        "appointment": { "selector": ".grid-when", "text": "S3 Ct 1 (slot over court below 640px); screen readers get Slot 3 · Court 1", "fill": "--surface-2", "type": "appointment" },
+        "now": { "selector": ".grid-entry.grid-now", "ring": "inset 1px --accent-text" },
+        "selected": { "selector": ".grid-entry[aria-current]", "outline": "2px solid --accent-text", "offset": "2px (1px below 640px)", "note": "outside the cell, so the Now ring and the selection show together" }
+      },
+      "schedule": {
+        "selector": ".slot-list",
+        "gap": "12px",
+        "slot": { "selector": ".slot", "fill": "--panel", "radius": "16px", "shadow": "--elevation-3", "padding": "14px 14px 16px", "gap": "10px", "head": "slot-head" },
+        "now": { "selector": ".slot[data-now]", "ring": "inset 1px --accent-text over --elevation-3", "chip": { "selector": ".now-chip", "text": "Now", "type": "now-chip", "edge": "inset 1px --accent-text", "radius": "12px", "padding": "2px 10px", "fill": "none" } },
+        "row": { "selector": ".slot-match", "layout": "court tag, teams, score; link or Correct on its own line below 768px, at the row's end from 768px", "padding": "10px 4px", "divider": "1px --hairline between rows", "scrollMarginTop": "96px" },
+        "courtTag": { "selector": ".court-tag", "fill": "--ink", "text": "--band-text", "type": "court-tag", "radius": "8px", "padding": "5px 9px" },
+        "teams": { "selector": ".slot-teams", "type": "slot-teams", "link": "back to the pairing's grid cell", "hover": "--accent-text, underlined" },
+        "scoreChip": { "selector": ".score-chip", "fill": "--band-ghost top half over --ink", "seam": "1px --flip-seam at 0.7", "ring": "1px --hairline", "radius": "8px", "minWidth": "44px", "padding": "0 8px", "type": "schedule-score-chip", "winner": "--amber", "running": "--band-muted (.slot-score[data-live])" },
+        "courtLink": { "selector": ".slot-court-link", "text": "Score on Court N (signed in) / Watch Court N (signed out)", "color": "--accent-text", "minHeight": "48px", "when": "unfinished match with a court" },
+        "correct": "CorrectionForm on finished matches, signed in",
+        "idle": { "selector": ".slot-idle", "text": "Observing: … / Resting: …", "type": "note", "color": "--muted" },
+        "selected": { "selector": ".slot-match[aria-current], .slot-match:target", "fill": "--ghost", "ring": "inset 2px --accent-text", "radius": "12px", "paddingInline": "10px", "enter": "target-in 600ms --ease" }
+      },
+      "interaction": "tapping a grid cell or a schedule row selects that pairing in both",
+      "states": ["loading", "no schedule (setup note; Generate schedule when signed in)", "in play (current slot)", "finished", "match without a court (Court –, no link)", "signed out"]
+    },
     "button": { "fill": "--ghost", "radius": "12px", "minHeight": "48px", "padding": "12px 20px", "disabledOpacity": 0.5 },
     "field": { "radius": "0px", "border": "1px --field-border", "minHeight": "48px", "focus": "--accent-text edge plus --focus" }
   },
   "rules": [
-    { "id": "amber-means-advancing", "rule": "Amber (--amber, --amber-tint, --amber-text) only marks advancing places and winning results: advancing rows, the advance key, winning bracket scores, the champion label and the winning side of each finished series game. Never decoration, status or emphasis; the live scoreboard carries none." },
+    { "id": "amber-means-advancing", "rule": "Amber (--amber, --amber-tint, --amber-text) only marks advancing places and winning results: advancing rows, the advance key, winning bracket scores, the champion label, the winning side of each finished series game, and the winner's score in pool grid and schedule chips. Never decoration, status or emphasis; the live scoreboard and running pool scores carry none." },
     { "id": "ember-one-primary", "rule": "The ember gradient fills only the one primary action per view (.btn-primary, submit); on the court view that is Finish match or Record game, ember only while enabled. The brand tile is the product mark. Everything else is ghost; +1 is a surface fill." },
     { "id": "ember-glow-band-only", "rule": "--ember-glow appears only on the board-head band; the court strip is plain ink." },
-    { "id": "ink-bands-and-boards", "rule": "--ink fills the app bar, board head, court strip, flip cards and score chips in both themes; text and accents on it use the --band-* tokens." },
+    { "id": "ink-bands-and-boards", "rule": "--ink fills the app bar, board head, court strip, flip cards, score chips, grid result chips and court tags in both themes; text and accents on it use the --band-* tokens." },
     { "id": "standings-are-the-page", "rule": "Organizer tools live in the Manage drawer or disclosures, never at equal weight with the board." },
-    { "id": "arms-length-targets", "rule": "Interactive elements are at least 48px tall; exceptions are the 32px bracket match actions and the 40px standings refresh. On the court view +1 is 72px (88px on phones) and Finish match 56px." },
-    { "id": "score-comes-first", "rule": "On a court the two columns and numerals own the first phone view; save status, Finish match and Up next follow in that order, with only the court strip above." }
+    { "id": "arms-length-targets", "rule": "Interactive elements are at least 48px tall; exceptions are the 32px bracket match actions and the 40px standings refresh. On the court view +1 is 72px (88px on phones) and Finish match 56px. Results-grid cells are 52px." },
+    { "id": "score-comes-first", "rule": "On a court the two columns and numerals own the first phone view; save status, Finish match and Up next follow in that order, with only the court strip above." },
+    { "id": "score-on-the-court", "rule": "Scoring happens on the court scoreboard. The pool page only links there (Score on Court N / Watch Court N); finished matches can be corrected in place." },
+    { "id": "amber-by-ground", "rule": "Amber on ink uses --amber; on light grounds (panels, tints, surfaces) it uses --amber-text." },
+    { "id": "result-vs-appointment", "rule": "A result chip and an appointment must read apart: a result is an ink flip-card chip with numerals, an appointment a quiet --surface-2 cell with small muted slot and court text." }
   ],
   "notOverhauled": [
     "BracketPage (champion line in BracketDiagram.jsx still renders a trophy emoji; to be replaced, not a system pattern)",
-    "PoolPage / PoolSchedule",
-    "TeamPage, MainPage, AccountPage, LoginPage, TournamentForm, ScoreEntryForm, CorrectionForm",
+    "TeamPage, MainPage, AccountPage, LoginPage, TournamentForm, ScoreEntryForm, CorrectionForm (including Correct on the pool page)",
     "SeriesForm outside board mode (plain game fields, fix-game form, conflict and error lines)"
   ],
-  "notCanonized": [
-    { "item": "trophy emoji in BracketDiagram.jsx champion line", "reason": "glyph icon; craft-floor defect awaiting replacement" },
-    { "item": "Try again / Refetch latest buttons in .save-status at 40px min-height", "reason": "below the 48px target rule on the view built for arm's length; drift, not a new exception" },
-    { "item": "Save game N (fix form, a submit) takes ember alongside Record game N on a series board", "reason": "button[type=submit] selector gives a second ember action while a game is being fixed; drift against ember-one-primary" }
-  ]
+  "notCanonized": []
 }
