@@ -4,7 +4,7 @@ from sqlmodel import Session, SQLModel
 from app.db import get_session
 from app.models import Game, Match
 from app.scoring import InvalidScore, MatchNotFound, VersionConflict
-from app.series import GameNotFound, edit_game, games_of, record_game
+from app.series import GameNotFound, edit_game, games_of, record_game, set_game_in_play
 
 router = APIRouter()
 
@@ -30,6 +30,22 @@ def add_game(
 ) -> Game:
     try:
         return record_game(session, match_id, data.team1_score, data.team2_score, data.version)
+    except MatchNotFound:
+        raise HTTPException(status_code=404, detail="Match not found")
+    except InvalidScore as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except VersionConflict:
+        raise HTTPException(status_code=409, detail=CONFLICT)
+
+
+@router.put("/matches/{match_id}/game-in-play", response_model=Match)
+def save_game_in_play(
+    match_id: int, data: GameSubmission, session: Session = Depends(get_session)
+) -> Match:
+    try:
+        return set_game_in_play(
+            session, match_id, data.team1_score, data.team2_score, data.version
+        )
     except MatchNotFound:
         raise HTTPException(status_code=404, detail="Match not found")
     except InvalidScore as exc:

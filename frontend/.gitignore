@@ -55,3 +55,6 @@ plugins/impeccable-live.client.ts
 app/plugins/impeccable-live.client.ts
 src/plugins/impeccable-live.client.ts
 # impeccable-live-ignore-end
+
+# Design review screenshots (local evidence, not source)
+.impeccable/review/

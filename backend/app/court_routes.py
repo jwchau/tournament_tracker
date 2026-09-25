@@ -32,6 +32,9 @@ class CourtMatch(SQLModel):
     team2_name: str | None
     team1_score: int | None
     team2_score: int | None
+    # A series' game in play (see Match).
+    game_team1_score: int | None = None
+    game_team2_score: int | None = None
     status: str
     court: int | None
     scheduled_time: datetime | None

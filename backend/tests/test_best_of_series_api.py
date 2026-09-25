@@ -104,6 +104,103 @@ def test_a_series_match_takes_games_not_a_single_score(client):
     assert _get(client, final["id"])["status"] == "ready"
 
 
+def _game_in_play(client, match_id, team1_score, team2_score, version=None):
+    if version is None:
+        version = _get(client, match_id)["version"]
+    return client.put(
+        f"/matches/{match_id}/game-in-play",
+        json={"team1_score": team1_score, "team2_score": team2_score, "version": version},
+    )
+
+
+def test_the_game_in_play_is_saved_point_by_point_for_spectators(client):
+    tournament_id, _ = _tournament(client, team_count=2, best_of=3)
+    final = _bracket(client, tournament_id)[("winners", 1, 1)]
+    _game(client, final["id"], 21, 15)
+
+    response = _game_in_play(client, final["id"], 7, 7)
+
+    assert response.status_code == 200
+    series = _get(client, final["id"])
+    assert (series["game_team1_score"], series["game_team2_score"]) == (7, 7)
+    # Games won are untouched: the running game counts for nothing yet.
+    assert (series["team1_score"], series["team2_score"], series["status"]) == (1, 0, "in_progress")
+    court = client.get(f"/tournaments/{tournament_id}/courts").json()[0]["current"]
+    assert (court["game_team1_score"], court["game_team2_score"]) == (7, 7)
+
+
+def test_recording_the_game_clears_the_game_in_play(client):
+    tournament_id, _ = _tournament(client, team_count=2, best_of=3)
+    final = _bracket(client, tournament_id)[("winners", 1, 1)]
+    _game_in_play(client, final["id"], 20, 18)
+
+    _game(client, final["id"], 21, 18)
+
+    series = _get(client, final["id"])
+    assert (series["game_team1_score"], series["game_team2_score"]) == (None, None)
+    assert (series["team1_score"], series["team2_score"]) == (1, 0)
+
+
+def test_the_game_in_play_takes_a_version_like_any_score(client):
+    tournament_id, _ = _tournament(client, team_count=2, best_of=3)
+    final = _bracket(client, tournament_id)[("winners", 1, 1)]
+
+    stale = _game_in_play(client, final["id"], 3, 1, version=final["version"] - 1)
+
+    assert stale.status_code == 409
+    assert _get(client, final["id"])["game_team1_score"] is None
+
+
+@pytest.mark.parametrize("scores", [(-1, 3), (3, -1)])
+def test_a_game_in_play_cannot_go_below_zero(client, scores):
+    tournament_id, _ = _tournament(client, team_count=2, best_of=3)
+    final = _bracket(client, tournament_id)[("winners", 1, 1)]
+
+    assert _game_in_play(client, final["id"], *scores).status_code == 400
+
+
+def test_only_an_unfinished_series_has_a_game_in_play(client):
+    tournament_id, _ = _tournament(client, team_count=2, best_of=3)
+    final = _bracket(client, tournament_id)[("winners", 1, 1)]
+    _game(client, final["id"], 21, 15)
+    _game(client, final["id"], 21, 16)
+
+    decided = _game_in_play(client, final["id"], 2, 0)
+    single_id = _bracket(client, _tournament(client, team_count=2)[0])[("winners", 1, 1)]["id"]
+    single = _game_in_play(client, single_id, 2, 0)
+
+    assert decided.status_code == 400
+    assert single.status_code == 400
+
+
+def test_a_correction_that_resets_a_match_clears_its_game_in_play(client):
+    tournament_id, teams = _tournament(client, team_count=4, best_of=3)
+    matches = _bracket(client, tournament_id)
+    semi1, semi2, final = (
+        matches[("winners", 1, 1)],
+        matches[("winners", 1, 2)],
+        matches[("winners", 2, 1)],
+    )
+    for semi in (semi1, semi2):
+        _game(client, semi["id"], 21, 15)
+        _game(client, semi["id"], 21, 16)
+    _game_in_play(client, final["id"], 9, 4)
+
+    client.patch(
+        f"/matches/{semi1['id']}/correct",
+        json={
+            "games": [
+                {"team1_score": 15, "team2_score": 21},
+                {"team1_score": 16, "team2_score": 21},
+            ],
+            "version": _get(client, semi1["id"])["version"],
+        },
+    )
+
+    reset_final = _get(client, final["id"])
+    assert (reset_final["game_team1_score"], reset_final["game_team2_score"]) == (None, None)
+
+
 def test_in_double_elimination_the_loser_drops_only_when_the_series_ends(client):
     tournament_id, teams = _tournament(client, team_count=4, best_of=3)
     matches = _bracket(client, tournament_id, format="double")

@@ -600,7 +600,7 @@ Stacking context is managed carefully to prevent unexpected layering conflicts. 
 
 ## As shipped in Tournament Tracker
 
-Recorded from the built code (`frontend/src/index.css` and the app shell and tournament page components), not from the plan. The sections above are the Kiln reference. Where this build differs from them, this section describes what actually shipped. Scope: the app shell on every page, plus the tournament page (`/tournaments/:id`). Machine-readable copy: `frontend/.impeccable/design.json`.
+Recorded from the built code (`frontend/src/index.css` and the components listed in the sidecar), not from the plan. The sections above are the Kiln reference. Where this build differs from them, this section describes what actually shipped. Scope: the app shell on every page, the tournament page (`/tournaments/:id`), the courts list (`/tournaments/:id/courts`) and the court view (`/tournaments/:id/courts/:court`). Machine-readable copy: `frontend/.impeccable/design.json`.
 
 ### Tokens (`:root` in `frontend/src/index.css`)
 
@@ -609,72 +609,92 @@ Dark is the default. When the device is in light mode (`prefers-color-scheme: li
 | Token | Dark (default) | Light override | Role |
 |---|---|---|---|
 | `--ground` | `linear-gradient(180deg, #1c1c1c, #161616)` | `linear-gradient(180deg, #ffffff, #f6f4f1)` | Page body (fixed) |
-| `--ink` | `linear-gradient(180deg, #151515, #0e0e0e)` | none, stays dark | App bar and board-head band |
-| `--panel` | `linear-gradient(180deg, #262626, #1f1f1f)` | `linear-gradient(180deg, #ffffff, #f6f4f1)` | Cards: pool, bracket, result, setup note |
+| `--ink` | `linear-gradient(180deg, #151515, #0e0e0e)` | none, stays dark | App bar, board-head band, court strip, flip cards and score chips |
+| `--panel` | `linear-gradient(180deg, #262626, #1f1f1f)` | `linear-gradient(180deg, #ffffff, #f6f4f1)` | Cards: pool, bracket, result, setup note, scoreboard columns, court tiles |
 | `--surface` | `#1a1a1a` | `#ffffff` | Drawer, modal, root background |
-| `--surface-2` | `#232323` | `#f6f4f1` | Team chips, code, loading bars |
-| `--surface-3` | `#2b2b2b` | `#e0e0e0` | Bracket match boxes, loading shimmer |
+| `--surface-2` | `#232323` | `#f6f4f1` | Team chips, code, loading bars, series game rows, Up next rows |
+| `--surface-3` | `#2b2b2b` | `#e0e0e0` | Bracket match boxes, loading shimmer, the +1 button |
 | `--text` | `#eeece9` | `#111111` | Body and headings |
 | `--muted` | `#a3a3a3` | `#333333` | Labels, table heads, notes |
 | `--subtle` | `#999999` | `#333333` | Placeholders |
-| `--accent-text` | `#ea9557` | `#9e5019` | Links, disclosure summaries, focused field edge |
+| `--accent-text` | `#ea9557` | `#9e5019` | Links, disclosure summaries, focused field edge, save errors, court tile hover ring |
 | `--border` | `#4d4d4d` | `#e0e0e0` | Bracket connectors, scrollbar |
-| `--hairline` | `rgba(255,255,255,.1)` | `rgba(0,0,0,.1)` | Table rules, drawer edges, box strokes |
+| `--hairline` | `rgba(255,255,255,.1)` | `rgba(0,0,0,.1)` | Table rules, drawer edges, box strokes, outlines on −1, disabled Finish match and free courts |
 | `--field-border` | `#4d4d4d` | `#4d4d4d` | Input and select edges. Kept heavy in light mode so they survive glare |
 | `--ghost`, `--ghost-hover`, `--ghost-active` | white at .10, .15, .20 | black at .10, .15, .20 | Default (secondary) button fills |
 | `--amber` | `#dfae4e` | same | Amber as a mark |
 | `--amber-tint` | `rgba(223,174,78,.1)` | `rgba(223,174,78,.2)` | Background of advancing rows |
-| `--amber-text` | `#dfae4e` | `#9e5019` | Amber as text: advancing places, winning scores. In light mode it becomes the copper-brown `#9e5019`, because `#dfae4e` is not legible on white |
+| `--amber-text` | `#dfae4e` | `#9e5019` | Amber as text: advancing places, winning scores, the champion label. In light mode it becomes the copper-brown `#9e5019`, because `#dfae4e` is not legible on white |
 | `--ember`, `--ember-hover`, `--ember-active` | 135deg `#ee9148`→`#d8742c`, `#f29a52`→`#e0803a`, `#d57a33`→`#c66a25` | same | The primary action only |
 | `--on-ember` | `#231306` | same | Label on ember |
+| `--ember-solid` | `#e68435` | same | Caret and `accent-color`; the caret in a flip card being typed into |
 | `--ember-glow` | radial at 80% 20%, `rgba(230,132,53,.14)` fading out by 60% | same | Board-head band only |
+| `--selection` | `rgba(230,132,53,.4)` | same | `::selection` background |
 | `--focus` | `0 0 0 3px rgba(230,132,53,.4)` | same | Every focus-visible ring |
-| `--elevation-3` | 1px white ring at .1 plus `0 1px 2px rgba(0,0,0,.05)` | ring in black at .1 | Cards and modal |
-| `--band-text`, `--band-muted` | `#eeece9`, `#a3a3a3` | same | Text on the ink band, whatever the device theme |
+| `--elevation-3` | 1px white ring at .1 plus `0 1px 2px rgba(0,0,0,.05)` | ring in black at .1 | Cards, scoreboard columns, court tiles, modal |
+| `--shadow-float` | `0 8px 24px rgba(0,0,0,.3)` | same | Toasts only, under their ring |
+| `--scrim` | `rgba(0,0,0,.5)` | same | Behind the open Manage drawer and the modal |
+| `--band-text`, `--band-muted` | `#eeece9`, `#a3a3a3` | same | Text on ink, whatever the device theme: bands, strips, flip-card numerals, score chips |
+| `--band-accent` | `#ea9557` | same | Accent on ink: stage-chip dot, Courts and All courts links, health error dot, pressed Swap sides edge, typing ring on a flip card, toast error edge |
+| `--band-ghost`, `--band-ghost-hover` | white at .10, .15 | same | Ghost fills on ink (nav, Manage toggle, stage chip, Swap sides, toast ring); `--band-ghost` is also the top-half lift on a score chip |
+| `--band-divider` | `rgba(255,255,255,.08)` | same | The app bar's bottom rule |
+| `--toast` | `#232323` | same | Toast fill. Toasts stay dark in both themes, like the band |
+| `--status-idle` | `#999999` | same | The health dot before the first check |
+| `--error-ring` | `rgba(234,149,87,.3)` | same | The 3px halo on the health error dot |
+| `--flip-top` | `rgba(255,255,255,.06)` | same | The lighter top half of a flip card, laid over `--ink` |
+| `--flip-seam` | `rgba(0,0,0,.7)` | same | The dark hinge seam across a flip card and a score chip |
 | `--gutter` | 16px | 24px from 768px, 40px from 1024px | Horizontal page padding |
 | `--section-gap` | 32px | 48px from 768px, 56px from 1024px | Space between page sections |
-| `--ease` | `cubic-bezier(0.22, 1, 0.36, 1)` | same | Drawer, toast, disclosure motion |
+| `--ease` | `cubic-bezier(0.22, 1, 0.36, 1)` | same | Drawer, toast, disclosure and new-match motion |
 
-Content max-width is 1200px. Selection, caret and `accent-color` use ember `#e68435`.
+Content max-width is 1200px. The court view's scoreboard, Finish match and Up next share a 640px centered column. No literal colors remain in the stylesheet outside `:root`.
 
 ### Type roles as used
 
 Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, DM Sans 500.
 
-- **Unbounded 700 (`--display`)** is used only for names and section heads:
+- **Unbounded 700 (`--display`)** is used for names, section heads and scoreboard numerals:
   - Tournament name (`h2.board-title`): 32/36, and 48/48 from 768px, tracking -0.02em.
-  - Section heads (`h3`: Standings, Playoffs, Results): 24/28, and 28/32 from 768px, tracking -0.01em.
+  - Section heads (`h3`: Standings, Playoffs, Results, Up next): 24/28, and 28/32 from 768px, tracking -0.01em.
   - Card heads (`.pool-card-head h4`): pool and bracket names at 22/26.4.
-  - Also at 22/26.4: the champion's name on a result card, the Manage drawer title, modal titles, court names.
+  - Also at 22/26.4: the champion's name on a result card, the Manage drawer title, modal titles.
+  - Court names: 28/32 on the court strip (`.court-strip h2`, also "Courts"), 24/28 on a courts-list tile.
+  - **Scoreboard numerals** (`.flip-half`): sized by digit count with container query units, so they fill the card at any width. One digit is `min(84cqi, 168px)`, two digits `min(56cqi, 128px)`; line height 1.3, `tabular-nums`, tracking -0.02em (-0.04em for two digits). The card itself is at least `min(112cqi, 220px)` tall, measured against its column (`.flip-column` is the inline-size container). While a score is being typed, the overlaid input shows its digits at `min(54cqi, 128px)`.
+  - Score chips on a courts-list tile: 28/40, `tabular-nums`, tracking -0.02em.
+  - Up next order numbers: 16px, `tabular-nums`, in `--muted`.
   - The brand word: 16px.
 - **Inter (`--ui`)** is the working face:
   - Root body: 16.8/25.2.
   - Tables: 16/24, headers 600 at 14/20.
-  - Labels: 600 at 14.7/21.
+  - Labels: 600 at 14.7/21. Court labels and the save status line use 500 at 14.7/21.
   - Fields: 16/24.
-  - Notes and captions: 14/20.
+  - Notes and captions: 14/20 (including the Finish match notes).
   - Plain `h4` (drawer sections, result-card tier): 600 at 16.8/25.2.
-  - Numbers use `tabular-nums` in tables, number inputs and the bracket.
-- **DM Sans 500 (`--nav`)**: buttons, nav links, the board meta line, disclosure summaries and the Manage toggle, all at 16/24.
-- **Manrope 700 (`--emphasis`)**: the primary action only (`.btn-primary`, `button[type=submit]`), at 16/24.
+  - Series tally: 600 at 16/24 in `--muted`. Series game lines and Up next rows: 500 at 16/24.
+  - Numbers use `tabular-nums` in tables, number inputs, the bracket, the series tally and game lines.
+- **DM Sans 500 (`--nav`)**: buttons, nav links, the board meta line, disclosure summaries, the Manage toggle and the court strip's links, all at 16/24.
+- **Manrope 700 (`--emphasis`)** sets the court's hands-on text:
+  - The primary action (`.btn-primary`, `button[type=submit]`), at 16/24.
+  - Team names over each scoreboard column (`.flip-team`): 18/24, centered.
+  - +1 at 24px and −1 at 18px, each an SVG glyph plus the digit, with `tabular-nums`.
 
 ### Components
 
 - **App bar** (`.app-bar`):
-  - Sticky, z-index 6, `--ink` fill, 1px `rgba(255,255,255,.08)` bottom rule.
+  - Sticky, z-index 6, `--ink` fill, 1px `--band-divider` bottom rule.
   - The inner row is at least 64px tall and at most 1200px wide.
   - The brand is a 28px ember tile (8px radius) holding a 16px SVG mark in `--on-ember`, next to the Unbounded word.
-  - Nav links and buttons are at least 48px tall with 12px radius and white-on-ink ghost fills.
+  - Nav links and buttons are at least 48px tall with 12px radius and `--band-ghost` fills.
   - Icon buttons are 48px square (44px on phones) with 14px radius.
-  - Health is an 8px dot with a visually hidden label. The error state is `#ea9557` with a 3px halo.
+  - Health is an 8px dot with a visually hidden label: `--status-idle` before the first check; the error state is `--band-accent` with a 3px `--error-ring` halo.
   - Below 640px the bar stays one row, the brand word is visually hidden, and the Home link is dropped.
 - **Board-head band** (`.board-head`):
   - A full-bleed ink band pulled up under the app bar, filled with `--ember-glow` over `--ink`.
   - At 1200px and wider, the bottom corners round to 16px.
-  - It holds the tournament name, a meta line in `--band-muted`, and the Manage toggle on the right. The meta line has the stage chip and a Courts link in `#ea9557` that is at least 48px tall.
+  - It holds the tournament name, a meta line in `--band-muted`, and the Manage toggle on the right. The meta line has the stage chip and a Courts link in `--band-accent` that is at least 48px tall.
 - **Stage chip** (`.stage-chip`):
-  - 12px radius, white fill at .10, `--band-text`, Inter 600 at 14.7/21, padding 4px 12px.
-  - Leads with an 8px `#ea9557` dot.
+  - 12px radius, `--band-ghost` fill, `--band-text`, Inter 600 at 14.7/21, padding 4px 12px.
+  - Leads with an 8px `--band-accent` dot.
 - **Pool and bracket cards** (`.pool-grid` and `.pool-card`):
   - The grid is `repeat(auto-fit, minmax(min(100%, 340px), 1fr))` with a 16px gap: side by side on a laptop, stacked on a phone.
   - Each card has a `--panel` fill, 16px radius, `--elevation-3`, 20px padding and a 12px internal gap.
@@ -686,48 +706,78 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
   - The footer (`.standings-foot`) holds a key and a transparent refresh button in `--accent-text`. The key (`.advance-note`) is a 14px tinted swatch with an `--amber-text` edge plus "Top N advance to the playoffs".
 - **Results cards** (`.results-list`):
   - The same grid and card treatment as the pool cards, with a 6px internal gap.
-  - Each card has the tier head in Inter 600, a "Champion:" label in amber (Inter 600 at 14/20), the champion's name in Unbounded 22, the runner-up as a muted note, and a "Full placings" link.
+  - Each card has the tier head in Inter 600, a "Champion:" label in `--amber-text` (Inter 600 at 14/20), the champion's name in Unbounded 22, the runner-up as a muted note, and a "Full placings" link.
 - **Manage drawer** (`details.manage`):
-  - The summary is a DM Sans toggle on the band, with a 20px SVG and a white .10 ghost fill.
-  - When open, a 50% black scrim covers the page and a fixed right-hand panel opens, `min(480px, 100%)` wide, in `--surface` with a hairline left edge.
+  - The summary is a DM Sans toggle on the band, with a 20px SVG and a `--band-ghost` fill.
+  - When open, `--scrim` covers the page and a fixed right-hand panel opens, `min(480px, 100%)` wide, in `--surface` with a hairline left edge.
   - The panel slides in over 300ms (`drawer-in`, a 24px translate on `--ease`), with a 32px gap between sections.
   - The panel head is sticky, with an Unbounded 22 title and an icon close button.
   - The danger zone sits last, above a hairline, with its button text in `--accent-text`.
+- **Toasts**: `--toast` fill in both themes, a `--band-ghost` ring plus `--shadow-float`; an error toast swaps the ring for a `--band-accent` edge. They enter over 300ms (`toast-in`) on `--ease`.
 - **Bracket diagram** (`.bracket-svg`):
   - Inter 16/22 with tabular numerals. Team names are 16px; meta lines (`.bracket-meta`) are 14px in `--muted`.
   - The winning score (`.bracket-score-won`) is in `--amber-text`.
   - Match boxes are 176px wide on `--surface-3` with a hairline stroke. Connectors are `--border` at 1.5px, and rounds are 60px apart.
   - Match action buttons are a compact 32px variant, used only inside the diagram.
+- **Court strip** (`.court-strip`, court view and courts list):
+  - An ink band like the board head but without the glow: `--ink` fill, `--band-text`, pulled up under the app bar (margin-top -24px), padding 12px `--gutter`. At 1200px and wider its bottom corners round to 16px.
+  - Holds the court name (Unbounded 28/32), the court label in `--band-muted` (Inter 500 at 14.7/21), and on the right a DM Sans link in `--band-accent`, at least 48px tall ("All courts" on the court view, "Back to tournament" on the list).
+  - On the court view (`.court-strip-narrow`) the strip's content is inset to the 640px scoreboard column: `padding-inline: max(var(--gutter), calc((100% - 640px) / 2))`. Below 768px it stays one row.
+  - **Swap sides** (`.swap-sides`, only while a match is on): a `--band-ghost` toggle (hover `--band-ghost-hover`) with a 20px SVG and the label. `aria-pressed="true"` adds a 1px inset `--band-accent` edge. Below 768px it is a 48px icon-only square with the label visually hidden. It reverses the columns on screen only; scores stay with their teams, and the choice is remembered per court on the device (`localStorage`, `court-sides:<tournament>:<court>`).
+- **Flip scoreboard** (`.flip-board`, `FlipBoard.jsx`):
+  - Two equal columns, 12px apart, in the 640px centered column. Each column (`.flip-column`) is a `--panel` card, 16px radius, `--elevation-3`, 12px padding and a 10px internal gap (12px 4px 4px on phones, so the card takes the full width). The team name sits on top in Manrope 700 18/24, at least 48px tall.
+  - **Flip card** (`.flip-card`): `--ink` in both themes, 12px radius, the numeral in `--band-text`. The top half is lighter (`--flip-top` over `--ink`); a 3px `--flip-seam` seam crosses the middle. Each half is the whole numeral clipped to its half, stacked in one grid cell so they line up exactly.
+  - **The flip**: when a score changes (a tap, a typed value or another device), the old top half folds down over the hinge (`flip-fold`, 90ms ease-in, `rotateX` 0 to -90deg) and then the new bottom half drops into place (`flip-drop`, 90ms ease-out after a 90ms delay, from `rotateX(90deg)`): 180ms in all, with `perspective: 600px`. Reduced motion skips both, and the new number simply shows.
+  - **Typing**: a number input lies over the card with transparent text. On focus it shows its digits in `--band-text` on `--ink`, with an `--ember-solid` caret and a 2px inset `--band-accent` ring.
+  - A new match comes onto the board with `match-in`: 320ms on `--ease`, from opacity .4 and 24px lower.
+  - Spectators (signed out) get the same board read-only, with no buttons, under a sign-in line and, for a series, the tally.
+- **+1 / −1** (`.flip-plus`, `.flip-minus`), full column width under each card:
+  - +1: `--surface-3` fill, 72px tall (88px on phones), hover `--ghost-hover`, active `--ghost-active`, 22px SVG plus.
+  - −1: 48px tall, transparent with a 1px inset `--hairline` outline, `--muted` text, 18px SVG minus. Disabled at 0.
+  - On phones a scorekeeper's board fills the first view (`min-height: calc(100svh - 176px)`) and the cards stretch, so +1 sits in the thumb zone and Finish match at the bottom.
+- **Save status line** (`.save-status`, `SaveStatus.jsx`, `role="status"`): centered Inter 500 at 14.7/21 in `--muted`, at least 24px tall so the board does not jump. It reads "Saving…" (points are sent 600ms after the last tap, as one running score), then "Saved"; nothing before the first change. A failed save ("Couldn’t save the score…") and a version conflict ("Someone else updated this match.") switch to `--accent-text` with a Try again or Refetch latest ghost button.
+- **Finish match** (`.btn-primary.finish-match`, also "Record game N" on a series board): full width of the 640px column, at least 56px tall. It is ember only when it can be pressed. Disabled (tied, saving, finishing or in conflict) it is a ghost outline: `--ghost` fill, `--muted` text, a 1px inset `--hairline` edge, full opacity. A tie shows "A match can’t finish tied." as a `.finish-note` (Inter 14/20, `--muted`) above it. Finishing asks for confirmation in the modal first.
+- **Series on the board** (`.series-board`, `SeriesForm` with `board`):
+  - The tally (`.series-tally`) on top: "A vs B · best of N · x–y", Inter 600 16/24 in `--muted`, centered, tabular.
+  - Then the game in play on the flip scoreboard, its save status and Record game N.
+  - Then the games so far (`.series-games`), each a `--surface-2` row with 12px radius, padding 8px 8px 8px 16px: "Game N: a–b" in Inter 500 16/24, with the winning side's score (`.game-won`) in `--amber-text` at 700, and a Fix game N button. Empty lists are hidden.
+- **Up next** (`.up-next`): below the fold on phones, in the 640px column. An Unbounded section head, a playoff note when the matches go to the next free court of that kind, then an ordered list: each row a `--surface-2` block, 12px radius, at least 56px tall, padding 8px 16px, Inter 500 16/24, led by its number in Unbounded 700 16 `--muted`.
+- **Empty court**: the setup-note card ("Nothing left to play on this court right now.").
+- **Courts list** (`.court-list`, `CourtsPage.jsx`):
+  - A grid of `repeat(auto-fill, minmax(min(100%, 300px), 1fr))` with a 12px gap; each whole tile is the link to that court.
+  - A busy court's tile (`.court-link`): `--panel`, 16px radius, `--elevation-3`, 16px padding, 8px gap. Hover swaps the elevation for a 1px inset `--accent-text` ring (200ms). The head is the court name in Unbounded 24/28 and its label in Inter 500 14.7/21; a series adds "Best of N · Games x–y" in the same label style.
+  - One line per team: the name at weight 600 in `--text`, and a **score chip** (`.court-link-chip`), a small flip card: `--ink` with a `--band-ghost` top half (stronger than `--flip-top`, so it reads at chip size), a 1px `--flip-seam` seam at .7, a `--hairline` ring, 8px radius, at least 64px wide, padding 4px 10px, the score in Unbounded 700 28/40 `--band-text`.
+  - A free court (`[data-free]`) has no board: one outlined line, transparent with a 1px inset `--hairline` edge (hover `--accent-text`), and "Free" pushed to the right in Inter 500 14.7/21.
 - **Buttons and fields**:
   - The default button is a ghost fill with 12px radius, at least 48px tall, padding 12px 20px, in DM Sans 500.
-  - Disabled buttons drop to opacity .5 with a `not-allowed` cursor.
+  - Disabled buttons drop to opacity .5 with a `not-allowed` cursor (Finish match overrides this, above).
   - Inputs and selects are square (0 radius) with a 1px `--field-border`. On focus the edge turns `--accent-text` and gets the `--focus` ring.
 - **Radii in use**:
   - 0 for fields
   - 4 for focus rings and code
-  - 8 for the brand tile and loading bars
-  - 12 for buttons, chips and toasts
+  - 8 for the brand tile, loading bars and score chips
+  - 12 for buttons, chips, toasts, flip cards, series game rows and Up next rows
   - 14 for icon buttons
-  - 16 for cards, the modal and the band corners
+  - 16 for cards, scoreboard columns, court tiles, the modal and the band and strip corners
 
   The reference's 48px and 104px radii do not appear in this build.
 
 ### Named rules
 
-1. **Amber means advancing or winning, and nothing else.** It marks advancing standings rows (tint plus amber rank), the advance key, winning bracket scores and the champion label. It is never used for decoration, status or emphasis.
-2. **The ember gradient is for the one primary action on a view.** Only `.btn-primary` and submit buttons use it; the brand tile carries it as the product mark. Secondary actions stay ghost.
-3. **The ember glow is for the board-head band only.** No other surface uses `--ember-glow`.
-4. **Ink is for bands.** `--ink` fills the app bar and board head in both themes. Text on it uses the `--band-*` tokens, not the theme text tokens.
+1. **Amber means advancing or winning, and nothing else.** It marks advancing standings rows (tint plus amber rank), the advance key, winning bracket scores, the champion label, and the winning side's score in each finished game of a series. It is never used for decoration, status or emphasis; the live scoreboard itself carries no amber.
+2. **The ember gradient is for the one primary action on a view.** Only `.btn-primary` and submit buttons use it; the brand tile carries it as the product mark. On the court view that action is Finish match, or Record game on a series board, and it wears ember only once it can be pressed. Secondary actions stay ghost, and +1 is a plain surface fill, not ember.
+3. **The ember glow is for the board-head band only.** No other surface uses `--ember-glow`; the court strip is plain ink.
+4. **Ink is for bands and boards.** `--ink` fills the app bar, board head, court strip, flip cards and score chips in both themes. Text and accents on it use the `--band-*` tokens, not the theme tokens.
 5. **Standings are the page.** Organizer tools live in the Manage drawer or behind disclosures and never sit at equal weight with the board.
-6. **Targets work at arm's length.** Every interactive element is at least 48px tall, except the compact bracket match actions (32px) and the standings refresh button (40px).
+6. **Targets work at arm's length.** Every interactive element is at least 48px tall, except the compact bracket match actions (32px) and the standings refresh button (40px). On the court view the targets grow: +1 is 72px (88px on phones) and Finish match 56px.
+7. **The score comes first on a court.** The two columns and their numerals own the first view on a phone; the save status, Finish match and Up next follow in that order, and nothing sits above the board but the court strip.
 
 ### Not yet overhauled
 
 These pages still use the default `.app-main > section` spacing and have not had a Kiln pass:
 
-- Court list and court view (`CourtsPage`, `CourtPage`). The `.court-*` styles date from before the overhaul.
 - Bracket page (`BracketPage`). Its champion line in `BracketDiagram.jsx` still shows a 🏆 emoji. It is due to be replaced and is not part of the system.
 - Pool page (`PoolPage`, `PoolSchedule`).
-- The others: team page, main page, account and login pages, the tournament create form, and the score, series and correction forms.
+- The others: team page, main page, account and login pages, the tournament create form, and the score and correction forms. `SeriesForm` has had a pass only in its court-board mode; its plain form (fix-game fields, conflict and error lines) has not.
 
 Treat how those pages look today as a gap to close, not as a pattern to copy.

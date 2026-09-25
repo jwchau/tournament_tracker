@@ -241,6 +241,8 @@ def _unplay(session: Session, match: Match, slots: list[int]) -> None:
         **{(Match.team1_id if slot == 1 else Match.team2_id).key: None for slot in slots},
         team1_score=None,
         team2_score=None,
+        game_team1_score=None,
+        game_team2_score=None,
         winner_id=None,
         status="pending",
         court=None,
