@@ -173,6 +173,11 @@ class Match(SQLModel, table=True):
     team2_id: int | None = Field(default=None, foreign_key="team.id")
     team1_score: int | None = None
     team2_score: int | None = None
+    # A best-of series' game in play: its running score, saved point by point
+    # so spectators can follow it. None between games; cleared when the game
+    # is recorded (see app.series).
+    game_team1_score: int | None = None
+    game_team2_score: int | None = None
     status: str
     winner_id: int | None = Field(default=None, foreign_key="team.id")
     winner_next_match_id: int | None = Field(default=None, foreign_key="match.id")

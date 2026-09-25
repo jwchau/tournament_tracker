@@ -5,10 +5,10 @@ works off a match's result (advancement, corrections, the diagram) sees the
 series result. The individual games live in the Game table.
 """
 
-from sqlmodel import Session, delete, select
+from sqlmodel import Session, delete, select, update
 
 from app.models import Game, Match, PlayoffBracket, Tournament
-from app.scoring import InvalidScore, MatchNotFound, submit_score
+from app.scoring import InvalidScore, MatchNotFound, VersionConflict, submit_score
 
 
 def best_of(session: Session, match: Match) -> int:
@@ -107,16 +107,60 @@ def _save_tally(
         raise
 
 
+def set_game_in_play(
+    session: Session, match_id: int, team1_score: int, team2_score: int, expected_version: int
+) -> Match:
+    """Save the running score of an unfinished series' game in play.
+
+    It's shown with the match (so spectators follow the game point by point)
+    but counts for nothing until the game is recorded. A tie is fine here: the
+    game isn't over.
+    """
+    match = session.get(Match, match_id)
+    if match is None:
+        raise MatchNotFound(match_id)
+    if best_of(session, match) == 1:
+        raise InvalidScore("this match is a single game; submit its score instead")
+    if match.team1_id is None or match.team2_id is None:
+        raise InvalidScore("both teams must be known before a game is played")
+    if match.status == "complete":
+        raise InvalidScore("this series is decided; correct it to change its games")
+    if team1_score < 0 or team2_score < 0:
+        raise InvalidScore("a score can't be negative")
+
+    result = session.execute(
+        update(Match)
+        .where(Match.id == match_id, Match.version == expected_version)
+        .values(
+            game_team1_score=team1_score,
+            game_team2_score=team2_score,
+            status="in_progress",
+            version=Match.version + 1,
+        )
+    )
+    if result.rowcount == 0:
+        session.rollback()
+        raise VersionConflict(match_id)
+    session.commit()
+    session.refresh(match)
+    return match
+
+
 def record_game(
     session: Session, match_id: int, team1_score: int, team2_score: int, expected_version: int
 ) -> Game:
-    """Add the next game of an unfinished series."""
+    """Add the next game of an unfinished series, ending the game in play."""
     _, games_needed = _open_series(session, match_id, team1_score, team2_score)
     games = games_of(session, match_id)
     game = Game(
         match_id=match_id, number=len(games) + 1, team1_score=team1_score, team2_score=team2_score
     )
     session.add(game)
+    session.execute(
+        update(Match)
+        .where(Match.id == match_id)
+        .values(game_team1_score=None, game_team2_score=None)
+    )
     _save_tally(session, match_id, [*games, game], games_needed, expected_version)
     session.refresh(game)
     return game

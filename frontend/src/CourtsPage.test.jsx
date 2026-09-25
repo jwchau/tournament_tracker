@@ -32,7 +32,8 @@ test('lists every court as a link to its page, with what is on it now', async ()
   const courtOne = await screen.findByRole('link', { name: /court 1/i })
   expect(courtOne).toHaveAttribute('href', '/tournaments/3/courts/1')
   expect(courtOne).toHaveTextContent('Bracket 1')
-  expect(courtOne).toHaveTextContent('Spikers vs Diggers')
+  expect(courtOne).toHaveTextContent('Spikers0')
+  expect(courtOne).toHaveTextContent('Diggers0')
   const courtTwo = screen.getByRole('link', { name: /court 2/i })
   expect(courtTwo).toHaveAttribute('href', '/tournaments/3/courts/2')
   expect(courtTwo).toHaveTextContent('Free')
@@ -65,6 +66,72 @@ test('a court lent to a bracket without courts says whose match it is playing', 
   expect(await screen.findByRole('link', { name: /court 1/i })).toHaveTextContent(
     'Bracket 1 · now playing Bracket 2',
   )
+})
+
+test("a court's tile shows the running score of the match on it", async () => {
+  vi.spyOn(api, 'listCourts').mockResolvedValue([
+    {
+      court: 1,
+      use: 'pool',
+      label: 'Pool A',
+      current: {
+        id: 5,
+        team1_name: 'Spikers',
+        team2_name: 'Diggers',
+        team1_score: 14,
+        team2_score: 9,
+        status: 'in_progress',
+      },
+      up_next: [],
+    },
+  ])
+
+  render(
+    <MemoryRouter initialEntries={['/tournaments/3/courts']}>
+      <Routes>
+        <Route path="/tournaments/:tournamentId/courts" element={<CourtsPage />} />
+      </Routes>
+    </MemoryRouter>,
+  )
+
+  const courtOne = await screen.findByRole('link', { name: /court 1/i })
+  expect(courtOne).toHaveTextContent('Spikers14')
+  expect(courtOne).toHaveTextContent('Diggers9')
+})
+
+test("a series court's tile shows the game in play and the games won", async () => {
+  vi.spyOn(api, 'listCourts').mockResolvedValue([
+    {
+      court: 1,
+      use: 'playoff',
+      label: 'Bracket 1',
+      current: {
+        id: 5,
+        team1_name: 'Spikers',
+        team2_name: 'Diggers',
+        team1_score: 1,
+        team2_score: 0,
+        game_team1_score: 11,
+        game_team2_score: 13,
+        best_of: 3,
+        status: 'in_progress',
+      },
+      up_next: [],
+    },
+  ])
+
+  render(
+    <MemoryRouter initialEntries={['/tournaments/3/courts']}>
+      <Routes>
+        <Route path="/tournaments/:tournamentId/courts" element={<CourtsPage />} />
+      </Routes>
+    </MemoryRouter>,
+  )
+
+  const courtOne = await screen.findByRole('link', { name: /court 1/i })
+  expect(courtOne).toHaveTextContent('Spikers11')
+  expect(courtOne).toHaveTextContent('Diggers13')
+  expect(courtOne).toHaveTextContent('Games 1–0')
 })
 
 test('shows a loading placeholder, not an empty list, until the courts arrive', () => {

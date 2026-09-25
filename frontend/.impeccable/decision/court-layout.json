@@ -1,0 +1,89 @@
+{
+  "title": "Court view layout",
+  "seed": "484913f4",
+  "dealt": [4, 7, 1],
+  "picked": "flip-board",
+  "question": "Kiln stays the look, and scoring is live, rally by rally. Pick how a scorekeeper's court screen is arranged, steer one, or re-roll.",
+  "options": [
+    {
+      "id": "match-queue",
+      "label": "Match card and queue",
+      "kicker": "THE ROLL",
+      "lineage": "the scorer's clipboard: this match on top, the running order underneath",
+      "thesis": "One large match card with each team's score and big +1 / −1 buttons, then the court's queue of what's next.",
+      "palette": ["#1A1A1A", "#E68435", "#DFAE4E", "#EEECE9"],
+      "materials": ["ink court band", "match panel with steppers", "queue rows"],
+      "viewport": "A slim ink band with 'Court 3' and a switcher to other courts; the match panel fills the screen: team names, huge Unbounded scores side by side, +1 under each in thumb reach, −1 smaller, Finish match in ember; Up next rows below the fold.",
+      "risk": "The most conventional of the three; the queue competes a little with the score for attention.",
+      "raised": [
+        {
+          "from": "boarding pass and gate board",
+          "raise": "When the court is handed a new match, it slides up from the queue into the panel and stays lit until the scorekeeper's first tap, so a change is never missed."
+        }
+      ],
+      "wireframe": {
+        "cols": 12,
+        "rows": 16,
+        "regions": [
+          { "label": "Court 3 · switch", "x": 0, "y": 0, "w": 12, "h": 2 },
+          { "label": "team A · score", "x": 0, "y": 2, "w": 6, "h": 5 },
+          { "label": "team B · score", "x": 6, "y": 2, "w": 6, "h": 5 },
+          { "label": "+1", "x": 0, "y": 7, "w": 6, "h": 2, "accent": true },
+          { "label": "+1", "x": 6, "y": 7, "w": 6, "h": 2, "accent": true },
+          { "label": "−1 · −1", "x": 0, "y": 9, "w": 12, "h": 1 },
+          { "label": "Finish match", "x": 0, "y": 10, "w": 12, "h": 2, "accent": true },
+          { "label": "up next (queue)", "x": 0, "y": 12, "w": 12, "h": 4 }
+        ]
+      }
+    },
+    {
+      "id": "court-halves",
+      "label": "Court from above",
+      "lineage": "the court itself, seen from the umpire's stand",
+      "thesis": "The phone becomes the court: a net line across the middle, each half belongs to one team, and tapping a half scores for that team.",
+      "palette": ["#1A1A1A", "#E68435", "#DFAE4E", "#EEECE9"],
+      "materials": ["two full-width court halves", "net line", "corner −1 chips"],
+      "viewport": "Top half: team A's name and giant score, the whole half a +1 target; a net line with the court number across the middle; bottom half: team B the same; a small −1 chip in each half's corner; Finish match and Up next below the fold.",
+      "risk": "A stray tap anywhere on a half scores a point, so −1 and the saved-state indicator must be obvious.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 16,
+        "regions": [
+          { "label": "team A · tap to score", "x": 0, "y": 0, "w": 12, "h": 6, "accent": true },
+          { "label": "net · Court 3", "x": 0, "y": 6, "w": 12, "h": 1 },
+          { "label": "team B · tap to score", "x": 0, "y": 7, "w": 12, "h": 6, "accent": true },
+          { "label": "Finish match", "x": 0, "y": 13, "w": 12, "h": 1 },
+          { "label": "up next", "x": 0, "y": 14, "w": 12, "h": 2 }
+        ]
+      }
+    },
+    {
+      "id": "flip-board",
+      "label": "Flip scoreboard",
+      "lineage": "the flip-number scoreboard on a stand at courtside",
+      "thesis": "Two columns like a courtside flip board: team name on top, giant numerals that flip on each point, big +1 below each.",
+      "palette": ["#1A1A1A", "#E68435", "#DFAE4E", "#EEECE9"],
+      "materials": ["flip-card numerals", "column steppers", "ink stand"],
+      "viewport": "Court number and match on a thin ink strip; two tall columns fill the screen, each a team name over a split flip-card numeral; under each, a +1 as wide as the column and a smaller −1; Finish match spans the bottom.",
+      "risk": "The flip motion is decoration if it slows reading; it must be quick and off under reduced motion.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 16,
+        "regions": [
+          { "label": "Court 3 · match", "x": 0, "y": 0, "w": 12, "h": 1 },
+          { "label": "team A", "x": 0, "y": 1, "w": 6, "h": 1 },
+          { "label": "team B", "x": 6, "y": 1, "w": 6, "h": 1 },
+          { "label": "flip numeral", "x": 0, "y": 2, "w": 6, "h": 7 },
+          { "label": "flip numeral", "x": 6, "y": 2, "w": 6, "h": 7 },
+          { "label": "+1 / −1", "x": 0, "y": 9, "w": 6, "h": 3, "accent": true },
+          { "label": "+1 / −1", "x": 6, "y": 9, "w": 6, "h": 3, "accent": true },
+          { "label": "Finish match", "x": 0, "y": 12, "w": 12, "h": 2 },
+          { "label": "up next", "x": 0, "y": 14, "w": 12, "h": 2 }
+        ]
+      }
+    }
+  ],
+  "reroll": true,
+  "steer": true,
+  "buildPath": { "value": "code", "toggle": false }
+}

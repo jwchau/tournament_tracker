@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 
-import { addGame, editGame, getMatch, listGames } from './api'
+import { addGame, editGame, getMatch, listGames, saveGameInPlay } from './api'
+import FlipBoard from './FlipBoard'
+import SaveStatus from './SaveStatus'
+import { sameScores, useRunningScore } from './useRunningScore'
 import { usePending } from './usePending'
 
 // Two score inputs for one game, labelled "Game N <team> score".
@@ -46,11 +49,70 @@ export function GameScoreInputs({
 
 const EMPTY = { team1: '', team2: '' }
 
+function gameInPlay(match) {
+  return { team1: match.game_team1_score ?? 0, team2: match.game_team2_score ?? 0 }
+}
+
+/**
+ * The game in play on the court's scoreboard: each point is saved as the
+ * game's running score, so spectators follow it, and Record game ends it.
+ * A newer game score from another device replaces this one's only while
+ * nothing here is waiting to be saved.
+ */
+function GameBoard({ match, number, team1Name, team2Name, recording, onSaved, onRecord, onRefetch }) {
+  const [seenVersion, setSeenVersion] = useState(match.version)
+  const running = useRunningScore({
+    initial: gameInPlay(match),
+    version: match.version,
+    send: (scores, version) =>
+      saveGameInPlay(match.id, { team1Score: scores.team1, team2Score: scores.team2, version }),
+    onSaved,
+  })
+  const { scores, state } = running
+
+  if (match.version > seenVersion) {
+    setSeenVersion(match.version)
+    if (running.synced && !sameScores(gameInPlay(match), scores)) running.adopt(gameInPlay(match))
+  }
+
+  async function handleRecord(event) {
+    event.preventDefault()
+    if (await onRecord(scores)) running.adopt({ team1: 0, team2: 0 })
+  }
+
+  return (
+    <form onSubmit={handleRecord} className="series-next">
+      <FlipBoard
+        idPrefix={`series-${match.id}-game-${number}`}
+        team1Name={team1Name}
+        team2Name={team2Name}
+        labelPrefix={`Game ${number} `}
+        scores={scores}
+        onChange={running.change}
+      />
+      <SaveStatus
+        state={state}
+        onRetry={running.retry}
+        onRefetch={async () => running.adopt(gameInPlay(await onRefetch()))}
+      />
+      <button
+        type="submit"
+        className="btn-primary finish-match"
+        disabled={recording || state === 'saving' || state === 'conflict' || scores.team1 === scores.team2}
+      >
+        {recording ? 'Saving…' : `Record game ${number}`}
+      </button>
+    </form>
+  )
+}
+
 /**
  * Scoring for a best-of playoff series: one game at a time. The series
  * completes (and its winner advances) once a team wins a majority; until then
  * any recorded game can be fixed. A decided series changes only through a
  * correction.
+ * With board, the next game is kept on the court's scoreboard, point by point,
+ * and recorded when it ends.
  */
 export default function SeriesForm({
   match,
@@ -58,11 +120,18 @@ export default function SeriesForm({
   team1Name = 'Team 1',
   team2Name = 'Team 2',
   onScored,
+  board = false,
 }) {
   const [currentMatch, setCurrentMatch] = useState(match)
   const [seenVersion, setSeenVersion] = useState(match.version)
   const [games, setGames] = useState([])
   const [next, setNext] = useState(EMPTY)
+
+  // A save of the game in play returns the match with its new version.
+  function takeMatch(updated) {
+    setCurrentMatch(updated)
+    setSeenVersion((current) => Math.max(current, updated.version))
+  }
   const [fixing, setFixing] = useState(null)
   const [conflict, setConflict] = useState(false)
   const [submitError, setSubmitError] = useState(false)
@@ -111,6 +180,16 @@ export default function SeriesForm({
     if (saved) setNext(EMPTY)
   }
 
+  function recordFromBoard(scores) {
+    return save(() =>
+      addGame(currentMatch.id, {
+        team1Score: scores.team1,
+        team2Score: scores.team2,
+        version: currentMatch.version,
+      }),
+    )
+  }
+
   async function handleFix(event) {
     event.preventDefault()
     const saved = await save(() =>
@@ -128,17 +207,49 @@ export default function SeriesForm({
     setCurrentMatch(latest)
     setSeenVersion((current) => Math.max(current, latest.version))
     setConflict(false)
+    return latest
   }
 
   const nextNumber = games.length + 1
 
+  const nextGame =
+    nextNumber <= bestOf &&
+    (board ? (
+      <GameBoard
+        key={nextNumber}
+        match={currentMatch}
+        number={nextNumber}
+        team1Name={team1Name}
+        team2Name={team2Name}
+        recording={saving}
+        onSaved={takeMatch}
+        onRecord={recordFromBoard}
+        onRefetch={handleRefetch}
+      />
+    ) : (
+      <form onSubmit={handleRecord}>
+        <GameScoreInputs
+          idPrefix={`series-${currentMatch.id}`}
+          number={nextNumber}
+          team1Name={team1Name}
+          team2Name={team2Name}
+          scores={next}
+          onChange={setNext}
+        />
+        <button type="submit" disabled={saving}>
+          {saving ? 'Saving…' : `Record game ${nextNumber}`}
+        </button>
+      </form>
+    ))
+
   return (
-    <section>
-      <p>
+    <section className={board ? 'series series-board' : 'series'}>
+      <p className="series-tally">
         {team1Name} vs {team2Name} · best of {bestOf} · {currentMatch.team1_score ?? 0}–
         {currentMatch.team2_score ?? 0}
       </p>
-      <ol>
+      {board && nextGame}
+      <ol className="series-games">
         {games.map((game) =>
           fixing?.number === game.number ? (
             <li key={game.number}>
@@ -161,7 +272,22 @@ export default function SeriesForm({
             </li>
           ) : (
             <li key={game.number}>
-              Game {game.number}: {game.team1_score}–{game.team2_score}{' '}
+              {board ? (
+                <span className="game-line">
+                  Game {game.number}:{' '}
+                  <span className={game.team1_score > game.team2_score ? 'game-won' : undefined}>
+                    {game.team1_score}
+                  </span>
+                  –
+                  <span className={game.team2_score > game.team1_score ? 'game-won' : undefined}>
+                    {game.team2_score}
+                  </span>
+                </span>
+              ) : (
+                <>
+                  Game {game.number}: {game.team1_score}–{game.team2_score}
+                </>
+              )}{' '}
               <button
                 type="button"
                 onClick={() =>
@@ -178,21 +304,7 @@ export default function SeriesForm({
           ),
         )}
       </ol>
-      {nextNumber <= bestOf && (
-        <form onSubmit={handleRecord}>
-          <GameScoreInputs
-            idPrefix={`series-${currentMatch.id}`}
-            number={nextNumber}
-            team1Name={team1Name}
-            team2Name={team2Name}
-            scores={next}
-            onChange={setNext}
-          />
-          <button type="submit" disabled={saving}>
-            {saving ? 'Saving…' : `Record game ${nextNumber}`}
-          </button>
-        </form>
-      )}
+      {!board && nextGame}
       {conflict && (
         <p>
           Version conflict: this series was updated elsewhere.{' '}

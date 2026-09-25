@@ -243,6 +243,15 @@ export function addGame(matchId, { team1Score, team2Score, version }) {
   })
 }
 
+// The running score of a series' game in play, saved point by point.
+export function saveGameInPlay(matchId, { team1Score, team2Score, version }) {
+  return sendJson('PUT', `/matches/${matchId}/game-in-play`, {
+    team1_score: team1Score,
+    team2_score: team2Score,
+    version,
+  })
+}
+
 export function editGame(matchId, number, { team1Score, team2Score, version }) {
   return patchJson(`/matches/${matchId}/games/${number}`, {
     team1_score: team1Score,
