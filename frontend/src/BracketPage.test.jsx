@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from './testUtils'
+import { act, fireEvent, render, screen, waitFor, within } from './testUtils'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
@@ -7,6 +7,7 @@ import BracketPage from './BracketPage'
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
 function renderAt(bracketId) {
@@ -19,7 +20,7 @@ function renderAt(bracketId) {
   )
 }
 
-test('shows one tier with its controls, team names, courts, and a link back', async () => {
+test('shows one tier with its format, team names, courts, and a link back', async () => {
   vi.spyOn(api, 'getPlayoffBracket').mockResolvedValue({
     id: 30,
     tournament_id: 3,
@@ -43,27 +44,31 @@ test('shows one tier with its controls, team names, courts, and a link back', as
     'href',
     '/tournaments/3',
   )
-  expect(await screen.findByLabelText('Diggers score')).toBeInTheDocument()
+  expect(screen.getByText('Single elimination')).toBeInTheDocument()
+  // A match opens with its court and time, from the tournament's courts.
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Final: Spikers vs Diggers' }),
+  )
   expect(screen.getAllByRole('option', { name: /^court/i })).toHaveLength(4)
   expect(matches).toHaveBeenCalledWith(30)
 })
 
-test('a best-of tournament scores its playoff matches as series', async () => {
-  vi.spyOn(api, 'getPlayoffBracket').mockResolvedValue({ id: 30, tournament_id: 3, tier: 1 })
+test('a best-of tournament says so, and its matches are scored on the court', async () => {
+  vi.spyOn(api, 'getPlayoffBracket').mockResolvedValue({ id: 30, tournament_id: 3, tier: 1, format: 'double' })
   vi.spyOn(api, 'getTournament').mockResolvedValue({ id: 3, court_count: 2, playoff_best_of: 5 })
   vi.spyOn(api, 'listTeams').mockResolvedValue([
     { id: 10, name: 'Spikers' },
     { id: 11, name: 'Diggers' },
   ])
   vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([
-    { id: 1, bracket: 'winners', round: 1, position: 1, team1_id: 10, team2_id: 11, status: 'ready', version: 1 },
+    { id: 1, bracket: 'winners', round: 1, position: 1, team1_id: 10, team2_id: 11, status: 'ready', court: 1, version: 1 },
   ])
-  vi.spyOn(api, 'listGames').mockResolvedValue([])
 
   renderAt(30)
 
-  expect(await screen.findByText('Spikers vs Diggers · best of 5 · 0–0')).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: 'Record game 1' })).toBeInTheDocument()
+  expect(await screen.findByText('Double elimination · best of 5')).toBeInTheDocument()
+  expect(await screen.findByRole('link', { name: 'Score on Court 1' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /record game/i })).not.toBeInTheDocument()
 })
 
 test('shows a loading placeholder until the bracket arrives', () => {
@@ -103,9 +108,12 @@ test('signed out, the bracket is read-only', async () => {
     { user: null },
   )
 
-  expect(await screen.findByText('Spikers')).toBeInTheDocument()
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Final: Spikers vs Diggers' }),
+  )
+  const match = screen.getByRole('dialog', { name: 'Final' })
+  expect(within(match).queryByRole('button', { name: /save schedule|hold|correct/i })).not.toBeInTheDocument()
   expect(screen.queryByLabelText('Diggers score')).not.toBeInTheDocument()
-  expect(screen.queryByRole('button')).not.toBeInTheDocument()
 })
 
 test('once the tournament is complete, lists this tier\'s full placings', async () => {
@@ -167,10 +175,13 @@ test('double-elimination placings name the losers-bracket round', async () => {
   renderAt(30)
 
   const placings = await screen.findByRole('region', { name: 'Placings' })
-  expect(within(placings).getByText('3rd: Blockers (out in losers round 2)')).toBeInTheDocument()
+  expect(within(placings).getAllByRole('listitem')[2]).toHaveTextContent(
+    '3rd: Blockers (out in losers round 2)',
+  )
 })
 
-test('scoring the final shows the placings without a reload', async () => {
+test('a final scored on the court shows the placings without a reload', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
   const final = {
     id: 1, bracket: 'winners', round: 1, position: 1,
     team1_id: 10, team2_id: 11, status: 'ready', version: 1,
@@ -183,10 +194,7 @@ test('scoring the final shows the placings without a reload', async () => {
     { id: 10, name: 'Spikers' },
     { id: 11, name: 'Diggers' },
   ])
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([final])
-  vi.spyOn(api, 'submitScore').mockResolvedValue({
-    ...final, team1_score: 21, team2_score: 15, status: 'complete', winner_id: 10, version: 2,
-  })
+  const loadMatches = vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([final])
   vi.spyOn(api, 'getTournamentResults').mockResolvedValue([
     {
       tier: 1,
@@ -200,13 +208,15 @@ test('scoring the final shows the placings without a reload', async () => {
 
   renderAt(30)
 
-  fireEvent.change(await screen.findByLabelText('Spikers score'), { target: { value: '21' } })
-  fireEvent.change(screen.getByLabelText('Diggers score'), { target: { value: '15' } })
-  fireEvent.click(screen.getByLabelText(/complete match/i))
-  fireEvent.click(screen.getByRole('button', { name: /submit score/i }))
+  await screen.findByRole('button', { name: 'Final: Spikers vs Diggers' })
+  // The scorekeeper finishes it on the court; the next poll brings it here.
+  loadMatches.mockResolvedValue([
+    { ...final, team1_score: 21, team2_score: 15, status: 'complete', winner_id: 10, version: 2 },
+  ])
+  await act(() => vi.advanceTimersByTimeAsync(4000))
 
   const placings = await screen.findByRole('region', { name: 'Placings' })
-  expect(await within(placings).findByText('1st: Spikers')).toBeInTheDocument()
+  await waitFor(() => expect(within(placings).getAllByRole('listitem')[0]).toHaveTextContent('1st: Spikers'))
 })
 
 test('shows no placings while the tournament is still being played', async () => {
