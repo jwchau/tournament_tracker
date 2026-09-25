@@ -71,7 +71,6 @@
       "--status-idle": { "dark": "#999999", "light": "#999999", "role": "health dot before the first check" },
       "--error-ring": { "dark": "rgba(234, 149, 87, 0.3)", "light": "rgba(234, 149, 87, 0.3)", "role": "3px halo on the health error dot" },
       "--scrim": { "dark": "rgba(0, 0, 0, 0.5)", "light": "rgba(0, 0, 0, 0.5)", "role": "behind the Manage drawer and the modal" },
-      "--flip-top": { "dark": "rgba(255, 255, 255, 0.06)", "light": "rgba(255, 255, 255, 0.06)", "role": "lighter top half of a flip card, over --ink" },
       "--flip-seam": { "dark": "rgba(0, 0, 0, 0.7)", "light": "rgba(0, 0, 0, 0.7)", "role": "hinge seam on flip cards (3px) and score chips (1px at .7)" }
     },
     "effect": {
@@ -161,7 +160,7 @@
       "selector": ".flip-board",
       "layout": "two equal columns, gap 12px, max-width 640px centered",
       "column": { "selector": ".flip-column", "fill": "--panel", "radius": "16px", "shadow": "--elevation-3", "padding": "12px (12px 4px 4px below 768px)", "gap": "10px", "teamName": "team-name, min-height 48px" },
-      "card": { "selector": ".flip-card", "fill": "--ink", "topHalf": "--flip-top over --ink", "seam": "3px --flip-seam across the middle", "radius": "12px", "numeral": "scoreboard-numeral in --band-text", "halves": "whole numeral clipped to each half, stacked in one grid cell" },
+      "card": { "selector": ".flip-card", "fill": "--ink", "topHalf": "--band-ghost over --ink", "seam": "3px --flip-seam across the middle", "outline": "1px --hairline ring", "radius": "12px", "numeral": "scoreboard-numeral in --band-text", "halves": "whole numeral clipped to each half, stacked in one grid cell" },
       "flip": "old top half folds down (flip-fold 90ms), new bottom half drops (flip-drop 90ms after 90ms); skipped under reduced motion",
       "typing": "overlaid number input; on focus digits in --band-text on --ink, --ember-solid caret, inset 2px --band-accent",
       "newMatch": "match-in 320ms --ease",
