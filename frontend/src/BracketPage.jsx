@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { getPlayoffBracket, getTournament, getTournamentResults, listTeams } from './api'
-import { useAuth } from './auth'
-import BracketDiagram from './BracketDiagram'
+import BracketBoard from './BracketBoard'
 import Loading from './Loading'
 import NotFound from './NotFound'
 import { useLoad } from './useLoad'
@@ -43,13 +42,15 @@ function Placings({ tournamentId, bracketId, championId }) {
   }
 
   return (
-    <section aria-labelledby="placings-heading">
+    <section aria-labelledby="placings-heading" className="board-section">
       <h3 id="placings-heading">Placings</h3>
       {/* Each row names its own place, so no list numbers. */}
-      <ul style={{ listStyle: 'none', padding: 0 }}>
+      <ul className="placings">
         {rows.map(([label, teams]) => (
           <li key={label}>
-            {label}: {teams}
+            <span className="placing-place">{label}</span>
+            <span className="visually-hidden">: </span>
+            <span className="placing-teams">{teams}</span>
           </li>
         ))}
       </ul>
@@ -64,7 +65,6 @@ export default function BracketPage() {
   const [bracket, setBracket] = useState(null)
   const [tournament, setTournament] = useState(null)
   const [teams, setTeams] = useState([])
-  const { user } = useAuth()
   const [championId, setChampionId] = useState(null)
   const reportedChampion = useRef(undefined)
 
@@ -107,10 +107,23 @@ export default function BracketPage() {
   if (status === 'not-found') return <NotFound thing="Bracket" />
   if (status !== 'ready') return <Loading label="Loading bracket" rows={6} />
 
+  const bestOf = tournament.playoff_best_of ?? 1
+  const format = bracket.format === 'double' ? 'Double elimination' : 'Single elimination'
+
   return (
-    <>
-      <Link to={`/tournaments/${bracket.tournament_id}`}>Back to tournament</Link>
-      <h2>Bracket {bracket.tier}</h2>
+    <div className="bracket-page">
+      <header className="court-strip">
+        <div className="court-strip-title">
+          <h2>Bracket {bracket.tier}</h2>
+          <p className="court-strip-label">
+            {format}
+            {bestOf > 1 && ` · best of ${bestOf}`}
+          </p>
+        </div>
+        <Link to={`/tournaments/${bracket.tournament_id}`} className="court-strip-link">
+          Back to tournament
+        </Link>
+      </header>
       {tournament.stage === 'complete' && (
         <Placings
           tournamentId={bracket.tournament_id}
@@ -118,14 +131,14 @@ export default function BracketPage() {
           championId={championId}
         />
       )}
-      <BracketDiagram
+      <BracketBoard
         playoffBracketId={bracket.id}
+        tournamentId={bracket.tournament_id}
         teams={teams}
         courtCount={tournament.court_count}
-        bestOf={tournament.playoff_best_of ?? 1}
-        readOnly={!user}
+        bestOf={bestOf}
         onChampionChange={handleChampionChange}
       />
-    </>
+    </div>
   )
 }

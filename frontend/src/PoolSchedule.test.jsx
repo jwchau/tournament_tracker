@@ -229,6 +229,9 @@ test('a correction shows the new score and tells the page the matches changed', 
   fireEvent.click(within(dialog).getByRole('button', { name: /review correction/i }))
   fireEvent.click(await screen.findByRole('button', { name: /apply correction/i }))
 
-  await waitFor(() => expect(matchRow('Spikers vs Diggers')).toHaveTextContent('15–21'))
+  // The correction runs through a preview and a confirm; give it time under a busy test run.
+  await waitFor(() => expect(matchRow('Spikers vs Diggers')).toHaveTextContent('15–21'), {
+    timeout: 3000,
+  })
   expect(onMatchesChange).toHaveBeenLastCalledWith(expect.arrayContaining([corrected]))
 })

@@ -1,7 +1,7 @@
 # Manual test walkthrough: Kiln overhaul
 
 Scenarios to walk through by hand after the Kiln UI overhaul (tournament page,
-court view and courts list, pool page). Each one lists its setup, what to do,
+court view and courts list, pool page, bracket page). Each one lists its setup, what to do,
 and what should happen. Tick the box when it passes; note anything odd under
 the scenario.
 
@@ -186,7 +186,46 @@ a private window.
   - Do: signed in, Delete pool at the bottom, then confirm.
   - Expect: a confirm dialog; a pool with scored matches refuses with a message; an empty one returns to the tournament.
 
-## 6. Across the app
+## 6. Bracket page
+
+- [ ] **Opens on the round being played** (**phone**)
+  - Setup: a playoff bracket partway through.
+  - Expect: the ink strip with "Bracket N" and its format; round tabs (Quarters, Semis, Final, or Winners/Losers/Grand final for double elimination) with the current round lit; that round's match cards below, the next round's edge showing at the right.
+
+- [ ] **Swipe and tabs**
+  - Do: swipe the cards sideways a couple of rounds; then tap a far tab.
+  - Expect: the lit tab follows the swipe and stays in view in the tab strip; tapping a tab slides to that round with no other tabs flashing on the way; the last round sits flush, with nothing of the previous round showing. "Next: {round}" moves on one round.
+
+- [ ] **Match cards**
+  - Expect: both teams with flip-card scores (winner amber, loser greyed); a match on a court is outlined in orange with its court and "Score on Court N" (signed in) or "Watch Court N" (signed out); a match in line says "Waiting for a court · #N"; a finished one says "Finished".
+
+- [ ] **Open a match**
+  - Do: tap a card (phone) or a card in the tree (laptop).
+  - Expect: a sheet slides up (phone) or in from the right (laptop), titled like the tabs ("Semis · match 2", "Final"); Escape, the ✕ and tapping outside close it; the open card has a white outline.
+
+- [ ] **Organizer tools in the panel**
+  - Do: signed in, open an unfinished match with both teams; set its court and time and save; then Hold it, then Release it; then open a finished match and Correct it.
+  - Expect: the card shows the new court and time right away; Hold explains what it does, the card says "On hold", Release brings it back; a match that has a score can't be held; Correct works as on the pool page. A bye or a match still waiting for a team has no tools.
+
+- [ ] **Signed out**
+  - Expect: tapping a match shows its teams, status and "Watch Court N", and no tools.
+
+- [ ] **Laptop tree**
+  - Do: open the page on a wide window.
+  - Expect: the whole bracket as a tree of the same cards, round names over the columns, lines between rounds; double elimination shows its winners and losers sections and the grand final.
+
+- [ ] **Champion and placings**
+  - Setup: finish the bracket's last match on its court.
+  - Expect: without reloading, "{Team} win the bracket" appears above the rounds; once the whole tournament is complete, Placings lists every team's finish with the champion in amber.
+
+- [ ] **Results scored on the court show up**
+  - Do: score a bracket match on its court on another device.
+  - Expect: the bracket page updates within a few seconds.
+
+- [ ] **Tournament page brackets**
+  - Expect: the small brackets on the tournament page are unchanged (read-only tree), and "Open Bracket N" leads to this page.
+
+## 7. Across the app
 
 - [ ] **Reduced motion**
   - Do: turn on reduced motion in the OS.

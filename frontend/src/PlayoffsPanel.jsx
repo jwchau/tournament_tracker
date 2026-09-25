@@ -91,12 +91,7 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
                 <Link to={`/brackets/${bracket.id}`}>Open Bracket {bracket.tier}</Link>
               </div>
               <div className="bracket-scroll">
-                <BracketDiagram
-                  playoffBracketId={bracket.id}
-                  teams={teams}
-                  bestOf={bestOf}
-                  readOnly
-                />
+                <BracketDiagram playoffBracketId={bracket.id} teams={teams} bestOf={bestOf} />
               </div>
             </li>
           ))}

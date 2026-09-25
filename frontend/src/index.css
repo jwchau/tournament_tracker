@@ -1131,15 +1131,6 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   stroke-width: 1.5;
 }
 
-.bracket-match-actions {
-  position: absolute;
-}
-
-.bracket-match-actions button {
-  min-height: 32px;
-  padding: 4px 12px;
-  font-size: 14px;
-}
 
 /* One game's two scores: each label stays beside its input, and the pair wraps as a unit. */
 .game-scores {
@@ -1773,6 +1764,341 @@ table[aria-label='Standings'] tr.advancing td:first-child {
 .court-link-free {
   margin-left: auto;
   font: 500 14.7px/21px var(--ui);
+}
+
+/* ---------- Bracket page: round by round ---------- */
+
+.bracket-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.bracket-page .court-strip h2 {
+  font-size: 32px;
+  line-height: 36px;
+}
+
+@media (min-width: 768px) {
+  .bracket-page .court-strip h2 {
+    font-size: 48px;
+    line-height: 48px;
+  }
+}
+
+.bracket-board-tree {
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: var(--elevation-3);
+  padding: 20px;
+}
+
+/* Round tabs over pages that swipe sideways, the next round peeking in. */
+.round-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.round-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-inline: calc(var(--gutter) * -1);
+  padding-inline: var(--gutter);
+}
+
+.round-tabs button {
+  flex: none;
+  font: 500 15px/20px var(--nav);
+  padding: 12px 16px;
+}
+
+.round-tabs button[aria-pressed='true'] {
+  background: var(--text);
+  color: var(--surface);
+}
+
+.round-pages {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  /* Inside the gutters, so only the next round peeks in, never the last one. */
+  padding-block: 3px 6px;
+}
+
+.round-pages::-webkit-scrollbar,
+.round-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Room after the last page, so it snaps flush to the gutter like the rest. */
+.round-pages::after {
+  content: '';
+  flex: 0 0 calc(12% - 12px);
+}
+
+.round-page {
+  flex: 0 0 88%;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.round-cards {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.round-card {
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: var(--elevation-3);
+  padding: 4px 4px 10px;
+}
+
+/* Being played on a court now. */
+.round-card[data-live] {
+  box-shadow: inset 0 0 0 2px var(--accent-text), var(--elevation-3);
+}
+
+/* The match that's open in the panel. */
+.round-card[aria-current] {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
+.round-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.round-next svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* The tree of cards on a wider screen. */
+.card-tree {
+  position: relative;
+}
+
+.card-tree-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.card-tree-head {
+  position: absolute;
+  font: 700 16px/24px var(--display);
+  color: var(--muted);
+}
+
+.card-tree .round-card {
+  z-index: 1;
+}
+
+.round-card-open {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: 0;
+  padding: 8px 10px;
+  background: transparent;
+  text-align: left;
+  border-radius: 12px;
+}
+
+.round-card-open:hover {
+  background: var(--ghost);
+}
+
+.card-team {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+  font: 600 17px/22px var(--ui);
+  color: var(--text);
+}
+
+.card-team.lost {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.card-team-name {
+  overflow-wrap: anywhere;
+}
+
+/* A game still being played: its running score, muted. */
+.score-chip.score-live {
+  color: var(--band-muted);
+}
+
+.round-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 12px;
+  padding: 0 10px;
+  font: 500 14px/20px var(--ui);
+  color: var(--muted);
+}
+
+.round-next {
+  align-self: flex-end;
+  min-height: 48px;
+  color: var(--accent-text);
+  background: transparent;
+  padding-inline: 8px;
+}
+
+/* One match, opened: a sheet from the bottom on a phone, from the right on
+   a wider screen. */
+.match-panel-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: var(--scrim);
+}
+
+.match-panel {
+  position: fixed;
+  z-index: 21;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 85svh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px var(--gutter) 28px;
+  border-radius: 16px 16px 0 0;
+  background: var(--surface);
+  box-shadow: var(--elevation-3), var(--shadow-float);
+  animation: sheet-up 280ms var(--ease);
+}
+
+@keyframes sheet-up {
+  from {
+    translate: 0 40px;
+    opacity: 0.4;
+  }
+}
+
+@media (min-width: 900px) {
+  .match-panel {
+    left: auto;
+    top: 0;
+    width: min(440px, 100vw);
+    max-height: none;
+    border-radius: 16px 0 0 16px;
+    padding: 24px;
+    animation-name: sheet-in;
+  }
+
+  @keyframes sheet-in {
+    from {
+      translate: 40px 0;
+      opacity: 0.4;
+    }
+  }
+}
+
+.match-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.match-panel-head h3 {
+  font: 700 22px/26.4px var(--display);
+}
+
+.match-panel-score {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--elevation-3);
+}
+
+.match-panel .round-card-meta {
+  padding: 0;
+}
+
+.match-panel-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+}
+
+.match-panel-tools h4 {
+  font: 600 14.7px/21px var(--ui);
+  color: var(--muted);
+}
+
+.match-panel-tools form {
+  width: 100%;
+}
+
+/* Every team's finish in this tier, once the tournament is complete. */
+.placings {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: var(--elevation-3);
+  padding: 6px 16px;
+}
+
+.placings li {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 10px 0;
+  font: 500 16px/22px var(--ui);
+}
+
+.placings li + li {
+  border-top: 1px solid var(--hairline);
+}
+
+.placing-place {
+  flex: none;
+  min-width: 3ch;
+  font: 700 18px/22px var(--display);
+  color: var(--muted);
+}
+
+.placings li:first-child .placing-place,
+.placings li:first-child .placing-teams {
+  color: var(--amber-text);
+}
+
+.placings li:first-child .placing-teams {
+  font-weight: 700;
 }
 
 /* ---------- Pool page: the round-robin sheet ---------- */

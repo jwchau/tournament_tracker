@@ -23,12 +23,20 @@
     "frontend/src/swapSides.js",
     "frontend/src/PoolPage.jsx",
     "frontend/src/PoolSchedule.jsx",
+    "frontend/src/BracketPage.jsx",
+    "frontend/src/BracketBoard.jsx",
+    "frontend/src/RoundPages.jsx",
+    "frontend/src/CardTree.jsx",
+    "frontend/src/MatchCard.jsx",
+    "frontend/src/MatchPanel.jsx",
+    "frontend/src/bracketModel.js",
     "frontend/index.html"
   ],
   "scope": [
     "app shell",
     "tournament page /tournaments/:id",
     "pool page /pools/:id",
+    "bracket page /brackets/:id",
     "courts list /tournaments/:id/courts",
     "court view /tournaments/:id/courts/:court"
   ],
@@ -40,23 +48,23 @@
     "color": {
       "--ground": { "dark": "linear-gradient(180deg, #1c1c1c 0%, #161616 100%)", "light": "linear-gradient(180deg, #ffffff 0%, #f6f4f1 100%)" },
       "--ink": { "dark": "linear-gradient(180deg, #151515 0%, #0e0e0e 100%)", "light": "linear-gradient(180deg, #151515 0%, #0e0e0e 100%)", "role": "app bar, board head, court strip, flip cards, score chips, grid result chips, court tags" },
-      "--panel": { "dark": "linear-gradient(180deg, #262626 0%, #1f1f1f 100%)", "light": "linear-gradient(180deg, #ffffff 0%, #f6f4f1 100%)", "role": "cards, scoreboard columns, court tiles, results-grid panel, schedule slots" },
-      "--surface": { "dark": "#1a1a1a", "light": "#ffffff" },
+      "--panel": { "dark": "linear-gradient(180deg, #262626 0%, #1f1f1f 100%)", "light": "linear-gradient(180deg, #ffffff 0%, #f6f4f1 100%)", "role": "cards, scoreboard columns, court tiles, results-grid panel, schedule slots; bracket match cards, card-tree panel, placings list, match panel score card" },
+      "--surface": { "dark": "#1a1a1a", "light": "#ffffff", "role": "drawer, modal, match panel, root; label of the current round tab" },
       "--surface-2": { "dark": "#232323", "light": "#f6f4f1", "role": "chips, rows, results-grid cells (appointments)" },
-      "--surface-3": { "dark": "#2b2b2b", "light": "#e0e0e0" },
-      "--text": { "dark": "#eeece9", "light": "#111111" },
-      "--muted": { "dark": "#a3a3a3", "light": "#333333" },
+      "--surface-3": { "dark": "#2b2b2b", "light": "#e0e0e0", "role": "read-only tree match boxes, loading shimmer, +1" },
+      "--text": { "dark": "#eeece9", "light": "#111111", "role": "body and headings; current round tab fill; outline of the match open in the panel" },
+      "--muted": { "dark": "#a3a3a3", "light": "#333333", "role": "labels, notes, match card meta and losing row, card-tree round heads, placing numbers" },
       "--subtle": { "dark": "#999999", "light": "#333333" },
-      "--accent-text": { "dark": "#ea9557", "light": "#9e5019", "role": "links, focus edge, errors, tile hover ring, Now chip, current-slot rings, selected pairing" },
-      "--border": { "dark": "#4d4d4d", "light": "#e0e0e0" },
-      "--hairline": { "dark": "rgba(255, 255, 255, 0.1)", "light": "rgba(0, 0, 0, 0.1)", "role": "rules and strokes, including the hatched grid diagonal and schedule row rules" },
+      "--accent-text": { "dark": "#ea9557", "light": "#9e5019", "role": "links, focus edge, errors, tile hover ring, Now chip, current-slot rings, selected pairing, live bracket match ring, Next round link" },
+      "--border": { "dark": "#4d4d4d", "light": "#e0e0e0", "role": "bracket connectors (read-only tree lines and card-tree elbows), scrollbar" },
+      "--hairline": { "dark": "rgba(255, 255, 255, 0.1)", "light": "rgba(0, 0, 0, 0.1)", "role": "rules and strokes, including the hatched grid diagonal, schedule row rules, placings rows and match panel tool sections" },
       "--field-border": { "dark": "#4d4d4d", "light": "#4d4d4d" },
-      "--ghost": { "dark": "rgba(255, 255, 255, 0.1)", "light": "rgba(0, 0, 0, 0.1)", "role": "button fill; selected schedule row" },
+      "--ghost": { "dark": "rgba(255, 255, 255, 0.1)", "light": "rgba(0, 0, 0, 0.1)", "role": "button fill; selected schedule row; hovered bracket match card" },
       "--ghost-hover": { "dark": "rgba(255, 255, 255, 0.15)", "light": "rgba(0, 0, 0, 0.15)" },
       "--ghost-active": { "dark": "rgba(255, 255, 255, 0.2)", "light": "rgba(0, 0, 0, 0.2)" },
-      "--amber": { "dark": "#dfae4e", "light": "#dfae4e", "role": "amber on ink: winner's score in grid result chips and schedule score chips" },
-      "--amber-tint": { "dark": "rgba(223, 174, 78, 0.1)", "light": "rgba(223, 174, 78, 0.2)" },
-      "--amber-text": { "dark": "#dfae4e", "light": "#9e5019", "role": "amber on light grounds: advancing places, winning scores (bracket and series games), champion label" },
+      "--amber": { "dark": "#dfae4e", "light": "#dfae4e", "role": "amber on ink: winner's score in grid result chips, schedule score chips and bracket match card chips" },
+      "--amber-tint": { "dark": "rgba(223, 174, 78, 0.1)", "light": "rgba(223, 174, 78, 0.2)", "role": "advancing rows; champion banner" },
+      "--amber-text": { "dark": "#dfae4e", "light": "#9e5019", "role": "amber on light grounds: advancing places, winning scores (bracket and series games), champion label, champion's row in placings" },
       "--ember": { "dark": "linear-gradient(135deg, #ee9148 0%, #d8742c 100%)", "light": "same", "role": "primary action only" },
       "--ember-hover": { "dark": "linear-gradient(135deg, #f29a52 0%, #e0803a 100%)", "light": "same" },
       "--ember-active": { "dark": "linear-gradient(135deg, #d57a33 0%, #c66a25 100%)", "light": "same" },
@@ -65,7 +73,7 @@
       "--ember-glow": { "dark": "radial-gradient(circle at 80% 20%, rgba(230, 132, 53, 0.14) 0%, rgba(230, 132, 53, 0) 60%)", "light": "same", "role": "board-head band only" },
       "--selection": { "dark": "rgba(230, 132, 53, 0.4)", "light": "same", "role": "::selection background" },
       "--band-text": { "dark": "#eeece9", "light": "#eeece9", "role": "text on ink, including flip numerals, score chips, grid result chips, court tags" },
-      "--band-muted": { "dark": "#a3a3a3", "light": "#a3a3a3", "role": "muted text on ink; running (unfinished) scores in schedule chips" },
+      "--band-muted": { "dark": "#a3a3a3", "light": "#a3a3a3", "role": "muted text on ink; running (unfinished) scores in schedule chips and bracket match card chips" },
       "--band-accent": { "dark": "#ea9557", "light": "#ea9557", "role": "accent on ink: stage-chip dot, Courts/All courts links, health error dot, pressed Swap sides edge, flip-card typing ring, toast error edge" },
       "--band-ghost": { "dark": "rgba(255, 255, 255, 0.1)", "light": "rgba(255, 255, 255, 0.1)", "role": "ghost fills on ink; toast ring; top half of score chips and grid result chips" },
       "--band-ghost-hover": { "dark": "rgba(255, 255, 255, 0.15)", "light": "rgba(255, 255, 255, 0.15)" },
@@ -73,13 +81,13 @@
       "--toast": { "dark": "#232323", "light": "#232323", "role": "toast fill; dark in both themes" },
       "--status-idle": { "dark": "#999999", "light": "#999999", "role": "health dot before the first check" },
       "--error-ring": { "dark": "rgba(234, 149, 87, 0.3)", "light": "rgba(234, 149, 87, 0.3)", "role": "3px halo on the health error dot" },
-      "--scrim": { "dark": "rgba(0, 0, 0, 0.5)", "light": "rgba(0, 0, 0, 0.5)", "role": "behind the Manage drawer and the modal" },
+      "--scrim": { "dark": "rgba(0, 0, 0, 0.5)", "light": "rgba(0, 0, 0, 0.5)", "role": "behind the Manage drawer, the modal and the match panel" },
       "--flip-seam": { "dark": "rgba(0, 0, 0, 0.7)", "light": "rgba(0, 0, 0, 0.7)", "role": "hinge seam on flip cards (3px), score chips and grid result chips (1px at .7)" }
     },
     "effect": {
       "--focus": "0 0 0 3px rgba(230, 132, 53, 0.4)",
       "--elevation-3": { "dark": "0 0 0 1px rgba(255, 255, 255, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.05)", "light": "0 0 0 1px rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.05)" },
-      "--shadow-float": { "value": "0 8px 24px rgba(0, 0, 0, 0.3)", "role": "toasts only" }
+      "--shadow-float": { "value": "0 8px 24px rgba(0, 0, 0, 0.3)", "role": "toasts and the match panel sheet" }
     },
     "font": {
       "--display": "'Unbounded', system-ui, -apple-system, 'Segoe UI', sans-serif",
@@ -91,23 +99,25 @@
       "--gutter": { "base": "16px", "768": "24px", "1024": "40px" },
       "--section-gap": { "base": "32px", "768": "48px", "1024": "56px" },
       "maxWidth": "1200px",
+      "bracketBreakpoint": "900px (round pages below, card tree and right-hand match panel from)",
       "courtColumn": "640px"
     },
-    "radius": { "field": "0px", "focus": "4px", "tile": "8px", "scoreChip": "8px", "courtTag": "8px", "gridCell": "10px", "button": "12px", "chip": "12px", "flipCard": "12px", "row": "12px", "iconButton": "14px", "card": "16px" },
+    "radius": { "field": "0px", "focus": "4px", "tile": "8px", "scoreChip": "8px", "courtTag": "8px", "gridCell": "10px", "button": "12px", "chip": "12px", "flipCard": "12px", "row": "12px", "iconButton": "14px", "card": "16px", "matchCardOpen": "12px", "matchPanelScore": "12px", "matchPanelSheet": "16px on the leading corners" },
     "motion": {
       "--ease": "cubic-bezier(0.22, 1, 0.36, 1)",
       "state": "200ms ease-in-out",
       "enter": "300ms var(--ease)",
       "match-in": "320ms var(--ease), from opacity 0.4 and translate 0 24px",
       "target-in": "600ms var(--ease), background from --ghost-active",
+      "sheet": "match panel: sheet-up 280ms var(--ease) from translate 0 40px and opacity 0.4 under 900px; sheet-in from translate 40px 0 from 900px",
       "flip": "flip-fold 90ms ease-in (rotateX 0 to -90deg), then flip-drop 90ms ease-out after 90ms (from rotateX 90deg); 180ms total, perspective 600px",
       "reducedMotion": "all animation and transition off"
     }
   },
   "type": {
-    "tournament-name": { "selector": "h2.board-title, .pool-page .court-strip h2", "family": "--display", "weight": 700, "size": "32px", "lineHeight": "36px", "from768": { "size": "48px", "lineHeight": "48px" }, "tracking": "-0.02em" },
+    "tournament-name": { "selector": "h2.board-title, .pool-page .court-strip h2, .bracket-page .court-strip h2", "family": "--display", "weight": 700, "size": "32px", "lineHeight": "36px", "from768": { "size": "48px", "lineHeight": "48px" }, "tracking": "-0.02em" },
     "section-head": { "selector": "h3", "family": "--display", "weight": 700, "size": "24px", "lineHeight": "28px", "from768": { "size": "28px", "lineHeight": "32px" }, "tracking": "-0.01em" },
-    "card-head": { "selector": ".pool-card-head h4, .results-list strong, .manage-panel-head h3, .modal h2", "family": "--display", "weight": 700, "size": "22px", "lineHeight": "26.4px" },
+    "card-head": { "selector": ".pool-card-head h4, .results-list strong, .champion-name, .manage-panel-head h3, .modal h2, .match-panel-head h3", "family": "--display", "weight": 700, "size": "22px", "lineHeight": "26.4px" },
     "court-strip-name": { "selector": ".court-strip h2", "family": "--display", "weight": 700, "size": "28px", "lineHeight": "32px" },
     "court-tile-name": { "selector": ".court-link-head strong", "family": "--display", "weight": 700, "size": "24px", "lineHeight": "28px" },
     "slot-head": { "selector": ".slot h4", "family": "--display", "weight": 700, "size": "18px", "lineHeight": "24px" },
@@ -124,17 +134,19 @@
       "typing": "min(54cqi, 128px) on the overlaid input"
     },
     "score-chip": { "selector": ".court-link-chip", "family": "--display", "weight": 700, "size": "28px", "lineHeight": "40px", "tracking": "-0.02em", "numeric": "tabular-nums" },
-    "schedule-score-chip": { "selector": ".score-chip", "family": "--display", "weight": 700, "size": "20px", "lineHeight": "34px", "separator": ".score-sep 16px --muted" },
+    "schedule-score-chip": { "selector": ".score-chip (pool schedule and bracket match cards)", "family": "--display", "weight": 700, "size": "20px", "lineHeight": "34px", "separator": ".score-sep 16px --muted" },
     "grid-score": { "selector": ".grid-entry", "family": "--display", "weight": 700, "size": "17px", "lineHeight": "22px", "phone": "14px", "numeric": "tabular-nums" },
     "grid-letter": { "selector": ".results-grid thead th, .grid-number", "family": "--display", "weight": 700, "size": "14px", "lineHeight": "20px", "color": "--muted" },
     "up-next-number": { "selector": ".up-next-list > li::before", "family": "--display", "weight": 700, "size": "16px", "color": "--muted", "numeric": "tabular-nums" },
+    "card-tree-head": { "selector": ".card-tree-head", "family": "--display", "weight": 700, "size": "16px", "lineHeight": "24px", "color": "--muted" },
+    "placing-place": { "selector": ".placing-place", "family": "--display", "weight": 700, "size": "18px", "lineHeight": "22px", "color": "--muted", "champion": "--amber-text" },
     "brand": { "selector": ".brand", "family": "--display", "weight": 700, "size": "16px" },
     "body": { "selector": ":root", "family": "--ui", "weight": 400, "size": "16.8px", "lineHeight": "25.2px" },
     "ui-heading": { "selector": "h4", "family": "--ui", "weight": 600, "size": "16.8px", "lineHeight": "25.2px" },
     "table": { "family": "--ui", "weight": 400, "size": "16px", "lineHeight": "24px", "numeric": "tabular-nums" },
     "table-head": { "family": "--ui", "weight": 600, "size": "14px", "lineHeight": "20px" },
     "label": { "family": "--ui", "weight": 600, "size": "14.7px", "lineHeight": "21px" },
-    "court-label": { "selector": ".court-strip-label, .court-link-label, .court-link-free, .save-status", "family": "--ui", "weight": 500, "size": "14.7px", "lineHeight": "21px" },
+    "court-label": { "selector": ".court-strip-label, .court-link-label, .court-link-free, .save-status, .match-panel-tools h4 (600, --muted)", "family": "--ui", "weight": 500, "size": "14.7px", "lineHeight": "21px" },
     "series-tally": { "selector": ".series-tally", "family": "--ui", "weight": 600, "size": "16px", "lineHeight": "24px", "color": "--muted", "numeric": "tabular-nums" },
     "court-row": { "selector": ".game-line, .up-next-list > li", "family": "--ui", "weight": 500, "size": "16px", "lineHeight": "24px" },
     "grid-row-name": { "selector": ".results-grid tbody th", "family": "--ui", "weight": 600, "size": "15px", "lineHeight": "20px", "phone": "14px" },
@@ -142,8 +154,12 @@
     "court-tag": { "selector": ".court-tag", "family": "--ui", "weight": 600, "size": "13px", "lineHeight": "18px", "color": "--band-text" },
     "now-chip": { "selector": ".now-chip", "family": "--ui", "weight": 600, "size": "13px", "lineHeight": "20px", "color": "--accent-text" },
     "slot-teams": { "selector": ".slot-teams", "family": "--ui", "weight": 600, "size": "16px", "lineHeight": "22px" },
+    "card-team": { "selector": ".card-team", "family": "--ui", "weight": 600, "size": "17px", "lineHeight": "22px", "lost": "500 in --muted" },
+    "card-meta": { "selector": ".round-card-meta", "family": "--ui", "weight": 500, "size": "14px", "lineHeight": "20px", "color": "--muted" },
+    "placing-row": { "selector": ".placings li", "family": "--ui", "weight": 500, "size": "16px", "lineHeight": "22px", "champion": "700 in --amber-text" },
+    "round-tab": { "selector": ".round-tabs button", "family": "--nav", "weight": 500, "size": "15px", "lineHeight": "20px" },
     "note": { "selector": ".section-note, .finish-note, .slot-idle", "family": "--ui", "weight": 400, "size": "14px", "lineHeight": "20px" },
-    "button-nav": { "selector": "button, .nav-bar, .board-meta, .disclosure > summary, .manage-toggle, .court-strip-link, .slot-court-link", "family": "--nav", "weight": 500, "size": "16px", "lineHeight": "24px" },
+    "button-nav": { "selector": "button, .nav-bar, .board-meta, .disclosure > summary, .manage-toggle, .court-strip-link, .slot-court-link, .round-next", "family": "--nav", "weight": 500, "size": "16px", "lineHeight": "24px" },
     "primary-action": { "selector": ".btn-primary, button[type='submit']", "family": "--emphasis", "weight": 700, "size": "16px", "lineHeight": "24px" },
     "team-name": { "selector": ".flip-team", "family": "--emphasis", "weight": 700, "size": "18px", "lineHeight": "24px" },
     "score-step": { "selector": ".flip-plus, .flip-minus", "family": "--emphasis", "weight": 700, "size": { "plus": "24px", "minus": "18px" }, "lineHeight": 1, "numeric": "tabular-nums" }
@@ -152,15 +168,16 @@
     "app-bar": { "selector": ".app-bar", "fill": "--ink", "rule": "1px --band-divider", "sticky": true, "zIndex": 6, "minHeight": "64px", "health": { "idle": "--status-idle", "error": "--band-accent with 3px --error-ring" }, "phone": "one row below 640px, brand word visually hidden, Home link dropped" },
     "board-head": { "selector": ".board-head", "fill": "--ember-glow over --ink", "text": "--band-text", "link": "--band-accent", "bleed": "full, rounded 0 0 16px 16px from 1200px" },
     "stage-chip": { "selector": ".stage-chip", "radius": "12px", "fill": "--band-ghost", "font": "label", "dot": "8px --band-accent" },
-    "pool-card": { "selector": ".pool-grid > .pool-card", "grid": "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", "gap": "16px", "fill": "--panel", "radius": "16px", "shadow": "--elevation-3", "padding": "20px", "usedFor": ["pools", "playoff bracket tiers"] },
+    "pool-card": { "selector": ".pool-grid > .pool-card", "grid": "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", "gap": "16px", "fill": "--panel", "radius": "16px", "shadow": "--elevation-3", "padding": "20px", "usedFor": ["pools", "playoff bracket tiers (read-only tree, Open Bracket link)"] },
     "standings": { "selector": "table[aria-label='Standings']", "advancing": { "row": "background --amber-tint", "rank": "--amber-text, weight 700", "sideStripe": false }, "key": ".advance-note", "usedOn": ["tournament page", "pool page"] },
     "results-card": { "selector": ".results-list > li", "treatment": "same as pool-card, gap 6px", "championLabel": "--amber-text, Inter 600 14/20", "championName": "card-head" },
     "manage-drawer": { "selector": "details.manage", "toggle": "--band-ghost", "panel": "fixed right, min(480px, 100%), --surface", "scrim": "--scrim", "enter": "drawer-in 300ms --ease", "sectionGap": "32px" },
     "toast": { "fill": "--toast", "shadow": "0 0 0 1px --band-ghost, --shadow-float", "error": "inset 1px --band-accent, --shadow-float", "enter": "toast-in 300ms --ease" },
-    "bracket-diagram": { "selector": ".bracket-svg", "nameSize": "16px", "metaSize": "14px", "metaColor": "--muted", "winningScore": "--amber-text", "matchWidth": 176, "roundGap": 60, "box": "--surface-3 with --hairline stroke", "connector": "--border 1.5px" },
+    "champion-banner": { "selector": ".champion", "file": "frontend/src/BracketDiagram.jsx (ChampionBanner)", "text": "{name} win the bracket, one sentence, no label", "type": "card-head in --text", "fill": "--amber-tint", "radius": "16px", "padding": "16px 20px", "marginBottom": "16px", "usedOn": ["tournament page bracket cards", "bracket page"] },
+    "bracket-diagram": { "selector": ".bracket-svg", "usedOn": ["tournament page only"], "interactive": false, "nameSize": "16px", "metaSize": "14px", "metaColor": "--muted", "winningScore": "--amber-text, row bold", "matchWidth": 176, "roundGap": 60, "box": "--surface-3 with --hairline stroke, 12px corners", "connector": "straight --border 1.5px" },
     "court-strip": {
       "selector": ".court-strip",
-      "usedOn": ["court view", "courts list", "pool page"],
+      "usedOn": ["court view", "courts list", "pool page", "bracket page"],
       "fill": "--ink, no glow",
       "text": "--band-text",
       "label": "--band-muted, Inter 500 14.7/21",
@@ -169,6 +186,7 @@
       "corners": "0 0 16px 16px from 1200px",
       "courtView": ".court-strip-narrow: padding-inline max(var(--gutter), calc((100% - 640px) / 2)); one row below 768px",
       "poolPage": "pool name at tournament-name scale (32/36, 48/48 from 768px); label lists the pool's courts; link Back to tournament",
+      "bracketPage": "tier (Bracket A) at tournament-name scale; label is the format (Single elimination · best of 3, best-of only above 1); link Back to tournament",
       "swapSides": { "selector": ".swap-sides", "fill": "--band-ghost, hover --band-ghost-hover", "pressed": "inset 1px --band-accent", "icon": "20px SVG", "phone": "48px icon-only square below 768px, label visually hidden", "behaviour": "reverses columns on screen only; remembered per court in localStorage court-sides:<tournament>:<court>" }
     },
     "flip-board": {
@@ -233,24 +251,226 @@
       "interaction": "tapping a grid cell or a schedule row selects that pairing in both",
       "states": ["loading", "no schedule (setup note; Generate schedule when signed in)", "in play (current slot)", "finished", "match without a court (Court –, no link)", "signed out"]
     },
+    "bracket-page": {
+      "selector": ".bracket-page",
+      "files": [
+        "frontend/src/BracketPage.jsx",
+        "frontend/src/BracketBoard.jsx",
+        "frontend/src/RoundPages.jsx",
+        "frontend/src/CardTree.jsx",
+        "frontend/src/MatchCard.jsx",
+        "frontend/src/MatchPanel.jsx",
+        "frontend/src/bracketModel.js"
+      ],
+      "gap": "20px",
+      "order": [
+        "court strip",
+        "placings (tournament complete)",
+        "connection / overflow notes",
+        "champion banner (decided)",
+        "round pages (<900px) or card tree (>=900px)"
+      ],
+      "placings": {
+        "selector": ".placings",
+        "fill": "--panel",
+        "radius": "16px",
+        "shadow": "--elevation-3",
+        "padding": "6px 16px",
+        "row": "padding 10px 0, 1px --hairline between rows",
+        "place": "placing-place",
+        "teams": "placing-row",
+        "champion": "first row in --amber-text, 700",
+        "shared": "teams out in the same round share a place, (out in round N)"
+      },
+      "phone": {
+        "below": "900px",
+        "view": {
+          "selector": ".round-view",
+          "gap": "14px"
+        },
+        "tabs": {
+          "selector": "nav.round-tabs button",
+          "gap": "8px",
+          "type": "round-tab",
+          "padding": "12px 16px",
+          "minHeight": "48px",
+          "fill": "--ghost",
+          "current": "aria-pressed: --text fill, --surface label, kept scrolled into view",
+          "bleed": "through the gutter, sideways scroll, no scrollbar"
+        },
+        "pages": {
+          "selector": ".round-pages",
+          "gap": "12px",
+          "snap": "x mandatory, start",
+          "page": ".round-page flex 0 0 88% (next round peeks in)",
+          "trailingSpacer": "::after flex 0 0 calc(12% - 12px), so the last page snaps flush",
+          "sync": "swiping moves the tabs; a tab scrolls to its page",
+          "opensOn": "the round being played, else the last played"
+        },
+        "cards": {
+          "selector": ".round-cards",
+          "gap": "10px"
+        },
+        "next": {
+          "selector": ".round-next",
+          "text": "Next: {round}",
+          "color": "--accent-text",
+          "fill": "transparent",
+          "minHeight": "48px",
+          "align": "end",
+          "icon": "18px SVG chevron"
+        }
+      },
+      "wide": {
+        "from": "900px",
+        "panel": {
+          "selector": ".bracket-board-tree",
+          "fill": "--panel",
+          "radius": "16px",
+          "shadow": "--elevation-3",
+          "padding": "20px",
+          "overflowX": "auto"
+        },
+        "tree": {
+          "selector": ".card-tree",
+          "component": "CardTree",
+          "geometry": "layoutBracket with matchWidth 248, roundGap 56, rowUnit 164; card height 132; heads 36px",
+          "cardWidth": "248px",
+          "connector": ".bracket-line elbow from the card's right middle, across half the gap, to the next match; --border 1.5px",
+          "heads": "card-tree-head per round column; double elimination labels sections (Winners bracket, Losers bracket, Grand final)"
+        }
+      },
+      "matchCard": {
+        "selector": ".round-card",
+        "component": "BracketCard (MatchTeams, CourtLink)",
+        "fill": "--panel",
+        "radius": "16px",
+        "shadow": "--elevation-3",
+        "padding": "4px 4px 10px",
+        "open": {
+          "selector": ".round-card-open",
+          "fill": "transparent, --ghost on hover",
+          "radius": "12px",
+          "padding": "8px 10px",
+          "label": "{match}: A vs B"
+        },
+        "team": {
+          "selector": ".card-team",
+          "type": "card-team",
+          "minHeight": "40px",
+          "empty": "TBD, or BYE once finished"
+        },
+        "scoreChip": {
+          "selector": ".score-chip",
+          "type": "schedule-score-chip",
+          "winner": ".score-won --amber on ink",
+          "loser": "row --muted 500",
+          "running": ".score-live --band-muted (single game in play)",
+          "series": "games won"
+        },
+        "meta": {
+          "selector": ".round-card-meta",
+          "type": "card-meta",
+          "padding": "0 10px",
+          "holds": "matchStatus, then CourtLink (Score on Court N signed in / Watch Court N signed out) while on a court with both teams"
+        },
+        "live": {
+          "selector": ".round-card[data-live]",
+          "when": "on a court, both teams known, not finished",
+          "ring": "inset 0 0 0 2px --accent-text, --elevation-3"
+        },
+        "current": {
+          "selector": ".round-card[aria-current]",
+          "outline": "2px solid --text",
+          "offset": "3px",
+          "when": "open in the match panel"
+        }
+      },
+      "matchPanel": {
+        "selector": ".match-panel",
+        "role": "dialog, named for the match",
+        "scrim": ".match-panel-scrim --scrim, z-index 20 (panel 21)",
+        "phone": "bottom sheet: full width, max-height 85svh, scrolls, radius 16px 16px 0 0, padding 18px --gutter 28px, sheet-up",
+        "from900": "right sheet: min(440px, 100vw), full height, radius 16px 0 0 16px, padding 24px, sheet-in",
+        "fill": "--surface",
+        "shadow": "--elevation-3, --shadow-float",
+        "gap": "14px",
+        "holds": [
+          "head: match name (card-head) + A vs B note + icon close",
+          "score card (.match-panel-score: --panel, 12px, --elevation-3, padding 6px 12px) with MatchTeams",
+          "meta line with CourtLink"
+        ],
+        "signedIn": {
+          "sections": ".match-panel-tools, 1px --hairline above, padding-top 14px, gap 10px",
+          "tools": [
+            "Court and time (ScheduleForm) while playable",
+            "Hold / Release with an explanatory note, for an unstarted or held match",
+            "Correct (CorrectionForm) for a finished match"
+          ]
+        },
+        "close": "Escape, the close button, or the scrim"
+      },
+      "naming": {
+        "source": "bracketModel.js roundsOf / matchLabels / matchStatus",
+        "single": [
+          "Round N",
+          "Quarters",
+          "Semis",
+          "Final"
+        ],
+        "double": [
+          "Winners Quarters",
+          "Winners Semis",
+          "Winners final",
+          "Losers N",
+          "Losers final",
+          "Grand final",
+          "Reset"
+        ],
+        "match": "{round} · match {position}, or the round name alone when it has one match",
+        "status": [
+          "Finished",
+          "Waiting for both teams",
+          "Court N · time",
+          "Waiting for a court · #N (Waiting (any court) · #N when overflow)",
+          "On hold",
+          "Not on a court yet"
+        ]
+      },
+      "states": [
+        "loading",
+        "connection lost",
+        "overflow bracket",
+        "waiting for teams",
+        "in line for a court",
+        "on a court (live, running score)",
+        "on hold",
+        "finished",
+        "champion decided",
+        "tournament complete (placings)",
+        "signed out"
+      ]
+    },
     "button": { "fill": "--ghost", "radius": "12px", "minHeight": "48px", "padding": "12px 20px", "disabledOpacity": 0.5 },
     "field": { "radius": "0px", "border": "1px --field-border", "minHeight": "48px", "focus": "--accent-text edge plus --focus" }
   },
   "rules": [
-    { "id": "amber-means-advancing", "rule": "Amber (--amber, --amber-tint, --amber-text) only marks advancing places and winning results: advancing rows, the advance key, winning bracket scores, the champion label, the winning side of each finished series game, and the winner's score in pool grid and schedule chips. Never decoration, status or emphasis; the live scoreboard and running pool scores carry none." },
+    { "id": "amber-means-advancing", "rule": "Amber (--amber, --amber-tint, --amber-text) only marks advancing places and winning results: advancing rows, the advance key, winning bracket scores, the champion label, the champion banner tint, the champion's placings row, the winning side of each finished series game, and the winner's score in pool grid, schedule and bracket card chips. Never decoration, status or emphasis; the live scoreboard and running pool or bracket scores carry none." },
     { "id": "ember-one-primary", "rule": "The ember gradient fills only the one primary action per view (.btn-primary, submit); on the court view that is Finish match or Record game, ember only while enabled. The brand tile is the product mark. Everything else is ghost; +1 is a surface fill." },
     { "id": "ember-glow-band-only", "rule": "--ember-glow appears only on the board-head band; the court strip is plain ink." },
     { "id": "ink-bands-and-boards", "rule": "--ink fills the app bar, board head, court strip, flip cards, score chips, grid result chips and court tags in both themes; text and accents on it use the --band-* tokens." },
-    { "id": "standings-are-the-page", "rule": "Organizer tools live in the Manage drawer or disclosures, never at equal weight with the board." },
-    { "id": "arms-length-targets", "rule": "Interactive elements are at least 48px tall; exceptions are the 32px bracket match actions and the 40px standings refresh. On the court view +1 is 72px (88px on phones) and Finish match 56px. Results-grid cells are 52px." },
+    { "id": "standings-are-the-page", "rule": "Organizer tools live in the Manage drawer, disclosures or the bracket match panel, never at equal weight with the board." },
+    { "id": "arms-length-targets", "rule": "Interactive elements are at least 48px tall; the exception is the 40px standings refresh. On the court view +1 is 72px (88px on phones) and Finish match 56px. Results-grid cells are 52px. On the bracket page round tabs, Next and court links are at least 48px and the whole top of a match card is its button." },
     { "id": "score-comes-first", "rule": "On a court the two columns and numerals own the first phone view; save status, Finish match and Up next follow in that order, with only the court strip above." },
-    { "id": "score-on-the-court", "rule": "Scoring happens on the court scoreboard. The pool page only links there (Score on Court N / Watch Court N); finished matches can be corrected in place." },
+    { "id": "score-on-the-court", "rule": "Scoring happens on the court scoreboard, not the pool or bracket page. They only link there (Score on Court N / Watch Court N); finished matches can be corrected in place (schedule row or match panel)." },
     { "id": "amber-by-ground", "rule": "Amber on ink uses --amber; on light grounds (panels, tints, surfaces) it uses --amber-text." },
-    { "id": "result-vs-appointment", "rule": "A result chip and an appointment must read apart: a result is an ink flip-card chip with numerals, an appointment a quiet --surface-2 cell with small muted slot and court text." }
+    { "id": "result-vs-appointment", "rule": "A result chip and an appointment must read apart: a result is an ink flip-card chip with numerals, an appointment a quiet --surface-2 cell with small muted slot and court text." },
+    { "id": "on-court-is-live", "rule": "A bracket match on a court (both teams, not finished) is marked live: a 2px inset --accent-text ring and a court link. Nothing else on the bracket page wears that ring." },
+    { "id": "rounds-named-once", "rule": "Tabs, pages, card-tree heads and Next links say rounds the same way (roundsOf); match names derive from them (Semis · match 2, or the round name alone); status reads in words (matchStatus)." },
+    { "id": "tournament-page-read-only-tree", "rule": "The tournament page keeps the read-only SVG tree and champion banner; matches open only on the bracket page." }
   ],
   "notOverhauled": [
-    "BracketPage (champion line in BracketDiagram.jsx still renders a trophy emoji; to be replaced, not a system pattern)",
-    "TeamPage, MainPage, AccountPage, LoginPage, TournamentForm, ScoreEntryForm, CorrectionForm (including Correct on the pool page)",
+    "TeamPage, MainPage, AccountPage, LoginPage, TournamentForm, ScoreEntryForm, CorrectionForm (including Correct on the pool page and in the bracket match panel)",
     "SeriesForm outside board mode (plain game fields, fix-game form, conflict and error lines)"
   ],
   "notCanonized": []

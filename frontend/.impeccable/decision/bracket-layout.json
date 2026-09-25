@@ -1,0 +1,78 @@
+{
+  "title": "Bracket page layout",
+  "seed": "3c6c1df1",
+  "dealt": [7, 2, 4],
+  "question": "Kiln stays the look, scoring happens on the court, and tapping a match opens its controls. Pick how the bracket page is laid out, steer one, or re-roll.",
+  "options": [
+    {
+      "id": "wall-chart",
+      "label": "Wall chart",
+      "kicker": "THE ROLL",
+      "lineage": "the printed bracket poster taped to the venue wall",
+      "thesis": "A mirrored bracket: the two halves run in from the left and right edges and meet at the final in the middle, where the champion is named.",
+      "palette": ["#1A1A1A", "#E68435", "#DFAE4E", "#EEECE9"],
+      "materials": ["ink band", "mirrored bracket halves", "flip-card match cards", "match panel"],
+      "viewport": "Ink band with 'Bracket 1', its stage and courts; the bracket fills the width, first rounds at both edges converging on a centre final card; matches on court glow with their live score; tapping a match opens a panel with Score on Court N, court and time, hold, correct. On a phone the chart pans sideways and opens on the round being played.",
+      "risk": "Mirroring needs width: on a phone only part of the chart shows at once. Double elimination's losers bracket runs as a second chart below.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 14,
+        "regions": [
+          { "label": "Bracket 1 · Playoffs · Courts 1, 2", "x": 0, "y": 0, "w": 12, "h": 2 },
+          { "label": "R1", "x": 0, "y": 2, "w": 2, "h": 8 },
+          { "label": "semi", "x": 2, "y": 3, "w": 2, "h": 6 },
+          { "label": "FINAL · champion", "x": 4, "y": 4, "w": 4, "h": 4, "accent": true },
+          { "label": "semi", "x": 8, "y": 3, "w": 2, "h": 6 },
+          { "label": "R1", "x": 10, "y": 2, "w": 2, "h": 8 },
+          { "label": "placings", "x": 0, "y": 11, "w": 12, "h": 3 }
+        ]
+      }
+    },
+    {
+      "id": "round-pages",
+      "label": "Round by round",
+      "lineage": "the sports app that pages through a bracket one round at a time",
+      "thesis": "On a phone, one round fills the screen and you swipe to the next, with each match's line to its next match peeking at the edge; on desktop the whole tree shows.",
+      "palette": ["#1A1A1A", "#E68435", "#DFAE4E", "#EEECE9"],
+      "materials": ["ink band", "round tabs", "full-width match cards", "match panel"],
+      "viewport": "Ink band; round tabs (Round 1 · Semis · Final) with the current round selected; that round's matches as full-width cards (teams, score chips, court or place in line), connectors to the next round peeking at the right edge; tapping a match opens its panel.",
+      "risk": "You see one round at a time on a phone, so following a team's whole path takes swiping.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 14,
+        "regions": [
+          { "label": "Bracket 1 · Playoffs", "x": 0, "y": 0, "w": 12, "h": 2 },
+          { "label": "Round 1 · Semis · Final", "x": 0, "y": 2, "w": 12, "h": 1, "accent": true },
+          { "label": "match card", "x": 0, "y": 3, "w": 10, "h": 3 },
+          { "label": "match card", "x": 0, "y": 7, "w": 10, "h": 3 },
+          { "label": "→", "x": 10, "y": 3, "w": 2, "h": 7 },
+          { "label": "placings", "x": 0, "y": 11, "w": 12, "h": 3 }
+        ]
+      }
+    },
+    {
+      "id": "round-list",
+      "label": "Rounds as a list",
+      "lineage": "the order-of-play sheet read out at the scorer's table",
+      "thesis": "On a phone the bracket reads as rounds stacked top to bottom, each match a card that names where its winner goes; on desktop the same page shows the tree.",
+      "palette": ["#1A1A1A", "#E68435", "#DFAE4E", "#EEECE9"],
+      "materials": ["ink band", "round sections", "match cards with 'winner to' lines", "match panel"],
+      "viewport": "Ink band; 'On court now' first (matches being played, live score chips, court); then Round 1, Semis, Final as sections, each match a card with its teams, scores, court or place in line, and 'Winner plays in Final'; tapping a match opens its panel. Desktop swaps the list for the tree with the same cards.",
+      "risk": "On a phone the bracket's shape is described in words rather than drawn.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 14,
+        "regions": [
+          { "label": "Bracket 1 · Playoffs", "x": 0, "y": 0, "w": 12, "h": 2 },
+          { "label": "On court now", "x": 0, "y": 2, "w": 12, "h": 3, "accent": true },
+          { "label": "Round 1", "x": 0, "y": 5, "w": 12, "h": 3 },
+          { "label": "Semis", "x": 0, "y": 8, "w": 12, "h": 3 },
+          { "label": "Final", "x": 0, "y": 11, "w": 12, "h": 3 }
+        ]
+      }
+    }
+  ],
+  "reroll": true,
+  "steer": true,
+  "buildPath": { "value": "code", "toggle": false }
+}
