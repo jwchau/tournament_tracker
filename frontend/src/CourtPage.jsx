@@ -10,6 +10,7 @@ import FlipBoard from './FlipBoard'
 import LiveScore from './LiveScore'
 import Loading from './Loading'
 import NotFound from './NotFound'
+import { courtRefLine } from './refModel'
 import SeriesForm from './SeriesForm'
 import { SwapSidesContext, useSwapSides } from './swapSides'
 import { usePolling } from './usePolling'
@@ -61,6 +62,7 @@ export default function CourtPage() {
         <div className="court-strip-title">
           <h2>Court {court.court}</h2>
           {court.label && <p className="court-strip-label">{courtLabel(court)}</p>}
+          {current && <p className="court-strip-label">{courtRefLine(current)}</p>}
         </div>
         <div className="court-strip-actions">
           {current && (
@@ -140,9 +142,15 @@ export default function CourtPage() {
             </p>
           )}
           <ol className="up-next-list">
-            {court.up_next.map((match) => (
-              <li key={match.id}>{teams(match)}</li>
-            ))}
+            {court.up_next.map((match) => {
+              const ref = courtRefLine(match)
+              return (
+                <li key={match.id}>
+                  <span>{teams(match)}</span>
+                  {ref && <span className="up-next-ref">{ref}</span>}
+                </li>
+              )
+            })}
           </ol>
         </section>
       )}

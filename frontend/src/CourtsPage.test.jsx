@@ -162,3 +162,43 @@ test('a tournament that does not exist is not found', async () => {
 
   expect(await screen.findByRole('heading', { name: 'Tournament not found' })).toBeInTheDocument()
 })
+
+test('a busy court shows its ref; a free court shows none', async () => {
+  vi.spyOn(api, 'listCourts').mockResolvedValue([
+    {
+      court: 1,
+      use: 'pool',
+      label: 'Pool A',
+      current: {
+        id: 5,
+        pool_id: 7,
+        court: 1,
+        team1_name: 'Spikers',
+        team2_name: 'Diggers',
+        ref_team_id: 9,
+        ref_name: 'Aces',
+      },
+      up_next: [],
+    },
+    {
+      court: 2,
+      use: 'pool',
+      label: 'Pool A',
+      current: { id: 6, pool_id: 7, court: 2, team1_name: 'Blockers', team2_name: 'Setters', ref_team_id: null },
+      up_next: [],
+    },
+    { court: 3, use: null, label: null, current: null, up_next: [] },
+  ])
+
+  render(
+    <MemoryRouter initialEntries={['/tournaments/3/courts']}>
+      <Routes>
+        <Route path="/tournaments/:tournamentId/courts" element={<CourtsPage />} />
+      </Routes>
+    </MemoryRouter>,
+  )
+
+  expect(await screen.findByRole('link', { name: /court 1/i })).toHaveTextContent('Ref: Aces')
+  expect(screen.getByRole('link', { name: /court 2/i })).toHaveTextContent('Ref: N/A')
+  expect(screen.getByRole('link', { name: /court 3/i })).not.toHaveTextContent('Ref:')
+})

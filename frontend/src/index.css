@@ -1666,6 +1666,14 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   font: 500 16px/24px var(--ui);
 }
 
+/* The row's ref, at its end. */
+.up-next-ref {
+  margin-left: auto;
+  font: 400 14px/20px var(--ui);
+  color: var(--muted);
+  text-align: right;
+}
+
 .up-next-list > li::before {
   content: counter(up-next);
   font: 700 16px/1 var(--display);
@@ -1717,6 +1725,11 @@ table[aria-label='Standings'] tr.advancing td:first-child {
 
 .court-link-label {
   font: 500 14.7px/21px var(--ui);
+}
+
+.court-link-ref {
+  font: 500 14.7px/21px var(--ui);
+  color: var(--muted);
 }
 
 .court-link-team {

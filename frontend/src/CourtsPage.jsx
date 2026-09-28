@@ -7,6 +7,7 @@ import { courtLabel } from './courtLabel'
 import { isNotFound } from './failure'
 import Loading from './Loading'
 import NotFound from './NotFound'
+import { courtRefLine } from './refModel'
 import { usePolling } from './usePolling'
 
 // One team's line on a court's tile: its name and a small flip-card score.
@@ -70,6 +71,7 @@ export default function CourtsPage() {
                     )}
                     <TeamLine name={current.team1_name} score={boardScores(current).team1} />
                     <TeamLine name={current.team2_name} score={boardScores(current).team2} />
+                    <span className="court-link-ref">{courtRefLine(current)}</span>
                   </>
                 )}
               </Link>

@@ -163,6 +163,8 @@ def test_the_court_list_carries_each_matchs_ref(client):
     [court] = client.get(f"/tournaments/{tournament_id}/courts").json()
 
     assert court["current"]["ref_team_id"] == first["ref_team_id"]
+    ref_name = client.get(f"/teams/{first['ref_team_id']}").json()["name"]
+    assert court["current"]["ref_name"] == ref_name
     assert court["current"]["ref_set_at"] is None
 
 
