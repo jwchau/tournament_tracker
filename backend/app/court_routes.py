@@ -39,6 +39,8 @@ class CourtMatch(SQLModel):
     court: int | None
     scheduled_time: datetime | None
     best_of: int
+    ref_team_id: int | None = None
+    ref_set_at: datetime | None = None
     version: int
 
 

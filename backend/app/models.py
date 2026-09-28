@@ -193,6 +193,11 @@ class Match(SQLModel, table=True):
     # A playoff match's place in the court queue: the order in which the
     # tournament's playoff matches became ready (see app.dispatch).
     ready_order: int | None = None
+    # The reffing team, or None for no ref (N/A).
+    ref_team_id: int | None = Field(default=None, foreign_key="team.id")
+    # When the ref was chosen by hand; None for an automatic ref (see
+    # app.refs). A hand-set None ref is a deliberate N/A.
+    ref_set_at: datetime | None = None
     # Kept off courts (and out of the queue) until released.
     on_hold: bool = Field(default=False, sa_column_kwargs={"server_default": "0"})
     version: int = 1

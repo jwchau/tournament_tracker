@@ -172,7 +172,11 @@ change, untick the boxes it touches.
 
 - [x] **Five or more teams**
   - Setup: a pool with 5+ teams.
-  - Expect: on a phone the grid scrolls sideways inside its panel; nothing else on the page scrolls sideways. Observing and Resting lines appear under slots where teams sit out.
+  - Expect: on a phone the grid scrolls sideways inside its panel; nothing else on the page scrolls sideways. A Resting line appears under slots where teams sit out and aren't reffing.
+
+- [ ] **Refs**
+  - Setup: a pool with 5+ teams and a schedule, signed in.
+  - Expect: every match shows a ref (or N/A when no team is free), reffing is spread evenly, and Resting lists only idle teams not reffing. Pick a ref by hand: another court in that slot moves off that team if it had it, and a reload (or another device) shows the same refs. Set it back to Automatic and the rules' pick returns. Signed out, rows read "Ref: …" with no dropdown.
 
 - [x] **More than one game per pairing**
   - Setup: a tournament set to 2 games per pairing.

@@ -3,6 +3,7 @@ from sqlmodel import Session, SQLModel, select
 
 from app.db import get_session
 from app.models import Match, Pool, PoolCreate, PoolSummary, Team, Tournament
+from app.refs import reassign_pool_refs
 from app.settings import require_confirmed_settings
 from app.pools import (
     balanced_pool_count,
@@ -193,6 +194,8 @@ def generate_pool_schedule(pool_id: int, session: Session = Depends(get_session)
                     status="ready",
                 )
             )
+    session.flush()
+    reassign_pool_refs(session, pool.id)
     _sync_pool_stage(session, tournament)
     session.commit()
     return _pool_matches(session, pool.id)

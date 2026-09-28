@@ -7,9 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.auth import require_session_for_writes
 from app.auth import router as auth_router
 from app.court_routes import router as court_router
-from app.db import drop_tierless_bracket_matches, init_db
+from app.db import drop_tierless_bracket_matches, engine, init_db
 from app.playoff_routes import router as playoff_router
 from app.pool_routes import router as pool_router
+from app.refs import backfill_pool_refs
 from app.routers import router
 from app.series_routes import router as series_router
 
@@ -18,6 +19,7 @@ from app.series_routes import router as series_router
 async def lifespan(app: FastAPI):
     init_db()
     drop_tierless_bracket_matches()
+    backfill_pool_refs(engine)
     yield
 
 

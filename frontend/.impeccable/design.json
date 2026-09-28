@@ -245,7 +245,8 @@
         "scoreChip": { "selector": ".score-chip", "fill": "--band-ghost top half over --ink", "seam": "1px --flip-seam at 0.7", "ring": "1px --hairline", "radius": "8px", "minWidth": "44px", "padding": "0 8px", "type": "schedule-score-chip", "winner": "--amber", "running": "--band-muted (.slot-score[data-live])" },
         "courtLink": { "selector": ".slot-court-link", "text": "Score on Court N (signed in) / Watch Court N (signed out)", "color": "--accent-text", "minHeight": "48px", "when": "unfinished match with a court" },
         "correct": "CorrectionForm on finished matches, signed in",
-        "idle": { "selector": ".slot-idle", "text": "Observing: … / Resting: …", "type": "note", "color": "--muted" },
+        "ref": { "selector": ".slot-ref", "text": "Ref: Aces / Ref: N/A (signed out); signed in, a Ref dropdown: Automatic (Aces), the teams free that slot, N/A", "type": "note", "color": "--muted", "placement": "under the pairing, in .slot-pairing" },
+        "idle": { "selector": ".slot-idle", "text": "Resting: … (idle teams not reffing)", "type": "note", "color": "--muted" },
         "selected": { "selector": ".slot-match[aria-current], .slot-match:target", "fill": "--ghost", "ring": "inset 2px --accent-text", "radius": "12px", "paddingInline": "10px", "enter": "target-in 600ms --ease" }
       },
       "interaction": "tapping a grid cell or a schedule row selects that pairing in both",

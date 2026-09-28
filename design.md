@@ -671,7 +671,7 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
   - Tables: 16/24, headers 600 at 14/20.
   - Labels: 600 at 14.7/21. Court labels, the bracket format line on the strip and the save status line use 500 at 14.7/21.
   - Fields: 16/24.
-  - Notes and captions: 14/20 (including the Finish match notes, the schedule's observing/resting line and the match panel's teams and hold explanation).
+  - Notes and captions: 14/20 (including the Finish match notes, the schedule's ref and resting lines and the match panel's teams and hold explanation).
   - Plain `h4` (drawer sections, result-card tier): 600 at 16.8/25.2. The match panel's tool heads ("Court and time"): 600 at 14.7/21 in `--muted`.
   - Series tally: 600 at 16/24 in `--muted`. Series game lines and Up next rows: 500 at 16/24.
   - Pool page: grid row names 600 at 15/20 (14px on phones); appointments (`.grid-when`) 500 at 13/16 in `--muted`; court tags 600 at 13/18; the Now chip 600 at 13/20; schedule team pairings (`.slot-teams`) 600 at 16/22.
@@ -768,10 +768,11 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
     - The selected pairing (`aria-current`, both of its cells) is a 2px `--accent-text` outline offset 2px outside the cell (1px on phones), so a current-slot cell shows its ring and the selection together.
   - **Schedule** (`.slot-list`): one panel per slot, 12px apart. Each slot (`.slot`) is `--panel`, 16px radius, `--elevation-3`, padding 14px 14px 16px, with an Unbounded 18/24 "Slot N" head.
     - The current slot (the first with an unfinished match, `data-now`) adds a 1px inset `--accent-text` ring and a **Now chip** beside its head: Inter 600 13/20 in `--accent-text`, a 1px inset `--accent-text` edge, 12px radius, padding 2px 10px, no fill.
-    - Match rows (`.slot-match`) are flat, split by `--hairline` rules, padding 10px 4px: a **court tag** (`.court-tag`, "Court N", Inter 600 13/18 `--band-text` on `--ink`, 8px radius, padding 5px 9px), then the pairing "A vs B" as a link back to its cell in the grid (`.slot-teams`, `--text`, `--accent-text` and underlined on hover), then the score.
+    - Match rows (`.slot-match`) are flat, split by `--hairline` rules, padding 10px 4px: a **court tag** (`.court-tag`, "Court N", Inter 600 13/18 `--band-text` on `--ink`, 8px radius, padding 5px 9px), then the pairing "A vs B" as a link back to its cell in the grid (`.slot-teams`, `--text`, `--accent-text` and underlined on hover) with its ref beneath, then the score.
+    - The ref (`.slot-ref`, Inter 14/20 in `--muted`, stacked under the pairing in `.slot-pairing`): "Ref: Aces" or "Ref: N/A" signed out. Signed in it is a labelled Ref dropdown, the standard select at 48px, offering "Automatic (Aces)" (the rules' pick, selected while the ref is automatic), the pool's teams free that slot, then N/A; a ref set by hand shows as that choice. A refused change shows its reason under the dropdown as a finish note.
     - The score is one **score chip** per team (`.score-chip`): the same small flip card at 20/34, at least 44px wide, padding 0 8px, 8px radius, a `--hairline` ring; the winner's score in `--amber`. A match still in play shows its running score with both chips in `--band-muted`.
     - An unfinished match with a court links to that court's scoreboard (`.slot-court-link`, DM Sans in `--accent-text`, at least 48px tall): "Score on Court N" signed in, "Watch Court N" signed out. A finished match gets Correct when signed in. Below 768px the link or Correct takes its own line under the row; from 768px it sits at the row's end.
-    - Under the rows, the teams sitting out: "Observing: …" then "Resting: …", Inter 14/20 in `--muted`, split evenly with observers first.
+    - Under the rows, the teams sitting out that aren't reffing: "Resting: …", Inter 14/20 in `--muted`.
     - The selected row (`aria-current`) or the row reached by link (`:target`) is filled with `--ghost` plus a 2px inset `--accent-text` ring, 12px radius, 10px side padding. It arrives from `--ghost-active` (`target-in`, 600ms on `--ease`), and keeps 96px clear of the sticky app bar when scrolled to.
     - Tapping a grid cell or a schedule row selects that pairing in both.
   - **States**: loading placeholders; no schedule (a setup note, plus Generate schedule when signed in); a match without a court shows "Court –" and no court link.
