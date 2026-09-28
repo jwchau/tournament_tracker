@@ -40,6 +40,8 @@ function courtMatch(id, team1Name, team2Name, fields = {}) {
     court: 2,
     scheduled_time: null,
     best_of: 1,
+    ref_team_id: null,
+    ref_name: null,
     version: 1,
     ...fields,
   }
@@ -73,8 +75,8 @@ test("shows the court's current match with its scoreboard and the matches after 
   expect(within(now).getByRole('button', { name: 'Finish match' })).toBeInTheDocument()
   const next = screen.getByRole('region', { name: 'Up next' })
   expect(within(next).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-    'Blockers vs Setters',
-    'Servers vs Liberos',
+    'Blockers vs SettersRef: N/A',
+    'Servers vs LiberosRef: N/A',
   ])
   expect(screen.getByRole('link', { name: /all courts/i })).toHaveAttribute(
     'href',
@@ -469,4 +471,59 @@ test('a tournament that does not exist is not found', async () => {
   renderAt('/tournaments/999/courts/1')
 
   expect(await screen.findByRole('heading', { name: 'Tournament not found' })).toBeInTheDocument()
+})
+
+test('the strip names the current match\'s ref, and each Up next row its own', async () => {
+  vi.spyOn(api, 'listCourts').mockResolvedValue(
+    courts({
+      current: { ...first, ref_team_id: 99, ref_name: 'Aces' },
+      up_next: [{ ...second, ref_team_id: 98, ref_name: 'Blocks' }, third],
+    }),
+  )
+
+  renderAt('/tournaments/3/courts/2')
+
+  const strip = (await screen.findByRole('heading', { name: 'Court 2' })).closest('header')
+  expect(within(strip).getByText('Ref: Aces')).toBeInTheDocument()
+  const next = screen.getByRole('region', { name: 'Up next' })
+  const rows = within(next).getAllByRole('listitem')
+  expect(within(rows[0]).getByText('Ref: Blocks')).toBeInTheDocument()
+  expect(within(rows[1]).getByText('Ref: N/A')).toBeInTheDocument()
+})
+
+test('a playoff match still in the queue has no ref line yet', async () => {
+  const queued = { ...second, pool_id: null, playoff_bracket_id: 4, bracket: 'winners', court: null }
+  vi.spyOn(api, 'listCourts').mockResolvedValue([
+    {
+      court: 2,
+      use: 'playoff',
+      label: 'Bracket 1',
+      current: { ...first, pool_id: null, playoff_bracket_id: 4, bracket: 'winners', ref_team_id: 99, ref_name: 'Aces' },
+      up_next: [queued],
+    },
+  ])
+
+  renderAt('/tournaments/3/courts/2')
+
+  const next = await screen.findByRole('region', { name: 'Up next' })
+  expect(within(next).getByRole('listitem')).toHaveTextContent('Blockers vs Setters')
+  expect(within(next).queryByText(/Ref:/)).not.toBeInTheDocument()
+})
+
+test('a ref changed elsewhere shows after the next poll', async () => {
+  vi.useFakeTimers()
+  const listCourts = vi
+    .spyOn(api, 'listCourts')
+    .mockResolvedValue(courts({ current: { ...first, ref_team_id: 99, ref_name: 'Aces' }, up_next: [] }))
+
+  renderAt('/tournaments/3/courts/2')
+  await act(() => vi.advanceTimersByTimeAsync(0))
+  expect(screen.getByText('Ref: Aces')).toBeInTheDocument()
+
+  listCourts.mockResolvedValue(
+    courts({ current: { ...first, ref_team_id: 98, ref_name: 'Blocks' }, up_next: [] }),
+  )
+  await act(() => vi.advanceTimersByTimeAsync(10000))
+
+  expect(screen.getByText('Ref: Blocks')).toBeInTheDocument()
 })

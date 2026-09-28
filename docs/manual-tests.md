@@ -67,6 +67,10 @@ change, untick the boxes it touches.
   - Setup: a playoff court with a best-of-3 match under way.
   - Expect: a "Best of 3 · Games 1–0" line, and the chips show the game in play.
 
+- [ ] **Refs on the courts list**
+  - Setup: pool play with refs (section 5).
+  - Expect: each busy court's tile reads "Ref: …" under its teams, matching the pool schedule; a free court shows no ref.
+
 ## 3. Court view: single-game match (**phone**)
 
 - [x] **First screen**
@@ -110,6 +114,10 @@ change, untick the boxes it touches.
 - [x] **Empty court**
   - Setup: a court with nothing left to play.
   - Expect: "Nothing left to play on this court right now." and no Swap sides button.
+
+- [ ] **Refs on the court view**
+  - Do: open a court during pool play; then change that match's ref on the pool page from another device.
+  - Expect: the ink strip reads "Ref: …" under the pool name, and each Up next row shows its ref at the right. The changed ref appears within a few seconds. On a playoff court, matches still in the queue show no ref until they get a court.
 
 - [x] **Playoff court note**
   - Setup: a playoff court with a queue.

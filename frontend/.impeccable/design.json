@@ -146,7 +146,7 @@
     "table": { "family": "--ui", "weight": 400, "size": "16px", "lineHeight": "24px", "numeric": "tabular-nums" },
     "table-head": { "family": "--ui", "weight": 600, "size": "14px", "lineHeight": "20px" },
     "label": { "family": "--ui", "weight": 600, "size": "14.7px", "lineHeight": "21px" },
-    "court-label": { "selector": ".court-strip-label, .court-link-label, .court-link-free, .save-status, .match-panel-tools h4 (600, --muted)", "family": "--ui", "weight": 500, "size": "14.7px", "lineHeight": "21px" },
+    "court-label": { "selector": ".court-strip-label, .court-link-label, .court-link-ref (--muted), .court-link-free, .save-status, .match-panel-tools h4 (600, --muted)", "family": "--ui", "weight": 500, "size": "14.7px", "lineHeight": "21px" },
     "series-tally": { "selector": ".series-tally", "family": "--ui", "weight": 600, "size": "16px", "lineHeight": "24px", "color": "--muted", "numeric": "tabular-nums" },
     "court-row": { "selector": ".game-line, .up-next-list > li", "family": "--ui", "weight": 500, "size": "16px", "lineHeight": "24px" },
     "grid-row-name": { "selector": ".results-grid tbody th", "family": "--ui", "weight": 600, "size": "15px", "lineHeight": "20px", "phone": "14px" },
@@ -207,7 +207,7 @@
     "save-status": { "selector": ".save-status", "role": "status", "font": "court-label", "color": "--muted", "minHeight": "24px", "states": { "idle": "empty", "dirty/saving": "Saving…", "saved": "Saved", "error": "--accent-text + Try again", "conflict": "--accent-text + Refetch latest" }, "debounce": "600ms" },
     "finish-match": { "selector": ".btn-primary.finish-match", "alsoFor": "Record game N on a series board", "width": "100%, max 640px", "minHeight": "56px", "enabled": "--ember", "disabled": "--ghost fill, --muted text, inset 1px --hairline, opacity 1", "note": ".finish-note for a tie", "confirm": "modal before finishing" },
     "series-board": { "selector": ".series-board", "order": ["tally", "game board", "save status", "Record game N", "games so far"], "tally": "series-tally", "gameRow": { "fill": "--surface-2", "radius": "12px", "padding": "8px 8px 8px 16px", "text": "court-row", "winningSide": ".game-won --amber-text 700" } },
-    "up-next": { "selector": ".up-next", "width": "max 640px centered", "row": { "fill": "--surface-2", "radius": "12px", "minHeight": "56px", "padding": "8px 16px", "text": "court-row", "number": "up-next-number" }, "placement": "below the fold on phones" },
+    "up-next": { "selector": ".up-next", "width": "max 640px centered", "row": { "fill": "--surface-2", "radius": "12px", "minHeight": "56px", "padding": "8px 16px", "text": "court-row", "number": "up-next-number", "ref": ".up-next-ref: Inter 14/20 --muted, at the row end; none for a queued playoff match" }, "placement": "below the fold on phones" },
     "court-list": {
       "selector": ".court-list",
       "grid": "repeat(auto-fill, minmax(min(100%, 300px), 1fr))",

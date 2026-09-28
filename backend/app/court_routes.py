@@ -40,6 +40,7 @@ class CourtMatch(SQLModel):
     scheduled_time: datetime | None
     best_of: int
     ref_team_id: int | None = None
+    ref_name: str | None = None
     ref_set_at: datetime | None = None
     version: int
 
@@ -82,6 +83,7 @@ def list_courts(tournament_id: int, session: Session = Depends(get_session)) -> 
             **match.model_dump(),
             team1_name=names.get(match.team1_id),
             team2_name=names.get(match.team2_id),
+            ref_name=names.get(match.ref_team_id),
             best_of=tournament.playoff_best_of if match.playoff_bracket_id is not None else 1,
         )
 
