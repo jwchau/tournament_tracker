@@ -230,6 +230,12 @@ def dispatch(session: Session, tournament_id: int) -> None:
             session.execute(update(Match).where(Match.id == waiting[0]).values(court=court))
             occupied[court] = waiting[0]
 
+    # Refs follow the courts; they never hold a match back.
+    from app.bracket_refs import sync_bracket_refs
+
+    session.flush()
+    sync_bracket_refs(session, tournament_id)
+
 
 def redispatch(session: Session, tournament_id: int) -> None:
     """Take every unfinished playoff match off its court and dispatch afresh, uncommitted.

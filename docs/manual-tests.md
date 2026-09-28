@@ -215,6 +215,10 @@ change, untick the boxes it touches.
   - Do: signed in, open an unfinished match with both teams; set its court and time and save; then Hold it, then Release it; then open a finished match and Correct it.
   - Expect: the card shows the new court and time right away; Hold explains what it does, the card says "On hold", Release brings it back; a match that has a score can't be held; Correct works as on the pool page. A bye or a match still waiting for a team has no tools.
 
+- [ ] **Bracket refs**
+  - Do: play a few bracket matches on their courts; signed in, open an unfinished match on a court and pick a ref by hand, then set it back to Automatic.
+  - Expect: once a match has a court its card reads "Court N · Ref: …", with a team that isn't playing: the team due next on that court, else the latest team knocked out. When a ref's own match goes on a court, the match they were reffing gets a new ref (unless it was picked by hand). The panel's Ref dropdown lists only teams not on a court; a hand-picked ref stays put; Automatic returns to the rules.
+
 - [x] **Signed out**
   - Expect: tapping a match shows its teams, status and "Watch Court N", and no tools.
 

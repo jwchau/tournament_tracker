@@ -207,7 +207,7 @@ test('a saved court and time show on the match right away', async () => {
   fireEvent.click(within(form).getByRole('button', { name: /save schedule/i }))
 
   const semis = screen.getByRole('region', { name: 'Semis' })
-  expect(await within(semis).findByText('Court 3 · Sat 09:15')).toBeInTheDocument()
+  expect(await within(semis).findByText(/^Court 3 · Sat 09:15/)).toBeInTheDocument()
 })
 
 function doubleMatch(id, bracket, round, position, fields = {}) {
@@ -301,4 +301,98 @@ test('keeps polling, so a result scored on the court shows up', async () => {
 
   const semis = screen.getByRole('region', { name: 'Semis' })
   expect(within(semis).getByRole('button', { name: 'Semis · match 2: Spikers vs Diggers' })).toHaveTextContent('21')
+})
+
+
+const withRefs = [...teams, { id: 40, name: 'Aces' }, { id: 50, name: 'Blocks' }]
+
+// The semi between Spikers and Diggers, on court 2 with Aces reffing unless overridden.
+const semiOnCourt = (fields = {}) =>
+  fiveTeamBracket.map((match) =>
+    match.id === 16 ? { ...match, court: 2, ref_team_id: 40, ref_set_at: null, ...fields } : match,
+  )
+
+test('a card shows its ref once the match has a court', async () => {
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(
+    semiOnCourt().map((match) => (match.id === 12 ? { ...match, ref_team_id: null } : match)),
+  )
+
+  renderBoard({ teams: withRefs })
+
+  const semi = await screen.findByRole('button', { name: 'Semis · match 2: Spikers vs Diggers' })
+  expect(semi.closest('.round-card')).toHaveTextContent('Ref: Aces')
+  // Quarter 2 has no court yet, so no ref line.
+  const quarter = screen.getByRole('button', { name: 'Quarters · match 2: Aces vs Blocks' })
+  expect(quarter.closest('.round-card')).not.toHaveTextContent('Ref:')
+})
+
+test('an on-court match nobody can ref shows N/A', async () => {
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(semiOnCourt({ ref_team_id: null }))
+
+  renderBoard({ teams: withRefs })
+
+  const semi = await screen.findByRole('button', { name: 'Semis · match 2: Spikers vs Diggers' })
+  expect(semi.closest('.round-card')).toHaveTextContent('Ref: N/A')
+})
+
+test('the panel Ref dropdown lists the teams free to ref and saves a choice', async () => {
+  const loadMatches = vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(semiOnCourt())
+  vi.spyOn(api, 'getBracketDispatch').mockResolvedValue({ courts: [], queue: [], overflow: false })
+  vi.spyOn(api, 'getRefOptions').mockResolvedValue([
+    { id: 40, name: 'Aces' },
+    { id: 50, name: 'Blocks' },
+  ])
+  const byHand = { ref_team_id: 50, ref_set_at: '2026-09-28T10:00:00', version: 2 }
+  const setMatchRef = vi.spyOn(api, 'setMatchRef').mockImplementation(async () => {
+    loadMatches.mockResolvedValue(semiOnCourt(byHand))
+    return semiOnCourt(byHand).find((match) => match.id === 16)
+  })
+
+  renderBoard({ teams: withRefs })
+  await open('Semis · match 2: Spikers vs Diggers')
+
+  const select = within(panel('Semis · match 2')).getByRole('combobox', {
+    name: 'Ref for Spikers vs Diggers',
+  })
+  await screen.findByRole('option', { name: 'Blocks' })
+  expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual([
+    'Automatic (Aces)',
+    'Aces',
+    'Blocks',
+    'N/A',
+  ])
+
+  fireEvent.change(select, { target: { value: '50' } })
+
+  expect(setMatchRef).toHaveBeenCalledWith(16, { automatic: false, refTeamId: 50, version: 1 })
+  // On the card and in the panel.
+  expect(await screen.findAllByText(/Ref: Blocks/)).toHaveLength(2)
+})
+
+test('a refused ref change says why', async () => {
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(semiOnCourt())
+  vi.spyOn(api, 'getBracketDispatch').mockResolvedValue({ courts: [], queue: [], overflow: false })
+  vi.spyOn(api, 'getRefOptions').mockResolvedValue([{ id: 50, name: 'Blocks' }])
+  vi.spyOn(api, 'setMatchRef').mockRejectedValue({
+    json: () => Promise.resolve({ detail: "Blocks can't ref this match: it is on a court" }),
+  })
+
+  renderBoard({ teams: withRefs })
+  await open('Semis · match 2: Spikers vs Diggers')
+  await screen.findByRole('option', { name: 'Blocks' })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Ref for Spikers vs Diggers' }), {
+    target: { value: '50' },
+  })
+
+  expect(await screen.findByText(/can't ref this match/)).toBeInTheDocument()
+})
+
+test('signed out, the panel shows the ref but no Ref dropdown', async () => {
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(semiOnCourt())
+
+  renderBoard({ teams: withRefs }, { user: null })
+  await open('Semis · match 2: Spikers vs Diggers')
+
+  expect(panel('Semis · match 2')).toHaveTextContent('Ref: Aces')
+  expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
 })

@@ -90,6 +90,40 @@ def reassign_pool_refs(session: Session, pool_id: int) -> None:
             session.add(match)
 
 
+def eligible_ref_team_ids(session: Session, match: Match) -> list[int]:
+    """Teams an organizer may pick to ref this match.
+
+    A pool match: its pool's teams not playing in its slot. A playoff match:
+    the tournament's teams not on a court right now and not in the match.
+    """
+    if match.pool_id is not None:
+        playing = {
+            team
+            for m in session.exec(
+                select(Match).where(Match.pool_id == match.pool_id, Match.round == match.round)
+            ).all()
+            for team in (m.team1_id, m.team2_id)
+        }
+        return [team for team in pool_team_ids(session, match.pool_id) if team not in playing]
+    from app.bracket_refs import playing_team_ids
+
+    busy = playing_team_ids(session, match.tournament_id) | {match.team1_id, match.team2_id}
+    teams = session.exec(
+        select(Team).where(Team.tournament_id == match.tournament_id).order_by(Team.name, Team.id)
+    ).all()
+    return [team.id for team in teams if team.id not in busy]
+
+
+def backfill_refs(bind: Engine) -> None:
+    """Startup: refs for pools and on-court playoff matches from before refs were stored."""
+    from app.bracket_refs import backfill_bracket_refs
+
+    backfill_pool_refs(bind)
+    with Session(bind) as session:
+        backfill_bracket_refs(session)
+        session.commit()
+
+
 def backfill_pool_refs(bind: Engine) -> None:
     """Give refs to scheduled pools from before refs were stored. Safe to rerun.
 

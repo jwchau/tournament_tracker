@@ -373,7 +373,7 @@
           "selector": ".round-card-meta",
           "type": "card-meta",
           "padding": "0 10px",
-          "holds": "matchStatus, then CourtLink (Score on Court N signed in / Watch Court N signed out) while on a court with both teams"
+          "holds": "MatchStatus (matchStatus, then ' · Ref: Aces' or ' · Ref: N/A' once on a court), then CourtLink (Score on Court N signed in / Watch Court N signed out) while on a court with both teams"
         },
         "live": {
           "selector": ".round-card[data-live]",

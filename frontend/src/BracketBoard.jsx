@@ -105,6 +105,8 @@ export default function BracketBoard({
           signedIn={Boolean(user)}
           holdError={bracket.holdError}
           onHold={bracket.hold}
+          refError={bracket.refError}
+          onRef={bracket.setRef}
           onSaved={bracket.replaceMatch}
           onCorrected={bracket.corrected}
           onClose={close}
