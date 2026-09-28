@@ -161,12 +161,12 @@ change, untick the boxes it touches.
   - Setup: a pool in pool play.
   - Expect: the pool name large on the ink strip, then standings (advancing places amber), then the Results grid, then the Schedule. On desktop, standings and grid side by side.
 
-- [x] **Results grid**
-  - Expect: teams lettered A, B, C… down and across; the diagonal hatched; a finished match is a dark chip with the winner's score in amber, read from each row's side (A vs B shows 17–21, B vs A shows 21–17); matches to come read "S3 / Ct 1"; the current slot's cells are outlined.
+- [ ] **Results grid by slot**
+  - Expect: slots across, the pool's teams down, no letters or hatched diagonal. A team's cell reads "Ct 1 · vs Setters" when it plays, then adds dark score chips from that team's side (winner's in amber; muted while it's played); "Ref · Ct 2" over the two teams, outlined with no fill, when it refs; "Rest" otherwise. The current slot's whole column is outlined.
 
-- [x] **Jump between grid and schedule**
-  - Do: tap a result in the grid.
-  - Expect: the page scrolls to that match in the schedule, and the row is filled and outlined; scroll back up and both of that pairing's grid cells are outlined. Tapping the team names in a schedule row jumps back to the grid.
+- [ ] **Jump between grid and schedule**
+  - Do: tap a playing or ref cell in the grid.
+  - Expect: the page scrolls to that match in the schedule, and the row is filled and outlined; scroll back up and that match's cells (both teams' and the ref's) are outlined. Tapping the team names in a schedule row jumps back to the grid.
 
 - [x] **Current-slot selection**
   - Do: tap an appointment cell in the current slot.
@@ -180,7 +180,7 @@ change, untick the boxes it touches.
 
 - [x] **Five or more teams**
   - Setup: a pool with 5+ teams.
-  - Expect: on a phone the grid scrolls sideways inside its panel; nothing else on the page scrolls sideways. A Resting line appears under slots where teams sit out and aren't reffing.
+  - Expect: on a phone the grid scrolls sideways inside its panel with the team names pinned; nothing else on the page scrolls sideways (8 teams included). A Resting line appears under slots where teams sit out and aren't reffing.
 
 - [ ] **Refs**
   - Setup: a pool with 5+ teams and a schedule, signed in.
@@ -188,7 +188,7 @@ change, untick the boxes it touches.
 
 - [x] **More than one game per pairing**
   - Setup: a tournament set to 2 games per pairing.
-  - Expect: each grid cell stacks both matches, split by a thin line, each linking to its own match.
+  - Expect: each pairing fills that many slots in a row, each cell linking to its own match.
 
 - [x] **No schedule yet**
   - Setup: a pool with teams and no schedule.

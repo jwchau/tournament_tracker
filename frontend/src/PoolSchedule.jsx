@@ -19,20 +19,10 @@ function groupBySlot(matches) {
 }
 
 const matchAnchor = (match) => `pool-match-${match.id}`
-const where = (match) => `Slot ${match.round} · Court ${match.court ?? '–'}`
 
+// A match's cell in a team's row (a playing or ref cell); the schedule jumps
+// back to the first team's.
 const gridAnchor = (match, teamId) => `grid-match-${match.id}-${teamId}`
-const letter = (index) => String.fromCharCode(65 + index)
-
-// A score as "21–15", the winner's side marked (winner: 'left', 'right' or null).
-function Score({ left, right, winner }) {
-  return (
-    <span className="score-pair">
-      <span className={winner === 'left' ? 'score-won' : undefined}>{left}</span>–
-      <span className={winner === 'right' ? 'score-won' : undefined}>{right}</span>
-    </span>
-  )
-}
 
 /**
  * A match's ref. Signed in, a dropdown: Automatic (naming who the rules
@@ -58,86 +48,103 @@ function MatchRef({ match, eligible, nameOf, signedIn, onChange, saving, error }
   )
 }
 
-/**
- * The round-robin sheet: every team down and across (lettered, so a head is
- * never read as a standings rank), each cell the result from the row team's
- * side, or when the pair plays. Each result or appointment links to its
- * match in the schedule below; choosing one marks the pairing in both.
- */
-function ResultsGrid({ poolTeams, matches, nowSlot, selectedId, onSelect }) {
-  function between(rowTeam, columnTeam) {
-    return matches.filter(
-      (match) =>
-        (match.team1_id === rowTeam.id && match.team2_id === columnTeam.id) ||
-        (match.team1_id === columnTeam.id && match.team2_id === rowTeam.id),
-    )
-  }
+// A team's score and the other side's, as the schedule's flip-card chips:
+// the winner's in amber once finished, both muted while it's played.
+function CellScore({ match, teamId }) {
+  if (match.team1_score == null) return null
+  const first = match.team1_id === teamId
+  const own = first ? match.team1_score : match.team2_score
+  const other = first ? match.team2_score : match.team1_score
+  const complete = match.status === 'complete'
+  const chip = (won) => (complete && won ? 'score-chip score-won' : 'score-chip')
+  return (
+    <span className="slot-score" data-live={complete ? undefined : ''}>
+      <span className={chip(match.winner_id === teamId)}>{own}</span>
+      <span className="score-sep">–</span>
+      <span className={chip(match.winner_id != null && match.winner_id !== teamId)}>
+        {other}
+      </span>
+    </span>
+  )
+}
 
-  function cellEntry(rowTeam, match) {
-    const first = match.team1_id === rowTeam.id
-    const own = first ? match.team1_score : match.team2_score
-    const other = first ? match.team2_score : match.team1_score
-    const complete = match.status === 'complete'
-    const classes = ['grid-entry']
-    if (complete) classes.push('grid-result')
-    if (match.round === nowSlot) classes.push('grid-now')
-    return (
-      <a
-        key={match.id}
-        id={gridAnchor(match, rowTeam.id)}
-        href={`#${matchAnchor(match)}`}
-        className={classes.join(' ')}
-        aria-current={match.id === selectedId ? 'true' : undefined}
-        onClick={() => onSelect(match.id)}
-      >
-        {complete ? (
-          <Score
-            left={own}
-            right={other}
-            winner={match.winner_id === rowTeam.id ? 'left' : match.winner_id ? 'right' : null}
-          />
-        ) : (
-          <span className="grid-when">
-            <span aria-hidden="true">
-              <span>S{match.round}</span> <span>Ct {match.court ?? '–'}</span>
-            </span>
-            <span className="visually-hidden">{where(match)}</span>
+/**
+ * Each team's day: slots across, the pool's teams down, every cell what that
+ * team does in that slot: plays whom on which court (with the score once
+ * there is one), refs which match (an outlined cell), or rests. The slot
+ * being played is outlined. A playing or ref cell jumps to its match in the
+ * schedule below; choosing one marks the match in both.
+ */
+function ResultsGrid({ poolTeams, slots, nowSlot, selectedId, onSelect, nameOf }) {
+  function cell(team, slotMatches) {
+    const playing = slotMatches.find(
+      (match) => match.team1_id === team.id || match.team2_id === team.id,
+    )
+    const reffing = slotMatches.find((match) => match.ref_team_id === team.id)
+    const match = playing ?? reffing
+    if (!match) {
+      return (
+        <span className="slot-cell" data-kind="rest">
+          Rest
+        </span>
+      )
+    }
+    const shared = {
+      href: `#${matchAnchor(match)}`,
+      'aria-current': match.id === selectedId ? 'true' : undefined,
+      onClick: () => onSelect(match.id),
+    }
+    if (playing) {
+      const opponent = playing.team1_id === team.id ? playing.team2_id : playing.team1_id
+      return (
+        <a
+          id={gridAnchor(playing, team.id)}
+          className="slot-cell"
+          data-kind="play"
+          {...shared}
+        >
+          <span className="slot-cell-line">
+            Ct {playing.court ?? '–'} · vs {nameOf(opponent)}
           </span>
-        )}
+          <CellScore match={playing} teamId={team.id} />
+        </a>
+      )
+    }
+    return (
+      <a className="slot-cell" data-kind="ref" {...shared}>
+        <span className="slot-cell-line">Ref · Ct {reffing.court ?? '–'}</span>
+        <span className="slot-cell-sub">
+          {nameOf(reffing.team1_id)} v {nameOf(reffing.team2_id)}
+        </span>
       </a>
     )
   }
 
   return (
     <div className="grid-scroll">
-      <table className="results-grid" aria-label="Results grid">
+      <table className="slot-grid" aria-label="Results grid">
         <thead>
           <tr>
-            <th scope="col">
+            <th scope="col" className="slot-grid-corner">
               <span className="visually-hidden">Team</span>
             </th>
-            {poolTeams.map((team, index) => (
-              <th key={team.id} scope="col">
-                <abbr title={team.name}>{letter(index)}</abbr>
+            {slots.map(([slot]) => (
+              <th key={slot} scope="col" data-now={slot === nowSlot ? '' : undefined}>
+                Slot {slot}
+                {slot === nowSlot && <span className="visually-hidden"> (now)</span>}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {poolTeams.map((rowTeam, rowIndex) => (
-            <tr key={rowTeam.id}>
-              <th scope="row">
-                <span className="grid-number">{letter(rowIndex)}</span> {rowTeam.name}
-              </th>
-              {poolTeams.map((columnTeam) =>
-                columnTeam.id === rowTeam.id ? (
-                  <td key={columnTeam.id} className="grid-self" />
-                ) : (
-                  <td key={columnTeam.id}>
-                    {between(rowTeam, columnTeam).map((match) => cellEntry(rowTeam, match))}
-                  </td>
-                ),
-              )}
+          {poolTeams.map((team) => (
+            <tr key={team.id}>
+              <th scope="row">{team.name}</th>
+              {slots.map(([slot, slotMatches]) => (
+                <td key={slot} data-now={slot === nowSlot ? '' : undefined}>
+                  {cell(team, slotMatches)}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
@@ -229,10 +236,11 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
         <h3 id="results-grid-heading">Results</h3>
         <ResultsGrid
           poolTeams={poolTeams}
-          matches={matches}
+          slots={slots}
           nowSlot={nowSlot}
           selectedId={selectedId}
           onSelect={setSelectedId}
+          nameOf={nameOf}
         />
       </section>
 

@@ -7,6 +7,8 @@
   --ground: linear-gradient(180deg, #1c1c1c 0%, #161616 100%);
   --ink: linear-gradient(180deg, #151515 0%, #0e0e0e 100%);
   --panel: linear-gradient(180deg, #262626 0%, #1f1f1f 100%);
+  /* The panel as one flat colour, for what scrolls over it (sticky cells). */
+  --panel-flat: #232323;
   --surface: #1a1a1a;
   --surface-2: #232323;
   --surface-3: #2b2b2b;
@@ -75,6 +77,7 @@
   :root {
     --ground: linear-gradient(180deg, #ffffff 0%, #f6f4f1 100%);
     --panel: linear-gradient(180deg, #ffffff 0%, #f6f4f1 100%);
+    --panel-flat: #fbfaf8;
     --surface: #ffffff;
     --surface-2: #f6f4f1;
     --surface-3: #e0e0e0;
@@ -2168,99 +2171,7 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   padding-top: 16px;
 }
 
-/* The grid: teams down and across, each cell a result or an appointment. */
-.grid-scroll {
-  overflow-x: auto;
-  border-radius: 16px;
-  background: var(--panel);
-  box-shadow: var(--elevation-3);
-  padding: 10px;
-}
-
-.results-grid {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 6px;
-  font-variant-numeric: tabular-nums;
-}
-
-.results-grid thead th {
-  font: 700 14px/20px var(--display);
-  color: var(--muted);
-  text-align: center;
-  padding: 0 0 2px;
-}
-
-.results-grid abbr {
-  text-decoration: none;
-}
-
-.results-grid tbody th {
-  font: 600 15px/20px var(--ui);
-  color: var(--text);
-  text-align: left;
-  padding-right: 6px;
-  min-width: 96px;
-}
-
-.grid-number {
-  display: inline-block;
-  min-width: 1.4em;
-  font: 700 14px/20px var(--display);
-  color: var(--muted);
-}
-
-.results-grid td {
-  min-width: 64px;
-  height: 52px;
-  padding: 0;
-  border-radius: 10px;
-  background: var(--surface-2);
-  vertical-align: middle;
-}
-
-/* A team against itself: an empty hatched cell, like the struck box on a paper sheet. */
-.results-grid td.grid-self {
-  background: repeating-linear-gradient(
-    135deg,
-    var(--hairline) 0 2px,
-    transparent 2px 9px
-  );
-}
-
-.grid-entry {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 52px;
-  padding: 6px 4px;
-  border-radius: 10px;
-  color: var(--text);
-  text-decoration: none;
-  text-align: center;
-  font: 700 17px/22px var(--display);
-  transition: background 200ms ease-in-out;
-}
-
-.grid-entry + .grid-entry {
-  border-top: 1px solid var(--hairline);
-}
-
-.grid-entry:hover {
-  background: var(--ghost-hover);
-}
-
-/* A result is a small flip card, the court scoreboard's numerals at a glance;
-   an appointment stays a quiet cell, so the two read apart. */
-.grid-entry.grid-result {
-  position: relative;
-  overflow: hidden;
-  color: var(--band-text);
-  background: linear-gradient(180deg, var(--band-ghost) 50%, transparent 50%), var(--ink);
-}
-
-.grid-entry.grid-result::after,
+/* The flip-card seam and the winner's amber on every small score chip. */
 .score-chip::after {
   content: '';
   position: absolute;
@@ -2271,75 +2182,163 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   pointer-events: none;
 }
 
-.grid-result .score-won,
 .score-chip.score-won {
   color: var(--amber);
 }
 
-
-/* The slot being played now, in the grid as in the schedule. */
-.grid-entry.grid-now {
-  box-shadow: inset 0 0 0 1px var(--accent-text);
+/* The grid: slots across, the pool's teams down, each cell what that team
+   does in that slot. */
+.grid-scroll {
+  overflow-x: auto;
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: var(--elevation-3);
+  padding: 10px;
 }
 
-/* On an ink chip the ring takes the band accent, in either theme. */
-.grid-entry.grid-result.grid-now {
-  box-shadow: inset 0 0 0 1px var(--band-accent);
+/* Spaced across only, so the current slot's outline runs unbroken down its column. */
+.slot-grid {
+  border-collapse: separate;
+  border-spacing: 6px 0;
+  font-variant-numeric: tabular-nums;
 }
 
-/* The chosen pairing, both of its cells: an outline outside the cell, so a
-   current-slot cell shows its Now ring and the selection together. */
-.grid-entry[aria-current],
-.grid-entry.grid-now[aria-current] {
+.slot-grid thead th {
+  font: 700 14px/20px var(--display);
+  color: var(--muted);
+  text-align: center;
+  white-space: nowrap;
+  padding: 6px 4px 4px;
+}
+
+/* The team names stay put while the slots scroll sideways. */
+.slot-grid tbody th,
+.slot-grid-corner {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--panel-flat);
+  /* Also cover the container's padding to the left (generously: the
+     container clips the rest) and the cell gap to the right, so scrolled
+     slots don't peek out beside the names. */
+  box-shadow: -16px 0 0 var(--panel-flat), 6px 0 0 var(--panel-flat);
+}
+
+.slot-grid tbody th {
+  font: 600 15px/20px var(--ui);
+  color: var(--text);
+  text-align: left;
+  padding: 3px 8px 3px 0;
+  min-width: 96px;
+  max-width: 160px;
+  overflow-wrap: anywhere;
+}
+
+.slot-grid td {
+  padding: 3px 4px;
+  vertical-align: middle;
+}
+
+/* The slot being played: its column outlined, like the schedule's Now slot. */
+.slot-grid [data-now] {
+  box-shadow: inset 1px 0 0 var(--accent-text), inset -1px 0 0 var(--accent-text);
+}
+
+.slot-grid thead th[data-now] {
+  color: var(--accent-text);
+  border-radius: 10px 10px 0 0;
+  box-shadow: inset 1px 0 0 var(--accent-text), inset -1px 0 0 var(--accent-text),
+    inset 0 1px 0 var(--accent-text);
+}
+
+.slot-grid tbody tr:last-child td[data-now] {
+  border-radius: 0 0 10px 10px;
+  box-shadow: inset 1px 0 0 var(--accent-text), inset -1px 0 0 var(--accent-text),
+    inset 0 -1px 0 var(--accent-text);
+}
+
+.slot-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 120px;
+  min-height: 56px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  color: var(--text);
+  text-decoration: none;
+  font: 500 13px/18px var(--ui);
+  white-space: nowrap;
+  transition: background 200ms ease-in-out;
+}
+
+/* Playing: a filled cell with the court and opponent, then the score chips. */
+.slot-cell[data-kind='play'] {
+  background: var(--surface-2);
+}
+
+.slot-cell[data-kind='play'] .slot-cell-line {
+  font-weight: 600;
+}
+
+.slot-cell[data-kind='play'] .score-chip {
+  min-width: 36px;
+  font-size: 16px;
+  line-height: 26px;
+}
+
+/* Reffing: an outline with no fill, so it reads apart from a match at a glance. */
+.slot-cell[data-kind='ref'] {
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.slot-cell-sub {
+  color: var(--muted);
+}
+
+/* Resting: a quiet word, no cell. */
+.slot-cell[data-kind='rest'] {
+  color: var(--muted);
+}
+
+a.slot-cell:hover {
+  background: var(--ghost-hover);
+}
+
+/* The chosen match, in every cell that shows it. */
+.slot-cell[aria-current] {
   outline: 2px solid var(--accent-text);
   outline-offset: 2px;
 }
 
 @media (max-width: 639px) {
-  .grid-entry[aria-current],
-  .grid-entry.grid-now[aria-current] {
-    outline-offset: 1px;
-  }
-}
-
-.grid-when {
-  font: 500 13px/16px var(--ui);
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.grid-entry .score-pair {
-  white-space: nowrap;
-}
-
-/* Phones: narrower cells, so a pool of four fits without scrolling sideways. */
-@media (max-width: 639px) {
   .grid-scroll {
     padding: 6px;
   }
 
-  .results-grid {
-    border-spacing: 4px;
+  .slot-grid {
+    border-spacing: 4px 0;
   }
 
-  .results-grid tbody th {
-    min-width: 0;
+  .slot-grid tbody th,
+  .slot-grid-corner {
+    box-shadow: -16px 0 0 var(--panel-flat), 4px 0 0 var(--panel-flat);
+  }
+
+  .slot-grid tbody th {
+    min-width: 84px;
+    max-width: 96px;
     font-size: 14px;
-    padding-right: 2px;
+    padding-right: 4px;
   }
 
-  .results-grid td {
-    min-width: 54px;
+  .slot-cell {
+    min-width: 108px;
   }
 
-  .grid-entry {
-    font-size: 14px;
-    padding: 6px 2px;
-  }
-
-  /* Readable in sun: slot over court, not a smaller line. */
-  .grid-when > [aria-hidden] > span {
-    display: block;
+  .slot-cell[aria-current] {
+    outline-offset: 1px;
   }
 }
 

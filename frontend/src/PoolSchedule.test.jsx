@@ -99,55 +99,114 @@ test('the slot being played now is marked', async () => {
   expect(screen.getByRole('heading', { name: 'Slot 1' })).toBeInTheDocument()
 })
 
-test('the results grid shows every pairing from each team’s side', async () => {
-  vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
+// A team's cell in a slot's column of the grid (column 0 is the team names).
+function gridCell(grid, team, slot) {
+  return within(grid).getByRole('rowheader', { name: team }).closest('tr').cells[slot]
+}
 
-  render(inRouter(<PoolSchedule pool={pool} teams={teams} />))
-
-  const grid = await screen.findByRole('table', { name: 'Results grid' })
-  const cell = (rowTeam, columnIndex) =>
-    within(grid).getByRole('rowheader', { name: new RegExp(rowTeam) }).closest('tr').cells[
-      columnIndex
-    ]
-  // Columns follow the rows: 1 Spikers, 2 Diggers, 3 Blockers.
-  expect(cell('Spikers', 2)).toHaveTextContent('21–15')
-  expect(cell('Diggers', 1)).toHaveTextContent('15–21')
-  expect(cell('Spikers', 3)).toHaveTextContent('Slot 2 · Court 1')
-  // Each pairing links to its match in the slot list.
-  expect(within(cell('Spikers', 3)).getByRole('link')).toHaveAttribute('href', '#pool-match-2')
-  expect(matchRow('Spikers vs Blockers')).toHaveAttribute('id', 'pool-match-2')
-})
-
-test('the grid labels teams by letter, so its heads are never read as ranks', async () => {
+test('the grid has a column per slot, in order, and a row per pool team', async () => {
   vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
 
   render(inRouter(<PoolSchedule pool={pool} teams={teams} />))
 
   const grid = await screen.findByRole('table', { name: 'Results grid' })
   const heads = within(grid).getAllByRole('columnheader').slice(1)
-  expect(heads.map((head) => head.textContent)).toEqual(['A', 'B', 'C'])
-  expect(within(heads[0]).getByTitle('Spikers')).toBeInTheDocument()
-  expect(within(grid).getByRole('rowheader', { name: /Diggers/ })).toHaveTextContent('B')
+  expect(heads.map((head) => head.textContent)).toEqual(['Slot 1', 'Slot 2 (now)', 'Slot 3'])
+  expect(within(grid).getAllByRole('rowheader').map((head) => head.textContent)).toEqual([
+    'Spikers',
+    'Diggers',
+    'Blockers',
+  ])
+  // No team-against-team letters or hatched diagonal any more.
+  expect(within(grid).queryByTitle('Spikers')).not.toBeInTheDocument()
 })
 
-test('choosing a pairing marks it in the grid and the schedule', async () => {
+test('a playing cell shows the court and opponent, and the score from that team’s side', async () => {
   vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
 
   render(inRouter(<PoolSchedule pool={pool} teams={teams} />))
 
   const grid = await screen.findByRole('table', { name: 'Results grid' })
-  const entries = within(grid).getAllByRole('link', { name: /21–15|15–21/ })
-  fireEvent.click(entries[0])
+  const spikersFirst = gridCell(grid, 'Spikers', 1)
+  expect(spikersFirst).toHaveTextContent('Ct 1 · vs Diggers21–15')
+  expect(within(spikersFirst).getByText('21')).toHaveClass('score-won')
+  expect(gridCell(grid, 'Diggers', 1)).toHaveTextContent('Ct 1 · vs Spikers15–21')
+  expect(within(gridCell(grid, 'Diggers', 1)).getByText('21')).toHaveClass('score-won')
+  // Not played yet: court and opponent only.
+  expect(gridCell(grid, 'Spikers', 2)).toHaveTextContent(/^Ct 1 · vs Blockers$/)
+  expect(within(gridCell(grid, 'Spikers', 2)).getByRole('link')).toHaveAttribute(
+    'href',
+    '#pool-match-2',
+  )
+})
 
-  // Both sides of the pairing in the grid, and its row in the schedule.
-  for (const entry of entries) expect(entry).toHaveAttribute('aria-current', 'true')
+test('a match being played shows its running score, muted', async () => {
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue([
+    poolMatch(1, 1, 10, 11, { team1_score: 9, team2_score: 7, status: 'in_progress' }),
+  ])
+
+  render(inRouter(<PoolSchedule pool={pool} teams={teams} />))
+
+  const grid = await screen.findByRole('table', { name: 'Results grid' })
+  const score = gridCell(grid, 'Diggers', 1).querySelector('.slot-score')
+  expect(score).toHaveTextContent('7–9')
+  expect(score).toHaveAttribute('data-live')
+  expect(within(score).queryByText('9')).not.toHaveClass('score-won')
+})
+
+test('a ref cell shows the court and both teams, a free team rests, and an N/A match has no ref cell', async () => {
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
+
+  render(inRouter(<PoolSchedule pool={pool} teams={teams} />))
+
+  const grid = await screen.findByRole('table', { name: 'Results grid' })
+  const reffing = gridCell(grid, 'Blockers', 1)
+  expect(reffing).toHaveTextContent('Ref · Ct 1Spikers v Diggers')
+  expect(within(reffing).getByRole('link')).toHaveAttribute('data-kind', 'ref')
+  // Slot 3's match has no ref, so Spikers just rests.
+  expect(gridCell(grid, 'Spikers', 3)).toHaveTextContent(/^Rest$/)
+  expect(within(grid).getAllByText(/^Ref · /)).toHaveLength(2)
+})
+
+test('the current slot’s column is marked', async () => {
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
+
+  render(inRouter(<PoolSchedule pool={pool} teams={teams} />))
+
+  const grid = await screen.findByRole('table', { name: 'Results grid' })
+  const heads = within(grid).getAllByRole('columnheader')
+  expect(heads[2]).toHaveAttribute('data-now')
+  expect(heads[1]).not.toHaveAttribute('data-now')
+  for (const team of ['Spikers', 'Diggers', 'Blockers']) {
+    expect(gridCell(grid, team, 2)).toHaveAttribute('data-now')
+    expect(gridCell(grid, team, 3)).not.toHaveAttribute('data-now')
+  }
+})
+
+test('choosing a cell marks the match in the grid and the schedule, and back', async () => {
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
+
+  render(inRouter(<PoolSchedule pool={pool} teams={teams} />))
+
+  const grid = await screen.findByRole('table', { name: 'Results grid' })
+  const cells = ['Spikers', 'Diggers', 'Blockers'].map((team) =>
+    within(gridCell(grid, team, 1)).getByRole('link'),
+  )
+  fireEvent.click(cells[0])
+
+  // Both teams' cells and the ref's, and its row in the schedule.
+  for (const cell of cells) expect(cell).toHaveAttribute('aria-current', 'true')
   expect(matchRow('Spikers vs Diggers')).toHaveAttribute('aria-current', 'true')
   expect(matchRow('Spikers vs Blockers')).not.toHaveAttribute('aria-current')
 
   // And from the schedule back to the grid.
-  fireEvent.click(within(matchRow('Spikers vs Blockers')).getByRole('link', { name: 'Spikers vs Blockers' }))
+  const schedulePair = within(matchRow('Spikers vs Blockers')).getByRole('link', {
+    name: 'Spikers vs Blockers',
+  })
+  expect(schedulePair).toHaveAttribute('href', `#${gridCell(grid, 'Spikers', 2).querySelector('a').id}`)
+  fireEvent.click(schedulePair)
   expect(matchRow('Spikers vs Blockers')).toHaveAttribute('aria-current', 'true')
-  expect(entries[0]).not.toHaveAttribute('aria-current')
+  expect(cells[0]).not.toHaveAttribute('aria-current')
 })
 
 const bigPool = [10, 11, 12, 13, 14].map((id) => ({ id, name: `T${id}`, pool_id: 1 }))
