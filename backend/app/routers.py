@@ -23,7 +23,8 @@ from app.models import (
     TournamentSummary,
     TournamentUpdate,
 )
-from app.refs import reassign_pool_refs
+from app.bracket_refs import sync_bracket_refs
+from app.refs import eligible_ref_team_ids, reassign_pool_refs
 from app.series import best_of, replace_games, series_result
 from app.settings import require_confirmed_settings
 from app.scoring import (
@@ -477,42 +478,63 @@ class RefUpdate(SQLModel):
     version: int
 
 
+class RefOption(SQLModel):
+    id: int
+    name: str
+
+
+def _match_or_404(session: Session, match_id: int) -> Match:
+    match = session.get(Match, match_id)
+    if match is None:
+        raise HTTPException(status_code=404, detail="Match not found")
+    return match
+
+
+@router.get("/matches/{match_id}/ref-options", response_model=list[RefOption])
+def list_ref_options(match_id: int, session: Session = Depends(get_session)) -> list[RefOption]:
+    """The teams that could ref this match right now, for the Ref dropdown."""
+    match = _match_or_404(session, match_id)
+    names = dict(
+        session.exec(
+            select(Team.id, Team.name).where(Team.tournament_id == match.tournament_id)
+        ).all()
+    )
+    return [RefOption(id=team, name=names[team]) for team in eligible_ref_team_ids(session, match)]
+
+
 @router.patch("/matches/{match_id}/ref", response_model=Match)
 def set_match_ref(
     match_id: int, data: RefUpdate, session: Session = Depends(get_session)
 ) -> Match:
-    """Choose a pool match's ref by hand (a team, or None for N/A), or go back to automatic.
+    """Choose a match's ref by hand (a team, or None for N/A), or go back to automatic.
 
-    The rest of the pool's automatic refs are then recomputed, so a team
-    picked here isn't also reffing another court in the same slot. Refs stay
-    editable after the match is finished.
+    A pool match's ref comes from its pool's teams not playing that slot; a
+    playoff match's from the tournament's teams not on a court right now.
+    The other automatic refs are then brought in line, so a team picked here
+    isn't also reffing another court. Refs stay editable after the match is
+    finished.
     """
-    match = session.get(Match, match_id)
-    if match is None:
-        raise HTTPException(status_code=404, detail="Match not found")
-    if match.pool_id is None:
-        raise HTTPException(status_code=400, detail="only pool matches have refs for now")
+    match = _match_or_404(session, match_id)
+    if match.pool_id is None and match.playoff_bracket_id is None:
+        raise HTTPException(status_code=400, detail="this match isn't in a pool or a bracket")
     if not data.automatic and data.ref_team_id is not None:
-        ref = session.get(Team, data.ref_team_id)
-        if ref is None or ref.pool_id != match.pool_id:
-            raise HTTPException(status_code=400, detail="the ref must be a team in this pool")
-        playing = session.exec(
-            select(Match.id).where(
-                Match.pool_id == match.pool_id,
-                Match.round == match.round,
-                (Match.team1_id == ref.id) | (Match.team2_id == ref.id),
+        if data.ref_team_id not in eligible_ref_team_ids(session, match):
+            ref = session.get(Team, data.ref_team_id)
+            name = ref.name if ref is not None else f"Team {data.ref_team_id}"
+            where = (
+                "isn't in this pool or is playing in this slot"
+                if match.pool_id is not None
+                else "isn't in this tournament, is in this match, or is on a court"
             )
-        ).first()
-        if playing is not None:
-            raise HTTPException(
-                status_code=400, detail=f"{ref.name} is playing in this slot, so it can't ref"
-            )
+            raise HTTPException(status_code=400, detail=f"{name} can't ref this match: it {where}")
 
-    values = (
-        {"ref_set_at": None}
-        if data.automatic
-        else {"ref_team_id": data.ref_team_id, "ref_set_at": datetime.now()}
-    )
+    if data.automatic:
+        # A playoff match's rules pick again now, if it's on a court.
+        values = {"ref_set_at": None, "ref_team_id": None, "ref_court": None}
+        if match.pool_id is not None:
+            values = {"ref_set_at": None}
+    else:
+        values = {"ref_team_id": data.ref_team_id, "ref_set_at": datetime.now()}
     result = session.execute(
         update(Match)
         .where(Match.id == match_id, Match.version == data.version)
@@ -525,7 +547,10 @@ def set_match_ref(
             detail="version conflict: match was updated by someone else, please refetch and retry",
         )
     session.expire_all()
-    reassign_pool_refs(session, match.pool_id)
+    if match.pool_id is not None:
+        reassign_pool_refs(session, match.pool_id)
+    else:
+        sync_bracket_refs(session, match.tournament_id)
     session.commit()
     session.refresh(match)
     return match

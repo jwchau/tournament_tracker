@@ -57,6 +57,16 @@ export function sectionOf(match) {
 export const bothTeamsKnown = (match) => match.team1_id != null && match.team2_id != null
 
 // Where the match stands, in words: on a court, in line, on hold, finished.
+/**
+ * "Ref: Aces" (or "Ref: N/A") once the match has a court. A finished match
+ * with no ref recorded (played before refs were kept) shows none.
+ */
+export function refLabel(match, teamsById) {
+  if (match.court == null) return null
+  if (match.ref_team_id == null) return match.status === 'complete' ? null : 'Ref: N/A'
+  return `Ref: ${teamName(teamsById, match.ref_team_id)}`
+}
+
 export function matchStatus(match, queuePosition, overflow) {
   if (match.status === 'complete') return 'Finished'
   if (!bothTeamsKnown(match)) return 'Waiting for both teams'

@@ -5,6 +5,8 @@ import { generatePoolSchedule, getPoolMatches, setMatchRef } from './api'
 import { useAuth } from './auth'
 import CorrectionForm from './CorrectionForm'
 import Loading from './Loading'
+import { refName, refUpdate } from './refModel'
+import RefSelect from './RefSelect'
 import { usePolling } from './usePolling'
 
 function groupBySlot(matches) {
@@ -32,37 +34,24 @@ function Score({ left, right, winner }) {
   )
 }
 
-// The Ref dropdown's value: automatic, or what an organizer chose by hand.
-const refChoice = (match) =>
-  match.ref_set_at == null ? 'auto' : match.ref_team_id == null ? 'na' : String(match.ref_team_id)
-
 /**
  * A match's ref. Signed in, a dropdown: Automatic (naming who the rules
  * picked), the teams free to ref this slot, or N/A.
  */
 function MatchRef({ match, eligible, nameOf, signedIn, onChange, saving, error }) {
-  const current = match.ref_team_id == null ? 'N/A' : nameOf(match.ref_team_id)
-  if (!signedIn) return <p className="slot-ref">Ref: {current}</p>
+  if (!signedIn) return <p className="slot-ref">Ref: {refName(match, nameOf)}</p>
   return (
     <div className="slot-ref">
       <label>
         Ref{' '}
-        <select
-          aria-label={`Ref for ${nameOf(match.team1_id)} vs ${nameOf(match.team2_id)}`}
-          value={refChoice(match)}
+        <RefSelect
+          match={match}
+          options={eligible}
+          nameOf={nameOf}
+          label={`Ref for ${nameOf(match.team1_id)} vs ${nameOf(match.team2_id)}`}
           disabled={saving}
-          onChange={(event) => onChange(match, event.target.value)}
-        >
-          <option value="auto">
-            Automatic{match.ref_set_at == null ? ` (${current})` : ''}
-          </option>
-          {eligible.map((team) => (
-            <option key={team.id} value={String(team.id)}>
-              {team.name}
-            </option>
-          ))}
-          <option value="na">N/A</option>
-        </select>
+          onChange={onChange}
+        />
       </label>
       {error && <p className="finish-note">{error}</p>}
     </div>
@@ -204,11 +193,7 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
     setSavingRefId(match.id)
     setRefError(null)
     try {
-      await setMatchRef(match.id, {
-        automatic: choice === 'auto',
-        refTeamId: choice === 'auto' || choice === 'na' ? null : Number(choice),
-        version: match.version,
-      })
+      await setMatchRef(match.id, { ...refUpdate(choice), version: match.version })
       // Other matches' automatic refs can move to make room, so reload them all.
       setMatches(await getPoolMatches(pool.id))
     } catch (failure) {

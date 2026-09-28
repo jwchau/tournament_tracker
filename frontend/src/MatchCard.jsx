@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 
-import { bothTeamsKnown, matchStatus, slotLabel } from './bracketModel'
+import { bothTeamsKnown, matchStatus, refLabel, slotLabel } from './bracketModel'
 
 // A team's score on a card: a series' games won, a finished game's score, or
 // a single game's running score while it's played (shown muted).
@@ -70,10 +70,21 @@ export function BracketCard({
         <MatchTeams match={match} teamsById={teamsById} bestOf={bestOf} />
       </button>
       <p className="round-card-meta">
-        <span>{matchStatus(match, queuePosition, overflow)}</span>
+        <MatchStatus match={match} teamsById={teamsById} queuePosition={queuePosition} overflow={overflow} />
         <CourtLink match={match} tournamentId={tournamentId} signedIn={signedIn} />
       </p>
     </Tag>
+  )
+}
+
+// Where the match stands, and its ref once it has a court: "On Court 1 · Ref: Aces".
+export function MatchStatus({ match, teamsById, queuePosition, overflow }) {
+  const ref = refLabel(match, teamsById)
+  return (
+    <span>
+      {matchStatus(match, queuePosition, overflow)}
+      {ref && ` · ${ref}`}
+    </span>
   )
 }
 

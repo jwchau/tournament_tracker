@@ -198,6 +198,9 @@ class Match(SQLModel, table=True):
     # When the ref was chosen by hand; None for an automatic ref (see
     # app.refs). A hand-set None ref is a deliberate N/A.
     ref_set_at: datetime | None = None
+    # A playoff match's court when its automatic ref was chosen, so the ref
+    # isn't chosen again while it stays there (see app.bracket_refs).
+    ref_court: int | None = None
     # Kept off courts (and out of the queue) until released.
     on_hold: bool = Field(default=False, sa_column_kwargs={"server_default": "0"})
     version: int = 1

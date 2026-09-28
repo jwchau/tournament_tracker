@@ -1,9 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
-import { bothTeamsKnown, matchStatus, slotLabel, teamName } from './bracketModel'
+import { getRefOptions } from './api'
+import { bothTeamsKnown, slotLabel, teamName } from './bracketModel'
 import CorrectionForm from './CorrectionForm'
-import { CourtLink, MatchTeams } from './MatchCard'
+import { CourtLink, MatchStatus, MatchTeams } from './MatchCard'
 import { matchName } from './matchName'
+import RefSelect from './RefSelect'
 import ScheduleForm from './ScheduleForm'
 
 function CloseIcon() {
@@ -31,6 +33,8 @@ export default function MatchPanel({
   signedIn,
   holdError,
   onHold,
+  refError,
+  onRef,
   onSaved,
   onCorrected,
   onClose,
@@ -49,6 +53,33 @@ export default function MatchPanel({
   // Only a match nobody has started can be held; a held one is released before it's scored.
   const holdable = playable && !match.on_hold && match.team1_score == null && match.team2_score == null
   const correctable = bothTeamsKnown(match) && match.status === 'complete'
+  // A ref can be set once both teams are known, and changed after the match.
+  const reffable = signedIn && bothTeamsKnown(match)
+
+  // Who could ref depends on who is on a court, so ask again as the match changes.
+  const [refOptions, setRefOptions] = useState([])
+  const [savingRef, setSavingRef] = useState(false)
+  useEffect(() => {
+    if (!reffable) return undefined
+    let cancelled = false
+    getRefOptions(match.id)
+      .then((options) => {
+        if (!cancelled) setRefOptions(options)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [reffable, match.id, match.version, match.court, match.ref_team_id])
+
+  async function handleRef(changed, choice) {
+    setSavingRef(true)
+    try {
+      await onRef(changed, choice)
+    } finally {
+      setSavingRef(false)
+    }
+  }
 
   return (
     <>
@@ -68,7 +99,12 @@ export default function MatchPanel({
           <MatchTeams match={match} teamsById={teamsById} bestOf={bestOf} />
         </div>
         <p className="round-card-meta">
-          <span>{matchStatus(match, queuePosition, overflow)}</span>
+          <MatchStatus
+            match={match}
+            teamsById={teamsById}
+            queuePosition={queuePosition}
+            overflow={overflow}
+          />
           <CourtLink match={match} tournamentId={tournamentId} signedIn={signedIn} />
         </p>
 
@@ -81,6 +117,21 @@ export default function MatchPanel({
               courtCount={courtCount}
               onSaved={onSaved}
             />
+          </section>
+        )}
+
+        {reffable && (
+          <section className="match-panel-tools" aria-label="Ref">
+            <h4>Ref</h4>
+            <RefSelect
+              match={match}
+              options={refOptions}
+              nameOf={(teamId) => teamName(teamsById, teamId)}
+              label={`Ref for ${teams}`}
+              disabled={savingRef}
+              onChange={handleRef}
+            />
+            {refError && <p className="finish-note">{refError}</p>}
           </section>
         )}
 

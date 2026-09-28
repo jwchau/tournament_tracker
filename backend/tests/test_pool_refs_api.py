@@ -171,3 +171,13 @@ def test_signed_out_visitors_cannot_change_a_ref(client, anonymous_client):
     match = _matches(client, pool["id"])[0]
 
     assert _set_ref(anonymous_client, match, None).status_code == 401
+
+
+def test_ref_options_for_a_pool_match_are_its_pools_teams_free_that_slot(client):
+    _, pool, team_ids = _scheduled_pool(client, 5, court_count=2)
+    matches = _matches(client, pool["id"])
+    match = matches[0]
+
+    options = client.get(f"/matches/{match['id']}/ref-options").json()
+
+    assert [team["id"] for team in options] == _idle(matches, match["round"], team_ids)

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 
-import { getBracketDispatch, getPlayoffBracketMatches, holdMatch } from './api'
+import { getBracketDispatch, getPlayoffBracketMatches, holdMatch, setMatchRef } from './api'
 import { createCircuitBreaker } from './circuitBreaker'
+import { refUpdate } from './refModel'
 import { withTimeout } from './withTimeout'
 
 const POLL_INTERVAL_MS = 4000
@@ -20,6 +21,7 @@ export function useBracketMatches(playoffBracketId) {
   const [loaded, setLoaded] = useState(false)
   const [dispatch, setDispatch] = useState(null)
   const [holdError, setHoldError] = useState(null)
+  const [refError, setRefError] = useState(null)
   const [connectionLost, setConnectionLost] = useState(false)
 
   useEffect(() => {
@@ -85,6 +87,18 @@ export function useBracketMatches(playoffBracketId) {
     reload()
   }
 
+  // A hand-set ref can take a team off another court's automatic ref, so reload.
+  async function setRef(match, choice) {
+    try {
+      replaceMatch(await setMatchRef(match.id, { ...refUpdate(choice), version: match.version }))
+      setRefError(null)
+    } catch (failure) {
+      const body = await failure?.json?.().catch(() => null)
+      setRefError(body?.detail ?? "Couldn't change the ref. Please refresh and try again.")
+    }
+    reload()
+  }
+
   function corrected({ match: correctedMatch, reset_matches: resetMatches }) {
     const updatedById = Object.fromEntries(
       [correctedMatch, ...resetMatches].map((match) => [match.id, match]),
@@ -95,5 +109,16 @@ export function useBracketMatches(playoffBracketId) {
     reload()
   }
 
-  return { matches, loaded, dispatch, connectionLost, holdError, replaceMatch, hold, corrected }
+  return {
+    matches,
+    loaded,
+    dispatch,
+    connectionLost,
+    holdError,
+    refError,
+    replaceMatch,
+    hold,
+    setRef,
+    corrected,
+  }
 }

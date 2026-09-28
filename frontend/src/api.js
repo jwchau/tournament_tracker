@@ -342,6 +342,11 @@ export function setMatchRef(matchId, { refTeamId = null, automatic = false, vers
   return patchJson(`/matches/${matchId}/ref`, { ref_team_id: refTeamId, automatic, version })
 }
 
+// The teams that could ref a match right now: [{ id, name }].
+export function getRefOptions(matchId) {
+  return getJson(`/matches/${matchId}/ref-options`)
+}
+
 export function scheduleMatch(matchId, { court, scheduledTime }) {
   return patchJson(`/matches/${matchId}/schedule`, {
     court,
