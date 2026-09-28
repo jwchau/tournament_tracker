@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { currentRound } from './bracketModel'
 import { BracketCard } from './MatchCard'
@@ -51,8 +51,9 @@ export default function RoundPages({
     if (smooth) setTimeout(() => (jumping.current = false), 800)
   }
 
-  // Open on the round being played.
-  useEffect(() => {
+  // Open on the round being played, before the first paint, so it never
+  // lands after (and undoes) a tab the reader has already chosen.
+  useLayoutEffect(() => {
     show(currentRound(rounds), false)
     // Only on first show; after that the reader's own swiping decides.
     // eslint-disable-next-line react-hooks/exhaustive-deps
