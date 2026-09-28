@@ -23,6 +23,7 @@ from app.models import (
     TournamentSummary,
     TournamentUpdate,
 )
+from app.refs import reassign_pool_refs
 from app.series import best_of, replace_games, series_result
 from app.settings import require_confirmed_settings
 from app.scoring import (
@@ -464,6 +465,67 @@ def hold_match(
             detail="version conflict: match was updated by someone else, please refetch and retry",
         )
     dispatch(session, match.tournament_id)
+    session.commit()
+    session.refresh(match)
+    return match
+
+
+class RefUpdate(SQLModel):
+    ref_team_id: int | None = None
+    # Hand the ref back to automatic assignment; ref_team_id is then ignored.
+    automatic: bool = False
+    version: int
+
+
+@router.patch("/matches/{match_id}/ref", response_model=Match)
+def set_match_ref(
+    match_id: int, data: RefUpdate, session: Session = Depends(get_session)
+) -> Match:
+    """Choose a pool match's ref by hand (a team, or None for N/A), or go back to automatic.
+
+    The rest of the pool's automatic refs are then recomputed, so a team
+    picked here isn't also reffing another court in the same slot. Refs stay
+    editable after the match is finished.
+    """
+    match = session.get(Match, match_id)
+    if match is None:
+        raise HTTPException(status_code=404, detail="Match not found")
+    if match.pool_id is None:
+        raise HTTPException(status_code=400, detail="only pool matches have refs for now")
+    if not data.automatic and data.ref_team_id is not None:
+        ref = session.get(Team, data.ref_team_id)
+        if ref is None or ref.pool_id != match.pool_id:
+            raise HTTPException(status_code=400, detail="the ref must be a team in this pool")
+        playing = session.exec(
+            select(Match.id).where(
+                Match.pool_id == match.pool_id,
+                Match.round == match.round,
+                (Match.team1_id == ref.id) | (Match.team2_id == ref.id),
+            )
+        ).first()
+        if playing is not None:
+            raise HTTPException(
+                status_code=400, detail=f"{ref.name} is playing in this slot, so it can't ref"
+            )
+
+    values = (
+        {"ref_set_at": None}
+        if data.automatic
+        else {"ref_team_id": data.ref_team_id, "ref_set_at": datetime.now()}
+    )
+    result = session.execute(
+        update(Match)
+        .where(Match.id == match_id, Match.version == data.version)
+        .values(**values, version=Match.version + 1)
+    )
+    if result.rowcount == 0:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="version conflict: match was updated by someone else, please refetch and retry",
+        )
+    session.expire_all()
+    reassign_pool_refs(session, match.pool_id)
     session.commit()
     session.refresh(match)
     return match

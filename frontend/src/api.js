@@ -336,6 +336,12 @@ export function holdMatch(matchId, { onHold, version }) {
   return patchJson(`/matches/${matchId}/hold`, { on_hold: onHold, version })
 }
 
+// A pool match's ref: a team id, or null for N/A, both set by hand; or
+// automatic, which hands it back to the server's assignment.
+export function setMatchRef(matchId, { refTeamId = null, automatic = false, version }) {
+  return patchJson(`/matches/${matchId}/ref`, { ref_team_id: refTeamId, automatic, version })
+}
+
 export function scheduleMatch(matchId, { court, scheduledTime }) {
   return patchJson(`/matches/${matchId}/schedule`, {
     court,

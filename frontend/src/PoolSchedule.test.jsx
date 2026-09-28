@@ -34,14 +34,22 @@ function poolMatch(id, round, team1, team2, fields = {}) {
     team2_score: null,
     status: 'ready',
     winner_id: null,
+    ref_team_id: null,
+    ref_set_at: null,
     version: 1,
     ...fields,
   }
 }
 
 const schedule = [
-  poolMatch(1, 1, 10, 11, { team1_score: 21, team2_score: 15, status: 'complete', winner_id: 10 }),
-  poolMatch(2, 2, 10, 12),
+  poolMatch(1, 1, 10, 11, {
+    team1_score: 21,
+    team2_score: 15,
+    status: 'complete',
+    winner_id: 10,
+    ref_team_id: 12,
+  }),
+  poolMatch(2, 2, 10, 12, { ref_team_id: 11 }),
   poolMatch(3, 3, 11, 12),
 ]
 
@@ -50,16 +58,20 @@ function matchRow(teamsText) {
   return screen.getByText(teamsText).closest('li')
 }
 
-test('lists each slot with its court, teams, score, and who is idle', async () => {
+test('lists each slot with its court, teams, score, and ref', async () => {
   vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
 
-  render(inRouter(<PoolSchedule pool={pool} teams={teams} />))
+  render(inRouter(<PoolSchedule pool={pool} teams={teams} />), { user: null })
 
   const firstSlot = (await screen.findByRole('heading', { name: /^Slot 1/ })).closest('li')
   const played = within(firstSlot).getByText('Spikers vs Diggers').closest('li')
   expect(played).toHaveTextContent('Court 1')
   expect(played).toHaveTextContent('21–15')
-  expect(within(firstSlot).getByText('Observing: Blockers')).toBeInTheDocument()
+  expect(within(played).getByText('Ref: Blockers')).toBeInTheDocument()
+  expect(within(matchRow('Diggers vs Blockers')).getByText('Ref: N/A')).toBeInTheDocument()
+  // Blockers is reffing, so no one rests; no one is ever "observing".
+  expect(within(firstSlot).queryByText(/Resting/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/Observing/)).not.toBeInTheDocument()
   expect(screen.queryByText(/Elsewhere/)).not.toBeInTheDocument()
 })
 
@@ -138,14 +150,95 @@ test('choosing a pairing marks it in the grid and the schedule', async () => {
   expect(entries[0]).not.toHaveAttribute('aria-current')
 })
 
-test('splits idle teams evenly between observing and resting', async () => {
-  const bigPool = [10, 11, 12, 13, 14].map((id) => ({ id, name: `T${id}`, pool_id: 1 }))
-  vi.spyOn(api, 'getPoolMatches').mockResolvedValue([poolMatch(1, 1, 10, 11)])
+const bigPool = [10, 11, 12, 13, 14].map((id) => ({ id, name: `T${id}`, pool_id: 1 }))
+
+test('idle teams not reffing are listed as resting', async () => {
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue([poolMatch(1, 1, 10, 11, { ref_team_id: 12 })])
 
   render(inRouter(<PoolSchedule pool={pool} teams={bigPool} />))
 
-  expect(await screen.findByText('Observing: T12, T13')).toBeInTheDocument()
-  expect(screen.getByText('Resting: T14')).toBeInTheDocument()
+  expect(await screen.findByText('Resting: T13, T14')).toBeInTheDocument()
+  expect(screen.queryByText(/Observing/)).not.toBeInTheDocument()
+})
+
+test('signed in, the Ref dropdown offers Automatic, the teams free that slot, and N/A', async () => {
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue([
+    poolMatch(1, 1, 10, 11, { ref_team_id: 12 }),
+    poolMatch(2, 1, 12, 13, {
+      position: 2,
+      court: 2,
+      ref_team_id: 14,
+      ref_set_at: '2026-09-28T10:00:00',
+    }),
+  ])
+  const withOutsider = [...bigPool, { id: 99, name: 'Other pool', pool_id: 2 }]
+
+  render(inRouter(<PoolSchedule pool={pool} teams={withOutsider} />))
+
+  const automatic = await screen.findByRole('combobox', { name: 'Ref for T10 vs T11' })
+  expect(within(automatic).getAllByRole('option').map((option) => option.textContent)).toEqual([
+    'Automatic (T12)',
+    'T14',
+    'N/A',
+  ])
+  expect(automatic).toHaveValue('auto')
+  // A hand-set ref shows as that team.
+  expect(screen.getByRole('combobox', { name: 'Ref for T12 vs T13' })).toHaveValue('14')
+})
+
+test('changing a ref saves it and reloads the schedule; Automatic and N/A are sent as such', async () => {
+  const before = [poolMatch(1, 1, 10, 11, { ref_team_id: 12, version: 4 })]
+  const after = [
+    poolMatch(1, 1, 10, 11, { ref_team_id: 13, ref_set_at: '2026-09-28T10:00:00', version: 5 }),
+  ]
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValueOnce(before).mockResolvedValue(after)
+  const setMatchRef = vi.spyOn(api, 'setMatchRef').mockResolvedValue(after[0])
+
+  render(inRouter(<PoolSchedule pool={pool} teams={bigPool} />))
+
+  const select = await screen.findByRole('combobox', { name: 'Ref for T10 vs T11' })
+  fireEvent.change(select, { target: { value: '13' } })
+
+  await waitFor(() => expect(select).toHaveValue('13'))
+  expect(setMatchRef).toHaveBeenCalledWith(1, { automatic: false, refTeamId: 13, version: 4 })
+
+  fireEvent.change(select, { target: { value: 'na' } })
+  await waitFor(() =>
+    expect(setMatchRef).toHaveBeenLastCalledWith(1, {
+      automatic: false,
+      refTeamId: null,
+      version: 5,
+    }),
+  )
+  await waitFor(() => expect(select).not.toBeDisabled())
+  fireEvent.change(select, { target: { value: 'auto' } })
+  await waitFor(() =>
+    expect(setMatchRef).toHaveBeenLastCalledWith(1, { automatic: true, refTeamId: null, version: 5 }),
+  )
+})
+
+test('shows why a ref change was refused', async () => {
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue([poolMatch(1, 1, 10, 11, { ref_team_id: 12 })])
+  vi.spyOn(api, 'setMatchRef').mockRejectedValue({
+    json: () => Promise.resolve({ detail: 'version conflict: match was updated by someone else' }),
+  })
+
+  render(inRouter(<PoolSchedule pool={pool} teams={bigPool} />))
+
+  fireEvent.change(await screen.findByRole('combobox', { name: 'Ref for T10 vs T11' }), {
+    target: { value: '13' },
+  })
+
+  expect(await screen.findByText(/version conflict/)).toBeInTheDocument()
+})
+
+test('signed out, there is no Ref dropdown', async () => {
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue([poolMatch(1, 1, 10, 11, { ref_team_id: 12 })])
+
+  render(inRouter(<PoolSchedule pool={pool} teams={bigPool} />), { user: null })
+
+  expect(await screen.findByText('Ref: T12')).toBeInTheDocument()
+  expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
 })
 
 test('generates the schedule using the tournament setting for games per pairing', async () => {

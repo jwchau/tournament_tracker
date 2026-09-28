@@ -2448,6 +2448,27 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   overflow-wrap: anywhere;
 }
 
+/* The pairing, with its ref underneath. */
+.slot-pairing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.slot-ref {
+  font: 400 14px/20px var(--ui);
+  color: var(--muted);
+}
+
+.slot-ref label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  color: inherit;
+}
+
 .slot-teams:hover {
   color: var(--accent-text);
   text-decoration: underline;

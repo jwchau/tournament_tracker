@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import { generatePoolSchedule, getPoolMatches } from './api'
+import { generatePoolSchedule, getPoolMatches, setMatchRef } from './api'
 import { useAuth } from './auth'
 import CorrectionForm from './CorrectionForm'
 import Loading from './Loading'
@@ -14,13 +14,6 @@ function groupBySlot(matches) {
     slots.get(match.round).push(match)
   }
   return [...slots.entries()].sort(([a], [b]) => a - b)
-}
-
-// Observing vs. resting is only a display label for idle teams (scheduling only tracks playing vs. idle):
-// split them as evenly as possible, observers first.
-function splitIdle(idleTeams) {
-  const observing = Math.ceil(idleTeams.length / 2)
-  return [idleTeams.slice(0, observing), idleTeams.slice(observing)]
 }
 
 const matchAnchor = (match) => `pool-match-${match.id}`
@@ -36,6 +29,43 @@ function Score({ left, right, winner }) {
       <span className={winner === 'left' ? 'score-won' : undefined}>{left}</span>–
       <span className={winner === 'right' ? 'score-won' : undefined}>{right}</span>
     </span>
+  )
+}
+
+// The Ref dropdown's value: automatic, or what an organizer chose by hand.
+const refChoice = (match) =>
+  match.ref_set_at == null ? 'auto' : match.ref_team_id == null ? 'na' : String(match.ref_team_id)
+
+/**
+ * A match's ref. Signed in, a dropdown: Automatic (naming who the rules
+ * picked), the teams free to ref this slot, or N/A.
+ */
+function MatchRef({ match, eligible, nameOf, signedIn, onChange, saving, error }) {
+  const current = match.ref_team_id == null ? 'N/A' : nameOf(match.ref_team_id)
+  if (!signedIn) return <p className="slot-ref">Ref: {current}</p>
+  return (
+    <div className="slot-ref">
+      <label>
+        Ref{' '}
+        <select
+          aria-label={`Ref for ${nameOf(match.team1_id)} vs ${nameOf(match.team2_id)}`}
+          value={refChoice(match)}
+          disabled={saving}
+          onChange={(event) => onChange(match, event.target.value)}
+        >
+          <option value="auto">
+            Automatic{match.ref_set_at == null ? ` (${current})` : ''}
+          </option>
+          {eligible.map((team) => (
+            <option key={team.id} value={String(team.id)}>
+              {team.name}
+            </option>
+          ))}
+          <option value="na">N/A</option>
+        </select>
+      </label>
+      {error && <p className="finish-note">{error}</p>}
+    </div>
   )
 }
 
@@ -139,6 +169,9 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
   const [error, setError] = useState(null)
   // The pairing last chosen in the grid or the schedule, marked in both.
   const [selectedId, setSelectedId] = useState(null)
+  // The match whose ref is being saved, and why the last ref change failed.
+  const [savingRefId, setSavingRefId] = useState(null)
+  const [refError, setRefError] = useState(null)
   const { user } = useAuth()
 
   usePolling(() => getPoolMatches(pool.id), setMatches, pool.id)
@@ -165,6 +198,25 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
     setMatches((current) =>
       (current ?? []).map((match) => (match.id === updated.id ? updated : match)),
     )
+  }
+
+  async function handleRefChange(match, choice) {
+    setSavingRefId(match.id)
+    setRefError(null)
+    try {
+      await setMatchRef(match.id, {
+        automatic: choice === 'auto',
+        refTeamId: choice === 'auto' || choice === 'na' ? null : Number(choice),
+        version: match.version,
+      })
+      // Other matches' automatic refs can move to make room, so reload them all.
+      setMatches(await getPoolMatches(pool.id))
+    } catch (failure) {
+      const body = await failure?.json?.().catch(() => null)
+      setRefError({ matchId: match.id, message: body?.detail ?? "Couldn't change the ref." })
+    } finally {
+      setSavingRefId(null)
+    }
   }
 
   if (matches === null) return <Loading label="Loading schedule" rows={4} />
@@ -204,7 +256,9 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
         <ol className="slot-list">
           {slots.map(([slot, slotMatches]) => {
             const playing = new Set(slotMatches.flatMap((m) => [m.team1_id, m.team2_id]))
-            const [observing, resting] = splitIdle(poolTeams.filter((t) => !playing.has(t.id)))
+            const idle = poolTeams.filter((team) => !playing.has(team.id))
+            const reffing = new Set(slotMatches.map((m) => m.ref_team_id))
+            const resting = idle.filter((team) => !reffing.has(team.id))
             const now = slot === nowSlot
             return (
               <li key={slot} className="slot" data-now={now ? '' : undefined}>
@@ -230,13 +284,24 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
                         aria-current={match.id === selectedId ? 'true' : undefined}
                       >
                         <span className="court-tag">Court {match.court ?? '–'}</span>
-                        <a
-                          className="slot-teams"
-                          href={`#${gridAnchor(match, match.team1_id)}`}
-                          onClick={() => setSelectedId(match.id)}
-                        >
-                          {`${team1} vs ${team2}`}
-                        </a>
+                        <div className="slot-pairing">
+                          <a
+                            className="slot-teams"
+                            href={`#${gridAnchor(match, match.team1_id)}`}
+                            onClick={() => setSelectedId(match.id)}
+                          >
+                            {`${team1} vs ${team2}`}
+                          </a>
+                          <MatchRef
+                            match={match}
+                            eligible={idle}
+                            nameOf={nameOf}
+                            signedIn={Boolean(user)}
+                            onChange={handleRefChange}
+                            saving={savingRefId === match.id}
+                            error={refError?.matchId === match.id ? refError.message : null}
+                          />
+                        </div>
                         {match.team1_score != null && (
                           <span className="slot-score" data-live={complete ? undefined : ''}>
                             <span
@@ -281,9 +346,6 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
                     )
                   })}
                 </ul>
-                {observing.length > 0 && (
-                  <p className="slot-idle">Observing: {observing.map((team) => team.name).join(', ')}</p>
-                )}
                 {resting.length > 0 && (
                   <p className="slot-idle">Resting: {resting.map((team) => team.name).join(', ')}</p>
                 )}
