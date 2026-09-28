@@ -2393,9 +2393,11 @@ a.slot-cell:hover {
   flex-direction: column;
 }
 
+/* Phones: the court tag and the pairing share the first line; the ref, the
+   score, the court link and Correct each take a full-width line beneath. */
 .slot-match {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 8px 12px;
   padding: 10px 4px;
@@ -2423,18 +2425,19 @@ a.slot-cell:hover {
   }
 }
 
-.slot-match > :nth-child(n + 4) {
+.slot-match > :nth-child(n + 3),
+.slot-match .slot-ref {
   grid-column: 1 / -1;
   justify-self: start;
 }
 
-/* Wider screens: the link or Correct sits at the end of the match's row. */
+/* Wider screens: the score, then the link or Correct, at the end of the match's row. */
 @media (min-width: 768px) {
   .slot-match {
     grid-template-columns: auto minmax(0, 1fr) auto auto;
   }
 
-  .slot-match > :nth-child(n + 4) {
+  .slot-match > :nth-child(n + 3) {
     grid-column: auto;
     justify-self: end;
   }
@@ -2460,15 +2463,24 @@ a.slot-cell:hover {
   overflow-wrap: anywhere;
 }
 
-/* The pairing, with its ref underneath. */
+/* The pairing, with its ref underneath. On phones its teams and ref join
+   the row's grid directly, so the ref can take a full-width line. */
 .slot-pairing {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 0;
+  display: contents;
+}
+
+/* After the base rule above, so it wins on wider screens. */
+@media (min-width: 768px) {
+  .slot-pairing {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+  }
 }
 
 .slot-ref {
+  max-width: 100%;
   font: 400 14px/20px var(--ui);
   color: var(--muted);
 }
@@ -2477,8 +2489,18 @@ a.slot-cell:hover {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  max-width: 100%;
   font: inherit;
   color: inherit;
+}
+
+/* The dropdown is as wide as its longest team name; let it shrink to the
+   pairing's column (the closed select cuts the name short) rather than
+   spill over the score or the court link. */
+.slot-ref select {
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
 }
 
 .slot-teams:hover {

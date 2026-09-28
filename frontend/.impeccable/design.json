@@ -240,7 +240,7 @@
         "gap": "12px",
         "slot": { "selector": ".slot", "fill": "--panel", "radius": "16px", "shadow": "--elevation-3", "padding": "14px 14px 16px", "gap": "10px", "head": "slot-head" },
         "now": { "selector": ".slot[data-now]", "ring": "inset 1px --accent-text over --elevation-3", "chip": { "selector": ".now-chip", "text": "Now", "type": "now-chip", "edge": "inset 1px --accent-text", "radius": "12px", "padding": "2px 10px", "fill": "none" } },
-        "row": { "selector": ".slot-match", "layout": "court tag, teams, score; link or Correct on its own line below 768px, at the row's end from 768px", "padding": "10px 4px", "divider": "1px --hairline between rows", "scrollMarginTop": "96px" },
+        "row": { "selector": ".slot-match", "layout": "below 768px: court tag + teams, then ref, score, link or Correct each on a full-width line (.slot-pairing display: contents); from 768px: court tag, teams with the ref beneath, score, link or Correct at the row end", "padding": "10px 4px", "divider": "1px --hairline between rows", "scrollMarginTop": "96px" },
         "courtTag": { "selector": ".court-tag", "fill": "--ink", "text": "--band-text", "type": "court-tag", "radius": "8px", "padding": "5px 9px" },
         "teams": { "selector": ".slot-teams", "type": "slot-teams", "link": "back to the pairing's grid cell", "hover": "--accent-text, underlined" },
         "scoreChip": { "selector": ".score-chip", "fill": "--band-ghost top half over --ink", "seam": "1px --flip-seam at 0.7", "ring": "1px --hairline", "radius": "8px", "minWidth": "44px", "padding": "0 8px", "type": "schedule-score-chip", "winner": "--amber", "running": "--band-muted (.slot-score[data-live])" },
