@@ -56,6 +56,66 @@ test('loads the tournament and lists its teams with player counts, linking to th
   expect(screen.getByText(/2 players/i)).toBeInTheDocument()
 })
 
+test('the Teams heading counts every registered team', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    settings_confirmed: true,
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([
+    { id: 10, tournament_id: 1, name: 'Ice Wolves', player_count: 2, checked_in: true },
+    { id: 11, tournament_id: 1, name: 'Fire Hawks', player_count: 3, checked_in: false },
+  ])
+
+  renderAt(1)
+
+  expect(await screen.findByRole('heading', { name: 'Teams, 2' })).toBeInTheDocument()
+  expect(screen.queryByText(/no teams yet/i)).not.toBeInTheDocument()
+})
+
+test('a tournament without teams shows a count of 0 beside the empty message', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    settings_confirmed: true,
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([])
+
+  renderAt(1)
+
+  expect(await screen.findByRole('heading', { name: 'Teams, 0' })).toBeInTheDocument()
+  expect(screen.getByText(/no teams yet/i)).toBeInTheDocument()
+})
+
+test('adding a team from the Manage drawer updates the count', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    settings_confirmed: true,
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([
+    { id: 10, tournament_id: 1, name: 'Ice Wolves', player_count: 1 },
+  ])
+  vi.spyOn(api, 'createTeam').mockResolvedValue({ id: 11, tournament_id: 1, name: 'Fire Hawks' })
+
+  renderAt(1)
+  await screen.findByRole('heading', { name: 'Teams, 1' })
+
+  fireEvent.change(screen.getByLabelText(/team name/i), { target: { value: 'Fire Hawks' } })
+  fireEvent.click(screen.getByRole('button', { name: /add team/i }))
+
+  expect(await screen.findByRole('heading', { name: 'Teams, 2' })).toBeInTheDocument()
+})
+
 test('links to the court list for scorekeepers', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,

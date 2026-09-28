@@ -382,7 +382,10 @@ export default function TournamentPage() {
 
           <section className="board-section" aria-labelledby="teams-heading">
             <div className="section-head">
-              <h3 id="teams-heading">Teams</h3>
+              <h3 id="teams-heading">
+                Teams<span className="visually-hidden">,</span>{' '}
+                <span className="heading-count">{teams.length}</span>
+              </h3>
               <label htmlFor="show-rosters">
                 <input
                   id="show-rosters"
@@ -393,6 +396,7 @@ export default function TournamentPage() {
                 Show players
               </label>
             </div>
+            {teams.length === 0 && <p className="setup-note">No teams yet.</p>}
             <ul className="team-list">
               {teams.map((team) => (
                 <li key={team.id}>
