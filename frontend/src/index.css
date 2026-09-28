@@ -608,6 +608,13 @@ form > select {
   color: var(--muted);
 }
 
+/* A count riding in a section heading, e.g. "Teams 12". */
+.heading-count {
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
 .board-section {
   display: flex;
   flex-direction: column;
