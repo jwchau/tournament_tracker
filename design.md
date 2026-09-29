@@ -730,7 +730,7 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
   - The standard modal (`--surface`, 16px radius, 24px padding, 12px gap) widened to 560px and capped at the viewport height. The head and the actions stay fixed; the brackets between them (`.seeding-tiers`) scroll with a thin `--border` scrollbar.
   - The title, a `--muted` note, then the format select.
   - Each bracket is an Unbounded 700 18/24 heading over a list of rows (`.seed-list`): `--surface-2`, 12px radius, 6px apart. A row holds the seed number (Unbounded 700 16/24, `--muted`, tabular), the team name (Inter 600 16/24) over its pool finish (`.seed-finish`, Inter 14/20 `--muted`), and two 48px chevron buttons (`.seed-move`, 20px SVG, transparent, 35% when disabled) to move it up or down.
-  - Actions on the right: Cancel and the primary confirm. **Reset to standings order** (`.seeding-reset`, transparent, `--accent-text`) sits at the left and appears once the order has changed.
+  - Actions on the right: Cancel and the primary confirm. **Reset to standings order** (`.seeding-reset`, transparent, `--accent-text`) sits at the left and is always there, at 40% until the order has changed, so the row never changes size. Below 520px it takes the first row to itself, in both states.
   - After a move, focus stays on the same team's button, falling to the opposite one when it reaches an end.
 - **Champion banner** (`.champion`, `ChampionBanner` in `BracketDiagram.jsx`), on the tournament page's bracket cards and on the bracket page once a champion is decided:
   - One sentence, no label above it: "Aces win the bracket", in Unbounded 700 22/26.4 `--text`, wrapping anywhere.

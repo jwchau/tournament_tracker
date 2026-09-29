@@ -1641,10 +1641,31 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   opacity: 0.35;
 }
 
+/* Always there, so the row is the same size whether or not the order changed. */
+.seeding-modal .modal-actions {
+  flex-wrap: nowrap;
+}
+
 .seeding-reset {
   margin-right: auto;
   background: transparent;
   color: var(--accent-text);
+}
+
+.seeding-reset:disabled {
+  opacity: 0.4;
+}
+
+/* Too narrow for three buttons in a row: Reset takes the first row, always. */
+@media (max-width: 520px) {
+  .seeding-modal .modal-actions {
+    flex-wrap: wrap;
+  }
+
+  .seeding-reset {
+    flex: 1 0 100%;
+    margin-right: 0;
+  }
 }
 
 /* ---------- Bracket diagram ---------- */

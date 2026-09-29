@@ -17,8 +17,9 @@ changes.
   (moved here from the panel), then each bracket's teams in seed order with
   their pool finish ("Pool A · 1st"). Each team has move up and move down
   buttons; the first can't go up, the last can't go down. **Reset to
-  standings order** appears once anything has moved. **Cancel** and Escape
-  close it and build nothing.
+  standings order** is always in the row, disabled until something has moved,
+  so the dialog is the same size either way. **Cancel** and Escape close it
+  and build nothing.
 - **Only the order within a bracket changes.** Which bracket a team lands in
   stays as the standings decide.
 - `GET /tournaments/{id}/playoff-seeding` returns `{ ready, reason, tiers }`,

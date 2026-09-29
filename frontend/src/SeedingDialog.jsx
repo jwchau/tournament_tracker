@@ -140,11 +140,14 @@ export default function SeedingDialog({
         </div>
 
         <div className="modal-actions">
-          {changed && (
-            <button type="button" className="seeding-reset" onClick={() => setOrder(original)}>
-              Reset to standings order
-            </button>
-          )}
+          <button
+            type="button"
+            className="seeding-reset"
+            disabled={!changed}
+            onClick={() => setOrder(original)}
+          >
+            Reset to standings order
+          </button>
           <button type="button" onClick={onCancel}>
             Cancel
           </button>

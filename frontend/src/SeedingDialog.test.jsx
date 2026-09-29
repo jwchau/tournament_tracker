@@ -67,13 +67,16 @@ test('the first team cannot move up and the last cannot move down', () => {
 
 test('resetting brings back the standings order, which then confirms as unchanged', () => {
   const { onConfirm } = renderDialog()
-  expect(screen.queryByRole('button', { name: /reset to standings order/i })).not.toBeInTheDocument()
+  // Always in the row, so the dialog is the same size before and after a move.
+  const reset = screen.getByRole('button', { name: /reset to standings order/i })
+  expect(reset).toBeDisabled()
 
   fireEvent.click(screen.getByRole('button', { name: 'Move Bees up' }))
-  fireEvent.click(screen.getByRole('button', { name: /reset to standings order/i }))
+  expect(reset).toBeEnabled()
+  fireEvent.click(reset)
 
   expect(names('Bracket 1')).toEqual(['Aces', 'Bees', 'Cats'])
-  expect(screen.queryByRole('button', { name: /reset to standings order/i })).not.toBeInTheDocument()
+  expect(reset).toBeDisabled()
   fireEvent.click(screen.getByRole('button', { name: 'Confirm and advance' }))
   expect(onConfirm).toHaveBeenCalledWith({ format: 'single', seeding: undefined })
 })
