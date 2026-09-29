@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { generatePoolSchedule, getPoolMatches, setMatchRef } from './api'
@@ -8,6 +8,9 @@ import Loading from './Loading'
 import { refName, refUpdate } from './refModel'
 import RefSelect from './RefSelect'
 import { usePolling } from './usePolling'
+import { useMediaQuery } from './useMediaQuery'
+import { useRowLimit } from './useRowLimit'
+import { slotsInView } from './scheduleView'
 
 function groupBySlot(matches) {
   const slots = new Map()
@@ -76,6 +79,13 @@ function CellScore({ match, teamId }) {
  * schedule below; choosing one marks the match in both.
  */
 function ResultsGrid({ poolTeams, slots, nowSlot, selectedId, onSelect, nameOf }) {
+  // Beside the standings (from 1024px) the panel takes their height, set in
+  // CSS; stacked on narrower screens it shows four teams. Either way the rest
+  // scroll under the pinned slot heads.
+  const besideStandings = useMediaQuery('(min-width: 1024px)')
+  const scrollRef = useRef(null)
+  const limit = useRowLimit(scrollRef, 'tbody tr', besideStandings ? Infinity : 4, poolTeams.length)
+
   function cell(team, slotMatches) {
     const playing = slotMatches.find(
       (match) => match.team1_id === team.id || match.team2_id === team.id,
@@ -121,7 +131,12 @@ function ResultsGrid({ poolTeams, slots, nowSlot, selectedId, onSelect, nameOf }
   }
 
   return (
-    <div className="grid-scroll">
+    <div
+      ref={scrollRef}
+      className="grid-scroll"
+      style={limit.style}
+      data-more={limit.more ? '' : undefined}
+    >
       <table className="slot-grid" aria-label="Results grid">
         <thead>
           <tr>
@@ -169,6 +184,31 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
   const [savingRefId, setSavingRefId] = useState(null)
   const [refError, setRefError] = useState(null)
   const { user } = useAuth()
+
+  // The schedule shows about three matches' worth of slots; the rest scroll.
+  // Courts in use are the most matches any slot plays at once.
+  const courtsInUse = Math.max(
+    1,
+    ...groupBySlot(matches ?? []).map(([, slotMatches]) => slotMatches.length),
+  )
+  const scheduleRef = useRef(null)
+  const scheduleLimit = useRowLimit(
+    scheduleRef,
+    ':scope > .slot',
+    slotsInView(courtsInUse),
+    matches?.length,
+  )
+  // Open the schedule on the slot being played, once, without moving the page.
+  const openedOnNow = useRef(false)
+  useEffect(() => {
+    const list = scheduleRef.current
+    if (openedOnNow.current || !list || !scheduleLimit.limited) return
+    const now = list.querySelector(':scope > .slot[data-now]')
+    // Measured from the list's padding edge, so the slot's top ring stays in view.
+    const padding = parseFloat(getComputedStyle(list).paddingTop) || 0
+    if (now) list.scrollTop = Math.max(0, now.offsetTop - list.offsetTop - padding)
+    openedOnNow.current = true
+  }, [scheduleLimit.limited])
 
   usePolling(() => getPoolMatches(pool.id), setMatches, pool.id)
 
@@ -246,7 +286,12 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
 
       <section aria-labelledby="schedule-heading" className="board-section pool-schedule">
         <h3 id="schedule-heading">Schedule</h3>
-        <ol className="slot-list">
+        <ol
+          ref={scheduleRef}
+          className="slot-list"
+          style={scheduleLimit.style}
+          data-more={scheduleLimit.more ? '' : undefined}
+        >
           {slots.map(([slot, slotMatches]) => {
             const playing = new Set(slotMatches.flatMap((m) => [m.team1_id, m.team2_id]))
             const idle = poolTeams.filter((team) => !playing.has(team.id))

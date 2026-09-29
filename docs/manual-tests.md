@@ -177,6 +177,10 @@ change, untick the boxes it touches.
   - Setup: a pool in pool play.
   - Expect: the pool name large on the ink strip, then standings (advancing places amber), then the Results grid, then the Schedule. On desktop, standings and grid side by side.
 
+- [ ] **Long pools scroll in their boxes**
+  - Setup: a pool with 9+ teams (standings), 5+ teams (results) and a schedule.
+  - Expect: the standings show eight teams and scroll for the rest under a pinned header (on the pool page and in the tournament page's pool card); the results grid, beside the standings on a laptop, ends level with them (their footer included), and on a phone shows four teams, scrolling under pinned slot heads; the schedule shows one slot when three matches are played at once, two slots with two, three with one, opening on the Now slot. A capped list fades at the bottom until scrolled to its end, and the page itself never scrolls sideways.
+
 - [ ] **Results grid by slot**
   - Expect: slots across, the pool's teams down, no letters or hatched diagonal. A team's cell reads "Ct 1 · vs Setters" when it plays, then adds dark score chips from that team's side (winner's in amber; muted while it's played); "Ref · Ct 2" over the two teams, outlined with no fill, when it refs; "Rest" otherwise. The current slot's whole column is outlined.
 
