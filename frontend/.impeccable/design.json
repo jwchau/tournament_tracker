@@ -467,7 +467,11 @@
             "rest": {"selector": ".slot-cell[data-kind=rest]", "text": "Rest", "color": "--muted"},
             "now": {"selector": ".slot-grid [data-now]", "outline": "inset 1px --accent-text down the column, 10px radius at its ends", "head": "--accent-text, (now) for screen readers"},
             "selected": {"selector": ".slot-cell[aria-current]", "outline": "2px solid --accent-text", "offset": "2px (1px below 640px)", "note": "every cell showing the match (both teams' and the ref's) and its schedule row"},
-            "limit": {"rows": 4, "head": "thead th sticky top 0 on --panel-flat, corner z-index over both axes", "padding": "top padding moves into the heads (16px) while capped"}
+            "limit": {
+              "height": "from 1024px the standings block's height (section height 0, min-height 100%, grid flex 1); below 1024px four teams (useRowLimit)",
+              "head": "thead th sticky top 0 on --panel-flat, corner z-index over both axes",
+              "padding": "top padding moves into the heads (16px) whenever it scrolls"
+            }
           },
           "schedule": {
             "selector": ".slot-list",

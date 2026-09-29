@@ -8,6 +8,7 @@ import Loading from './Loading'
 import { refName, refUpdate } from './refModel'
 import RefSelect from './RefSelect'
 import { usePolling } from './usePolling'
+import { useMediaQuery } from './useMediaQuery'
 import { useRowLimit } from './useRowLimit'
 import { slotsInView } from './scheduleView'
 
@@ -78,9 +79,12 @@ function CellScore({ match, teamId }) {
  * schedule below; choosing one marks the match in both.
  */
 function ResultsGrid({ poolTeams, slots, nowSlot, selectedId, onSelect, nameOf }) {
-  // Four teams in view; the rest scroll under the pinned slot heads.
+  // Beside the standings (from 1024px) the panel takes their height, set in
+  // CSS; stacked on narrower screens it shows four teams. Either way the rest
+  // scroll under the pinned slot heads.
+  const besideStandings = useMediaQuery('(min-width: 1024px)')
   const scrollRef = useRef(null)
-  const limit = useRowLimit(scrollRef, 'tbody tr', 4, poolTeams.length)
+  const limit = useRowLimit(scrollRef, 'tbody tr', besideStandings ? Infinity : 4, poolTeams.length)
 
   function cell(team, slotMatches) {
     const playing = slotMatches.find(
