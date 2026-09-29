@@ -66,3 +66,14 @@ and the best-of stay open.
   it; locks disabled with their reason; the groups; best-of options; the drawer
   opening for an empty draft; the standings marking under an automatic setting;
   the main page grouping by date.
+
+## Follow-up
+
+- **Drop the unused `settings_confirmed` column.** The model no longer has it,
+  but databases created before this ticket keep the column (it has a server
+  default of 0, so inserts still work). Removing it needs a real migration:
+  `_add_missing_columns` only adds columns. Do it with the next change that
+  needs one, and take a backup first (`backups/`).
+- **Automatic advancing and `advance_per_pool` stay a non-null integer**, with 0
+  meaning automatic. Older databases have the column as NOT NULL, so a real null
+  would also need that migration.
