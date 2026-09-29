@@ -345,7 +345,6 @@ form > select {
 }
 
 .app-bar h1 {
-  margin-right: auto;
   font-size: inherit;
 }
 
@@ -411,6 +410,100 @@ form > select {
   background: var(--band-ghost-hover);
 }
 
+/* The page trail: an arrow up, Home › Tournament › Pool A › Court 2, an arrow
+   back down. It takes the bar's free width, its middle crumbs giving way first. */
+/* A zero basis, so the bar never wraps to fit the trail's full width; it
+   grows into the free space and its crumbs give way instead. */
+.page-trail {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font: 500 16px/24px var(--nav);
+}
+
+.page-trail .icon-button {
+  flex: none;
+  color: var(--band-text);
+  background: var(--band-ghost);
+}
+
+.page-trail .icon-button:hover:not(:disabled) {
+  background: var(--band-ghost-hover);
+}
+
+.trail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.trail-list::-webkit-scrollbar {
+  display: none;
+}
+
+.trail-list[data-scrolled='true'] {
+  mask-image: linear-gradient(to right, transparent, #000 24px);
+}
+
+.trail-list li {
+  display: flex;
+  align-items: center;
+  min-width: 3ch;
+  flex: 0 1 auto;
+}
+
+/* Home and the current page keep their names; the ones between shrink. */
+.trail-list li:first-child,
+.trail-list li:has(> .trail-current) {
+  flex-shrink: 0;
+}
+
+.trail-list a,
+.trail-current {
+  display: block;
+  max-width: 18ch;
+  padding: 12px 8px;
+  border-radius: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trail-list a {
+  color: var(--band-muted);
+  text-decoration: none;
+  transition: background 200ms ease-in-out, color 200ms ease-in-out;
+}
+
+.trail-list a:hover {
+  background: var(--band-ghost);
+  color: var(--band-text);
+}
+
+.trail-current {
+  color: var(--band-text);
+  font-weight: 600;
+}
+
+/* Pages the reader came up from: the way back down. */
+.trail-ahead {
+  opacity: 0.6;
+}
+
+.trail-sep {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--band-muted);
+}
+
 .icon-button {
   width: 48px;
   padding: 0;
@@ -462,10 +555,24 @@ form > select {
 
 /* Phones: one row. The brand keeps only its mark, and it already goes home. */
 @media (max-width: 639px) {
+  /* The brand and account links on the first row; the trail on its own below. */
   .app-bar-inner {
-    flex-wrap: nowrap;
-    gap: 8px;
-    padding-block: 8px;
+    gap: 4px 8px;
+    padding-block: 8px 4px;
+  }
+
+  .app-bar h1 {
+    margin-right: auto;
+  }
+
+  .page-trail {
+    order: 1;
+    flex-basis: 100%;
+  }
+
+  /* Phones scroll the trail rather than squeeze it; the current page stays in view. */
+  .trail-list li {
+    flex-shrink: 0;
   }
 
   .brand {
@@ -475,10 +582,6 @@ form > select {
 
   .nav-bar {
     gap: 4px;
-  }
-
-  .nav-bar .nav-home {
-    display: none;
   }
 
   .nav-bar a,

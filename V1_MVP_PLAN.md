@@ -49,6 +49,12 @@ the later ones need.
 5. **[26 — Pool grid by slot](tickets/26-pool-grid-by-slot.md):** slots
    across, teams down, with playing, ref and rest cells. It replaces the
    team-against-team grid.
+6. **[27 — Page trail](tickets/27-page-trail.md):** Home › tournament ›
+   pool, bracket, courts or team › court, in the app bar. A court sits
+   under the page it was opened from.
+7. **[28 — Trail arrows](tickets/28-trail-arrows.md):** the app bar's
+   arrows go up the trail and back down the way the reader came, instead of
+   through browser history.
 
 ## Then: restyle the rest to match design.md and PRODUCT.md
 

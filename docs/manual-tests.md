@@ -247,6 +247,10 @@ change, untick the boxes it touches.
 
 ## 7. Across the app
 
+- [ ] **Page trail and arrows**
+  - Do: go Home → a tournament → Pool A → a court; then ← ←, → →. Repeat through a bracket, the courts list and a team. Then open a court from its link on another page, and try it on a phone.
+  - Expect: the bar reads Home › tournament › Pool A › Court N, the current page in white and not a link. ← goes up (it's named "Up to …"); the pages you came up from stay on the trail, dimmed, and → goes back down them. A different link drops them. A court opened directly shows the pool or bracket using it. On a phone the trail has its own row, with the current page in view. The browser's back button still goes back through history.
+
 - [x] **Reduced motion**
   - Do: turn on reduced motion in the OS.
   - Expect: no flips, slides or drawer animation; scores simply change.

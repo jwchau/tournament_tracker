@@ -690,9 +690,10 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
   - The inner row is at least 64px tall and at most 1200px wide.
   - The brand is a 28px ember tile (8px radius) holding a 16px SVG mark in `--on-ember`, next to the Unbounded word.
   - Nav links and buttons are at least 48px tall with 12px radius and `--band-ghost` fills.
+  - **Page trail** (`nav.page-trail`, "Breadcrumb", `PageTrail.jsx`): after the brand, taking the bar's free width: an up arrow, the trail, a down arrow (48px `--band-ghost` icon buttons named "Up to Pool A" / "Down to Court 2", disabled with nothing that way). The trail (`ol.trail-list`) is DM Sans 500 16/24: earlier crumbs are links in `--band-muted` (hover `--band-ghost` fill and `--band-text`), the current page `--band-text` at 600 with `aria-current="page"`, split by 14px SVG chevrons in `--band-muted`. Crumbs are 48px tall, padding 12px 8px, 12px radius, at most 18ch with an ellipsis (full name as a tooltip); crumbs between Home and the current page shrink first when space runs out. Pages the reader came up from follow the current page at 0.6 opacity.
   - Icon buttons are 48px square (44px on phones) with 14px radius.
   - Health is an 8px dot with a visually hidden label: `--status-idle` before the first check; the error state is `--band-accent` with a 3px `--error-ring` halo.
-  - Below 640px the bar stays one row, the brand word is visually hidden, and the Home link is dropped.
+  - Below 640px the brand word is visually hidden and the bar takes two rows: the brand and account links, then the page trail on its own, full width. There the crumbs keep their size and the trail scrolls sideways, the current page scrolled into view and the start fading out (`mask-image`, 24px) while earlier crumbs are out of view.
 - **Board-head band** (`.board-head`):
   - A full-bleed ink band pulled up under the app bar, filled with `--ember-glow` over `--ink`.
   - At 1200px and wider, the bottom corners round to 16px.

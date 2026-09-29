@@ -302,7 +302,7 @@ export function resetPlayoffBrackets(tournamentId) {
 }
 
 export function getPlayoffBracket(bracketId) {
-  return getJson(`/playoff-brackets/${bracketId}`)
+  return getCachedJson(`/playoff-brackets/${bracketId}`)
 }
 
 export function getPlayoffReadiness(tournamentId) {
