@@ -1105,7 +1105,36 @@ form > select {
   color: var(--muted);
 }
 
-/* Standings tables, wherever they appear. */
+/* Standings tables, wherever they appear. Past eight teams the table scrolls
+   in its box (height set by useRowLimit) under a pinned header, whose fill
+   matches what the table sits on. */
+.standings-scroll {
+  --standings-head: var(--surface);
+}
+
+.pool-card .standings-scroll {
+  --standings-head: var(--panel-flat);
+}
+
+.standings-scroll:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-radius: 12px;
+}
+
+.standings-scroll[style] table[aria-label='Standings'] thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--standings-head);
+}
+
+/* A capped list fades out at the bottom while more waits below. */
+.standings-scroll[data-more],
+.slot-list[data-more] {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
+}
+
 table[aria-label='Standings'] {
   width: 100%;
   border-collapse: collapse;
@@ -2644,6 +2673,10 @@ table[aria-label='Standings'] tr.advancing td:first-child {
 }
 
 .slot-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--panel-flat);
   font: 700 14px/20px var(--display);
   color: var(--muted);
   text-align: center;
@@ -2662,6 +2695,20 @@ table[aria-label='Standings'] tr.advancing td:first-child {
      container clips the rest) and the cell gap to the right, so scrolled
      slots don't peek out beside the names. */
   box-shadow: -16px 0 0 var(--panel-flat), 6px 0 0 var(--panel-flat);
+}
+
+.slot-grid thead th.slot-grid-corner {
+  z-index: 3;
+}
+
+/* Capped (useRowLimit): the heads pin to the very top, so the panel's top
+   padding moves inside them rather than leaving a strip rows show through. */
+.grid-scroll[style] {
+  padding-top: 0;
+}
+
+.grid-scroll[style] .slot-grid thead th {
+  padding-top: 16px;
 }
 
 .slot-grid tbody th {
@@ -2793,6 +2840,13 @@ a.slot-cell:hover {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* Capped (useRowLimit): room for the slots' outer ring inside the scroll box. */
+.slot-list[style] {
+  padding: 3px;
+  margin: -3px;
+  overflow-x: hidden;
 }
 
 .slot {

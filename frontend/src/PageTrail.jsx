@@ -31,12 +31,22 @@ export default function PageTrail() {
   useEffect(() => {
     const list = listRef.current
     const current = currentRef.current
-    if (!list || !current) return
-    const listBox = list.getBoundingClientRect()
-    const box = current.getBoundingClientRect()
-    if (box.right > listBox.right) list.scrollLeft += box.right - listBox.right
-    else if (box.left < listBox.left) list.scrollLeft -= listBox.left - box.left
-    markScrolled()
+    if (!list || !current) return undefined
+    function keepCurrentInView() {
+      const listBox = list.getBoundingClientRect()
+      const box = current.getBoundingClientRect()
+      if (box.right > listBox.right) list.scrollLeft += box.right - listBox.right
+      else if (box.left < listBox.left) list.scrollLeft -= listBox.left - box.left
+      markScrolled()
+    }
+    keepCurrentInView()
+    // Web fonts arriving (or the window resizing) widen the crumbs after the
+    // names load, so check again whenever the current crumb changes size.
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const observer = new ResizeObserver(keepCurrentInView)
+    observer.observe(current)
+    observer.observe(list)
+    return () => observer.disconnect()
   }, [index, names])
 
   // Fade the start of the trail while earlier crumbs are scrolled out of view.
