@@ -292,7 +292,9 @@ test('keeps polling, so a result scored on the court shows up', async () => {
       ? { ...match, status: 'complete', team1_score: 21, team2_score: 17, winner_id: 20 }
       : match,
   )
-  const loadMatches = vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
+  // The semifinal is on a court, so the bracket is live and polled every 4s.
+  const onCourt = fiveTeamBracket.map((match) => (match.id === 16 ? { ...match, court: 1 } : match))
+  const loadMatches = vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(onCourt)
 
   renderBoard()
   await act(() => vi.advanceTimersByTimeAsync(0))
@@ -395,4 +397,59 @@ test('signed out, the panel shows the ref but no Ref dropdown', async () => {
 
   expect(panel('Semis · match 2')).toHaveTextContent('Ref: Aces')
   expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+})
+
+// How often the bracket is read depends on how live it is.
+async function pollsAfter(matches, waitMs) {
+  vi.useFakeTimers()
+  const load = vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(matches)
+  renderBoard()
+  await act(() => vi.advanceTimersByTimeAsync(0))
+  const first = load.mock.calls.length
+  await act(() => vi.advanceTimersByTimeAsync(waitMs))
+  return load.mock.calls.length - first
+}
+
+test('a bracket with a match on a court is read every 4 seconds', async () => {
+  const live = fiveTeamBracket.map((match) => (match.id === 16 ? { ...match, court: 2 } : match))
+
+  expect(await pollsAfter(live, 4000)).toBe(1)
+})
+
+test('a bracket only waiting for courts is read every 10 seconds, not 4', async () => {
+  expect(await pollsAfter(fiveTeamBracket, 9000)).toBe(0)
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+  expect(await pollsAfter(fiveTeamBracket, 10000)).toBe(1)
+})
+
+test('a finished bracket is read every 30 seconds', async () => {
+  const done = fiveTeamBracket.map((match) => ({ ...match, status: 'complete', winner_id: 10 }))
+
+  expect(await pollsAfter(done, 29000)).toBe(0)
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+  expect(await pollsAfter(done, 30000)).toBe(1)
+})
+
+test('a hidden tab is not read, and is read again the moment it is shown', async () => {
+  const live = fiveTeamBracket.map((match) => (match.id === 16 ? { ...match, court: 2 } : match))
+  vi.useFakeTimers()
+  const load = vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(live)
+  renderBoard()
+  await act(() => vi.advanceTimersByTimeAsync(0))
+  const hide = (hidden) => {
+    Object.defineProperty(document, 'hidden', { configurable: true, value: hidden })
+    document.dispatchEvent(new Event('visibilitychange'))
+  }
+
+  hide(true)
+  const whileHidden = load.mock.calls.length
+  await act(() => vi.advanceTimersByTimeAsync(60000))
+  expect(load.mock.calls.length).toBe(whileHidden)
+
+  hide(false)
+  await act(() => vi.advanceTimersByTimeAsync(0))
+  expect(load.mock.calls.length).toBe(whileHidden + 1)
+  Object.defineProperty(document, 'hidden', { configurable: true, value: false })
 })

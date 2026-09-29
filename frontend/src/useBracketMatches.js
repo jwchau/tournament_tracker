@@ -5,15 +5,28 @@ import { createCircuitBreaker } from './circuitBreaker'
 import { refUpdate } from './refModel'
 import { withTimeout } from './withTimeout'
 
-const POLL_INTERVAL_MS = 4000
+// How often a bracket is read, by how live it is: quickly while a match is on a
+// court (its scores are moving), slowly while matches wait for one, and rarely
+// once every match is finished (only a correction can change it).
+export const LIVE_POLL_MS = 4000
+export const WAITING_POLL_MS = 10000
+export const DONE_POLL_MS = 30000
 const REQUEST_TIMEOUT_MS = 5000
 const FAILURE_THRESHOLD = 3
 export const COOLDOWN_MS = 30000
 
+export function pollInterval(matches) {
+  if (matches.length === 0) return LIVE_POLL_MS
+  if (matches.every((match) => match.status === 'complete')) return DONE_POLL_MS
+  const onACourt = matches.some((match) => match.court != null && match.status !== 'complete')
+  return onACourt ? LIVE_POLL_MS : WAITING_POLL_MS
+}
+
 /**
  * A playoff bracket's matches and court queue, polled, with the changes an
  * organizer makes to them. Polling backs off after repeated failures
- * (connectionLost) and resumes after a cooldown.
+ * (connectionLost) and resumes after a cooldown, slows as the bracket gets
+ * less live (see pollInterval), and stops while the tab is hidden.
  */
 export function useBracketMatches(playoffBracketId) {
   const [matches, setMatches] = useState([])
@@ -26,22 +39,35 @@ export function useBracketMatches(playoffBracketId) {
 
   useEffect(() => {
     let cancelled = false
+    let timer = null
+    // What the last read found, for how soon to read again.
+    let latest = []
     const breaker = createCircuitBreaker({
       failureThreshold: FAILURE_THRESHOLD,
       cooldownMs: COOLDOWN_MS,
     })
 
+    function schedule() {
+      clearTimeout(timer)
+      if (cancelled || document.hidden) return
+      timer = setTimeout(refresh, pollInterval(latest))
+    }
+
     function refresh() {
+      clearTimeout(timer)
       breaker
         .execute(() => withTimeout(getPlayoffBracketMatches(playoffBracketId), REQUEST_TIMEOUT_MS))
         .then((data) => {
           if (cancelled) return
+          latest = data
           setMatches(data)
           setLoaded(true)
         })
         .catch(() => {})
         .finally(() => {
-          if (!cancelled) setConnectionLost(breaker.getState() === 'open')
+          if (cancelled) return
+          setConnectionLost(breaker.getState() === 'open')
+          schedule()
         })
       // Queue places only; the bracket still works without them.
       getBracketDispatch(playoffBracketId)
@@ -51,12 +77,19 @@ export function useBracketMatches(playoffBracketId) {
         .catch(() => {})
     }
 
+    // Nobody is looking at a hidden tab, so stop polling until it is shown again.
+    function handleVisibilityChange() {
+      if (document.hidden) clearTimeout(timer)
+      else refresh()
+    }
+
     refresh()
-    const interval = setInterval(refresh, POLL_INTERVAL_MS)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       cancelled = true
-      clearInterval(interval)
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [playoffBracketId])
 

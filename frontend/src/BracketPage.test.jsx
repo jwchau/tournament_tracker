@@ -184,7 +184,7 @@ test('a final scored on the court shows the placings without a reload', async ()
   vi.useFakeTimers({ shouldAdvanceTime: true })
   const final = {
     id: 1, bracket: 'winners', round: 1, position: 1,
-    team1_id: 10, team2_id: 11, status: 'ready', version: 1,
+    team1_id: 10, team2_id: 11, status: 'ready', court: 1, version: 1,
   }
   vi.spyOn(api, 'getPlayoffBracket').mockResolvedValue({ id: 30, tournament_id: 3, tier: 1 })
   vi.spyOn(api, 'getTournament')
