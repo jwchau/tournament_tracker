@@ -203,6 +203,34 @@ def test_every_playoff_tier_needs_a_champion_to_complete(client):
     assert _stage(client, tournament_id) == "complete"
 
 
+def test_the_tournaments_list_names_the_top_brackets_champion_once_complete(client):
+    tournament_id, [first, second] = _advanced(client, 2)
+
+    def summary():
+        return next(t for t in client.get("/tournaments").json() if t["id"] == tournament_id)
+
+    [first_final] = client.get(f"/playoff-brackets/{first['id']}/matches").json()
+    _complete(client, first_final["id"])
+    # Bracket 1 is decided, but the tournament isn't complete yet.
+    assert summary()["champion_name"] is None
+
+    [second_final] = client.get(f"/playoff-brackets/{second['id']}/matches").json()
+    _complete(client, second_final["id"])
+
+    assert summary()["stage"] == "complete"
+    assert summary()["champion_name"] == client.get(
+        f"/teams/{first_final['team1_id']}"
+    ).json()["name"]
+
+
+def test_a_tournament_still_being_played_has_no_champion(client):
+    tournament_id, _ = _bracket(client, 4)
+
+    [summary] = [t for t in client.get("/tournaments").json() if t["id"] == tournament_id]
+
+    assert summary["champion_name"] is None
+
+
 def test_resetting_brackets_goes_back_to_pool_play_after_pools(client):
     tournament_id, _ = _advanced(client, 1)
 

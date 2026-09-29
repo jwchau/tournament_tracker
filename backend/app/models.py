@@ -97,6 +97,8 @@ class TournamentSummary(SQLModel):
     settings_confirmed: bool
     created_at: datetime
     team_count: int
+    # The top playoff bracket's winner once the tournament is complete, else None.
+    champion_name: str | None = None
 
 
 class Pool(SQLModel, table=True):

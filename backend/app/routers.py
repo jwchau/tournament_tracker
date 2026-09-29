@@ -25,6 +25,7 @@ from app.models import (
 )
 from app.bracket_refs import sync_bracket_refs
 from app.refs import eligible_ref_team_ids, reassign_pool_refs
+from app.results import champion_id
 from app.series import best_of, replace_games, series_result
 from app.settings import require_confirmed_settings
 from app.scoring import (
@@ -59,9 +60,30 @@ def list_tournaments(session: Session = Depends(get_session)) -> list[Tournament
         ).all()
     )
     return [
-        TournamentSummary(**tournament.model_dump(), team_count=counts.get(tournament.id, 0))
+        TournamentSummary(
+            **tournament.model_dump(),
+            team_count=counts.get(tournament.id, 0),
+            champion_name=_champion_name(session, tournament),
+        )
         for tournament in tournaments
     ]
+
+
+def _champion_name(session: Session, tournament: Tournament) -> str | None:
+    """The top (tier 1) bracket's winner, once the tournament is complete."""
+    if tournament.stage != "complete":
+        return None
+    top = session.exec(
+        select(PlayoffBracket)
+        .where(PlayoffBracket.tournament_id == tournament.id)
+        .order_by(PlayoffBracket.tier)
+    ).first()
+    if top is None:
+        return None
+    matches = list(session.exec(select(Match).where(Match.playoff_bracket_id == top.id)).all())
+    winner = champion_id(matches) if matches else None
+    team = session.get(Team, winner) if winner is not None else None
+    return team.name if team is not None else None
 
 
 def _play_has_started(session: Session, tournament_id: int) -> bool:

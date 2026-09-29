@@ -49,5 +49,7 @@ test('a tournament being created cannot be created twice', async () => {
 
   finish({ id: 1, name: 'Spring Classic' })
 
-  expect(await screen.findByRole('button', { name: 'Create' })).toBeEnabled()
+  // Back to Create, which waits for the next name now that the field has cleared.
+  expect(await screen.findByRole('button', { name: 'Create' })).toBeDisabled()
+  expect(screen.getByLabelText(/tournament name/i)).toHaveValue('')
 })
