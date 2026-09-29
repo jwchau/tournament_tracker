@@ -768,6 +768,14 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
   - One line per team: the name at weight 600 in `--text`, and a **score chip** (`.court-link-chip`), a small flip card: `--ink` with a `--band-ghost` top half, as on the large card, a 1px `--flip-seam` seam at .7, a `--hairline` ring, 8px radius, at least 64px wide, padding 4px 10px, the score in Unbounded 700 28/40 `--band-text`.
   - Under the teams, the current match's ref (`.court-link-ref`, Inter 500 14.7/21 in `--muted`): "Ref: Aces" or "Ref: N/A". A free court shows none.
   - A free court (`[data-free]`) has no board: one outlined line, transparent with a 1px inset `--hairline` edge (hover `--accent-text`), and "Free" pushed to the right in Inter 500 14.7/21.
+- **Sign in and account** (`.form-page`, `LoginPage.jsx`, `AccountPage.jsx`):
+  - One narrow column: the court strip (`.court-strip-narrow`; the title Unbounded 28/32, and on the account page "Signed in as …" as its label) with everything under it 640px wide and centred. The strip's inset is nudged by one gutter so its title lines up with the panel's edge below.
+  - The form is a panel (`.form-panel`, the pool card's fill, 16px radius, `--elevation-3`, 20px padding, 16px gap) of full-width fields (label over a 48px input), then the primary submit, 56px tall and full width. A refused sign-in or password change shows as a line above the button in `--accent-text` (Inter 500 14.7/21, `role="alert"`).
+  - The account page puts "Change password" as a heading over the panel and the note about signing out elsewhere beneath it (`.section-note`). Signed out, it shows the strip and the standard `.setup-note` with the sign-in link.
+- **Correction dialog** (`.correction-modal`, `CorrectionForm.jsx`), opened by Correct on a finished match, on the pool page and in the bracket's match panel:
+  - It renders in the page's `<body>` (a portal), not beside the Correct button: the pool schedule fades and scrolls its list, and a fixed overlay inside it was clipped to that list.
+  - The standard modal at 520px, capped at the viewport height. The title "Correct A vs B" (the dialog's name), a `--muted` note ("Correcting A vs B", plus "(best of 3)"), then the scores: one game is two fields side by side (`.game-scores`, two equal columns 12px apart, each label over its box); a series has that row per game (`.correction-games`) with Add game and Remove last game beneath. A refusal shows in `--accent-text`. Close and the primary Review correction sit at the right; Review opens the confirmation with what would be reset.
+  - `.game-scores` is shared with the court board's fix-game form, and the series' conflict and save-error lines (`.series-alert`, Inter 500 14.7/21, `--accent-text`, centred, with a 48px Refetch button) match the save status.
 - **Team page** (`.team-page`, `TeamPage.jsx`, `PlayerForm.jsx`):
   - **Structure**: the court strip, holding the team's name at board-title scale (32/36, 48/48 from 768px), its seed and player count as the label ("Seed 3 · 4 players", or "No seed"), and Back to tournament. Then the sheet (`.team-sheet`, one column, `--section-gap` apart) and, signed in, Delete team last in a danger zone above a hairline.
   - **Sheet**: Details (signed in only) and Roster, each a heading outside a panel (`.team-panel`, the pool card's fill, 16px radius, `--elevation-3`, 20px padding, 12px gap). From 1024px they sit side by side in two equal columns 32px apart, top-aligned; a spectator's roster alone stays 640px wide.
@@ -866,8 +874,9 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
 
 ### Not yet overhauled
 
-These pages still use the default `.app-main > section` spacing and have not had a Kiln pass:
+Every page the app links to has had a Kiln pass. Two components have not, because nothing renders them:
 
-- The account and login pages, and the score and correction forms (including Correct on the pool page's finished matches and in the bracket's match panel). `SeriesForm` has had a pass only in its court-board mode; its plain form (fix-game fields, conflict and error lines) has not.
+- `ScoreEntryForm`: superseded by the court scoreboard and used only by its own test.
+- `SeriesForm` outside its court-board mode: the court page always passes `board`, so its plain form (score fields, conflict and error lines) is never shown.
 
-Treat how those pages look today as a gap to close, not as a pattern to copy.
+Treat them as a gap to close if they are ever used again, not as a pattern to copy.

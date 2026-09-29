@@ -24,29 +24,37 @@ export default function LoginPage() {
   }
 
   return (
-    <>
-      <h2>Sign in</h2>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="login-username">Username</label>
-        <input
-          id="login-username"
-          autoComplete="username"
-          required
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-        />
-        <label htmlFor="login-password">Password</label>
-        <input
-          id="login-password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-        <button type="submit">Sign in</button>
+    <div className="form-page">
+      <header className="court-strip court-strip-narrow">
+        <div className="court-strip-title">
+          <h2>Sign in</h2>
+        </div>
+      </header>
+      <form onSubmit={handleSubmit} className="form-panel">
+        <span className="field">
+          <label htmlFor="login-username">Username</label>
+          <input
+            id="login-username"
+            autoComplete="username"
+            required
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+          />
+        </span>
+        <span className="field">
+          <label htmlFor="login-password">Password</label>
+          <input
+            id="login-password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </span>
         {error && <p role="alert">{error}</p>}
+        <button type="submit">Sign in</button>
       </form>
-    </>
+    </div>
   )
 }

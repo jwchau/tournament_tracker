@@ -306,14 +306,18 @@ export default function SeriesForm({
       </ol>
       {!board && nextGame}
       {conflict && (
-        <p>
+        <p role="alert" className="series-alert">
           Version conflict: this series was updated elsewhere.{' '}
           <button type="button" onClick={handleRefetch}>
             Refetch latest
           </button>
         </p>
       )}
-      {submitError && <p>Couldn't save that game. Check the scores (no ties) and try again.</p>}
+      {submitError && (
+        <p role="alert" className="series-alert">
+          Couldn't save that game. Check the scores (no ties) and try again.
+        </p>
+      )}
     </section>
   )
 }

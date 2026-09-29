@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import ConfirmModal from './ConfirmModal'
 import { correctScore, listGames, previewCorrection } from './api'
@@ -92,85 +93,102 @@ export default function CorrectionForm({
   const team1Id = `correct-${match.id}-team1`
   const team2Id = `correct-${match.id}-team2`
 
+  // In the page's body, not beside the button: a list that fades or scrolls
+  // (the pool schedule) would clip and dim a fixed overlay inside it.
   return (
     <>
       {button}
-      <div className="modal-overlay">
-        <div className="modal" role="dialog" aria-modal="true" aria-label={title}>
-          <form onSubmit={handleReview}>
-            <p>
-              Correcting {team1Name} vs {team2Name}
-              {isSeries && ` (best of ${bestOf})`}
-            </p>
-            {isSeries ? (
-              <>
-                {games.map((game, index) => (
-                  <div key={index}>
-                    <GameScoreInputs
-                      idPrefix={`correct-${match.id}`}
-                      number={index + 1}
-                      team1Name={team1Name}
-                      team2Name={team2Name}
-                      scores={game}
-                      onChange={(scores) =>
-                        setGames((current) =>
-                          current.map((existing, i) => (i === index ? scores : existing)),
-                        )
-                      }
-                    />
+      {createPortal(
+        <div className="modal-overlay">
+          <div className="modal correction-modal" role="dialog" aria-modal="true" aria-label={title}>
+            <h3>{title}</h3>
+            <form onSubmit={handleReview} className="correction-form">
+              <p className="section-note">
+                Correcting {team1Name} vs {team2Name}
+                {isSeries && ` (best of ${bestOf})`}
+              </p>
+              {isSeries ? (
+                <>
+                  <div className="correction-games">
+                    {games.map((game, index) => (
+                      <GameScoreInputs
+                        key={index}
+                        idPrefix={`correct-${match.id}`}
+                        number={index + 1}
+                        team1Name={team1Name}
+                        team2Name={team2Name}
+                        scores={game}
+                        onChange={(scores) =>
+                          setGames((current) =>
+                            current.map((existing, i) => (i === index ? scores : existing)),
+                          )
+                        }
+                      />
+                    ))}
                   </div>
-                ))}
-                {games.length < bestOf && (
-                  <button
-                    type="button"
-                    onClick={() => setGames((current) => [...current, { team1: '', team2: '' }])}
-                  >
-                    Add game
-                  </button>
-                )}
-                {games.length > 1 && (
-                  <button type="button" onClick={() => setGames((current) => current.slice(0, -1))}>
-                    Remove last game
-                  </button>
-                )}
-              </>
-            ) : (
-              <>
-                <label htmlFor={team1Id}>{team1Name} score</label>
-                <input
-                  id={team1Id}
-                  type="number"
-                  required
-                  value={team1Score}
-                  onChange={(event) => setTeam1Score(event.target.value)}
-                />
-                <label htmlFor={team2Id}>{team2Name} score</label>
-                <input
-                  id={team2Id}
-                  type="number"
-                  required
-                  value={team2Score}
-                  onChange={(event) => setTeam2Score(event.target.value)}
-                />
-              </>
-            )}
-            <button type="submit">Review correction</button>
-            <button type="button" onClick={() => setOpen(false)}>
-              Close
-            </button>
-            {error && <p>{error}</p>}
-            <ConfirmModal
-              open={preview !== null}
-              title="Confirm score correction"
-              message={preview ? previewMessage(preview) : ''}
-              confirmLabel="Apply correction"
-              cancelLabel="Cancel"
-              onConfirm={handleConfirm}
-              onCancel={() => setPreview(null)}
-            />
-          </form>
-        </div>
-      </div>
+                  <div className="correction-games-actions">
+                    {games.length < bestOf && (
+                      <button
+                        type="button"
+                        onClick={() => setGames((current) => [...current, { team1: '', team2: '' }])}
+                      >
+                        Add game
+                      </button>
+                    )}
+                    {games.length > 1 && (
+                      <button type="button" onClick={() => setGames((current) => current.slice(0, -1))}>
+                        Remove last game
+                      </button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="game-scores">
+                  <span className="score-field">
+                    <label htmlFor={team1Id}>{team1Name} score</label>
+                    <input
+                      id={team1Id}
+                      type="number"
+                      required
+                      value={team1Score}
+                      onChange={(event) => setTeam1Score(event.target.value)}
+                    />
+                  </span>
+                  <span className="score-field">
+                    <label htmlFor={team2Id}>{team2Name} score</label>
+                    <input
+                      id={team2Id}
+                      type="number"
+                      required
+                      value={team2Score}
+                      onChange={(event) => setTeam2Score(event.target.value)}
+                    />
+                  </span>
+                </div>
+              )}
+              {error && <p role="alert">{error}</p>}
+              <div className="modal-actions">
+                <button type="button" onClick={() => setOpen(false)}>
+                  Close
+                </button>
+                <button type="submit" className="btn-primary">
+                  Review correction
+                </button>
+              </div>
+              <ConfirmModal
+                open={preview !== null}
+                title="Confirm score correction"
+                message={preview ? previewMessage(preview) : ''}
+                confirmLabel="Apply correction"
+                cancelLabel="Cancel"
+                onConfirm={handleConfirm}
+                onCancel={() => setPreview(null)}
+              />
+            </form>
+          </div>
+        </div>,
+        document.body,
+      )}
     </>
   )
 }
