@@ -245,3 +245,26 @@ def test_the_preview_is_refused_when_the_setting_has_locked(client):
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Games per pairing can't change now: play has started"
+
+
+def test_teams_can_be_added_until_a_pool_match_has_a_score(client):
+    tournament_id, [pool], _ = _setup(client, [3], advance_per_pool=1, playoff_bracket_count=1)
+    assert _tournament(client, tournament_id)["pool_play_started"] is False
+    assert client.post(f"/tournaments/{tournament_id}/teams", json={"name": "Early"}).status_code == 201
+
+    _score_one_pool_match(client, pool["id"])
+    refused = client.post(f"/tournaments/{tournament_id}/teams", json={"name": "Late"})
+
+    assert refused.status_code == 400
+    assert refused.json()["detail"] == "pool play has started, so teams can no longer be added"
+    assert _tournament(client, tournament_id)["pool_play_started"] is True
+    names = [team["name"] for team in client.get(f"/tournaments/{tournament_id}/teams").json()]
+    assert "Late" not in names
+
+
+def test_a_scheduled_pool_with_no_scores_yet_still_takes_new_teams(client):
+    tournament_id, _, _ = _setup(client, [3], advance_per_pool=1, playoff_bracket_count=1)
+
+    response = client.post(f"/tournaments/{tournament_id}/teams", json={"name": "Late arrival"})
+
+    assert response.status_code == 201

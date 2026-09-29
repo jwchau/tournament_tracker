@@ -44,11 +44,16 @@ change, untick the boxes it touches.
 
 - [x] **Manage drawer**
   - Do: signed in, tap Manage. Then press Escape, then open it again and tap the dark backdrop.
-  - Expect: the drawer slides in from the right with Settings, Add a team and Delete tournament; Escape and the backdrop both close it. Signed out, there is no Manage button.
+  - Expect: the drawer slides in from the right with Settings and Delete tournament; Escape and the backdrop both close it. Signed out, there is no Manage button.
 
 - [x] **An empty draft opens the drawer**
   - Setup: a new tournament with no teams yet.
-  - Expect: the Manage drawer opens by itself on the page, and teams can be added at once. Once it has teams, the drawer stays closed.
+  - Expect: the Manage drawer opens by itself on the page. Once it has teams, the drawer stays closed.
+
+- [ ] **Add a team from the Teams section**
+  - Setup: signed in, on any tournament page.
+  - Do: under the Teams heading, type a name in the box and press Add team.
+  - Expect: the team joins the list below and the count in the heading goes up; the name box empties. Signed out, the form isn't there. Once any pool match has a score, the box and button are disabled with "Pool play has started, so teams can't be added." underneath.
 
 - [ ] **Settings are grouped, saved as changed, and reviewed when they matter**
   - Setup: a tournament with a pool of teams, before any score.

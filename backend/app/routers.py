@@ -111,8 +111,26 @@ def _view(tournament: Tournament) -> dict:
     return view
 
 
+def _pool_play_started(session: Session, tournament_id: int) -> bool:
+    """Whether any pool match has a score."""
+    return (
+        session.exec(
+            select(Match.id).where(
+                Match.tournament_id == tournament_id,
+                Match.pool_id.is_not(None),
+                Match.team1_score.is_not(None) | Match.team2_score.is_not(None),
+            )
+        ).first()
+        is not None
+    )
+
+
 def _detail(session: Session, tournament: Tournament) -> TournamentDetail:
-    return TournamentDetail(**_view(tournament), setting_locks=setting_locks(session, tournament))
+    return TournamentDetail(
+        **_view(tournament),
+        setting_locks=setting_locks(session, tournament),
+        pool_play_started=_pool_play_started(session, tournament.id),
+    )
 
 
 def _tournament_or_404(session: Session, tournament_id: int) -> Tournament:
@@ -233,6 +251,10 @@ def create_team(
     tournament = session.get(Tournament, tournament_id)
     if tournament is None:
         raise HTTPException(status_code=404, detail="Tournament not found")
+    if _pool_play_started(session, tournament_id):
+        raise HTTPException(
+            status_code=400, detail="pool play has started, so teams can no longer be added"
+        )
 
     team = Team(tournament_id=tournament_id, name=data.name, seed=data.seed)
     session.add(team)

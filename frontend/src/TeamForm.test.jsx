@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
+import { NotificationProvider } from './NotificationContext'
 import TeamForm from './TeamForm'
 
 afterEach(() => {
@@ -48,4 +49,37 @@ test('a team being added cannot be added twice', async () => {
   finish({ id: 1, tournament_id: 42, name: 'Ice Wolves' })
 
   expect(await screen.findByRole('button', { name: 'Add team' })).toBeEnabled()
+})
+
+test('with a reason to wait, the form is off and says why', () => {
+  const createTeam = vi.spyOn(api, 'createTeam')
+
+  render(<TeamForm tournamentId={42} disabledReason="Pool play has started, so teams can't be added." />)
+
+  expect(screen.getByLabelText(/team name/i)).toBeDisabled()
+  expect(screen.getByRole('button', { name: /add team/i })).toBeDisabled()
+  expect(screen.getByText("Pool play has started, so teams can't be added.")).toBeInTheDocument()
+  fireEvent.submit(screen.getByLabelText(/team name/i).closest('form'))
+  expect(createTeam).not.toHaveBeenCalled()
+})
+
+test('a team the server refuses says why and keeps what was typed', async () => {
+  vi.spyOn(api, 'createTeam').mockRejectedValue({
+    json: () => Promise.resolve({ detail: 'pool play has started, so teams can no longer be added' }),
+  })
+  const onCreated = vi.fn()
+
+  render(
+    <NotificationProvider>
+      <TeamForm tournamentId={42} onCreated={onCreated} />
+    </NotificationProvider>,
+  )
+
+  const input = screen.getByLabelText(/team name/i)
+  fireEvent.change(input, { target: { value: 'Ice Wolves' } })
+  fireEvent.click(screen.getByRole('button', { name: /add team/i }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/pool play has started/)
+  expect(onCreated).not.toHaveBeenCalled()
+  expect(input).toHaveValue('Ice Wolves')
 })

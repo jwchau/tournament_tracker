@@ -90,7 +90,7 @@ test('a tournament without teams shows a count of 0 beside the empty message', a
   expect(screen.getByText(/no teams yet/i)).toBeInTheDocument()
 })
 
-test('adding a team from the Manage drawer updates the count', async () => {
+test('adding a team from the Teams section updates the count', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
@@ -559,13 +559,26 @@ test('playoff best-of is chosen from odd counts and locks once a playoff match i
   expect(screen.getByLabelText(/court count/i)).toBeEnabled()
 })
 
-test('a fresh tournament opens the Manage drawer, and teams can be added at once', async () => {
+test('a fresh tournament opens the Manage drawer, and teams can be added from the Teams section at once', async () => {
   mockSettingsPage()
 
   renderAt(1)
 
   expect(await screen.findByLabelText(/team name/i)).toBeInTheDocument()
   expect(document.querySelector('details.manage').open).toBe(true)
+})
+
+test('the add-a-team form is under the Teams heading, not in the Manage drawer', async () => {
+  mockSettingsPage()
+
+  renderAt(1)
+
+  const teams = await screen.findByRole('region', { name: /^Teams/ })
+  expect(within(teams).getByLabelText(/team name/i)).toBeInTheDocument()
+  expect(within(teams).getByRole('button', { name: 'Add team' })).toBeInTheDocument()
+  const drawer = screen.getByRole('region', { name: 'Manage tournament' })
+  expect(within(drawer).queryByLabelText(/team name/i)).not.toBeInTheDocument()
+  expect(within(drawer).queryByRole('heading', { name: 'Add a team' })).not.toBeInTheDocument()
 })
 
 test('a tournament with teams keeps the Manage drawer closed', async () => {
@@ -904,4 +917,15 @@ test('a tournament that fails to load for another reason says so', async () => {
 
   expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't reach the server/i)
   expect(screen.queryByText(/not found/i)).not.toBeInTheDocument()
+})
+
+test('once pool matches have started the add-a-team form is off, with the reason', async () => {
+  mockSettingsPage({ ...settings, pool_play_started: true })
+
+  renderAt(1)
+
+  const teams = await screen.findByRole('region', { name: /^Teams/ })
+  expect(within(teams).getByLabelText(/team name/i)).toBeDisabled()
+  expect(within(teams).getByRole('button', { name: 'Add team' })).toBeDisabled()
+  expect(within(teams).getByText("Pool play has started, so teams can't be added.")).toBeInTheDocument()
 })
