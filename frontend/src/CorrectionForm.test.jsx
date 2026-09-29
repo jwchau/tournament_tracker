@@ -48,7 +48,7 @@ test('previews how many matches a correction will reset before committing it', a
   )
   enterCorrection('10', '21')
 
-  const dialog = await screen.findByRole('dialog')
+  const dialog = await screen.findByRole('dialog', { name: 'Confirm score correction' })
   expect(api.previewCorrection).toHaveBeenCalledWith(7, { team1Score: 10, team2Score: 21 })
   expect(within(dialog).getByText(/this will reset 2 matches/i)).toBeInTheDocument()
   expect(within(dialog).getByText(/round 2 match 1/i)).toBeInTheDocument()
@@ -111,7 +111,7 @@ test('names losers-bracket and grand final matches in the preview', async () => 
   render(<CorrectionForm match={match} team1Name="Spikers" team2Name="Diggers" />)
   enterCorrection('10', '21')
 
-  const dialog = await screen.findByRole('dialog')
+  const dialog = await screen.findByRole('dialog', { name: 'Confirm score correction' })
   expect(dialog).toHaveTextContent(
     'This will reset 3 matches (scores cleared, teams updated): Losers round 1 match 2, Grand final, Grand final reset.',
   )
@@ -123,7 +123,7 @@ test('says nothing else is reset when the winner does not change', async () => {
   render(<CorrectionForm match={match} team1Name="Spikers" team2Name="Diggers" />)
   enterCorrection('25', '23')
 
-  const dialog = await screen.findByRole('dialog')
+  const dialog = await screen.findByRole('dialog', { name: 'Confirm score correction' })
   expect(within(dialog).getByText(/no other matches will be reset/i)).toBeInTheDocument()
 })
 
@@ -149,7 +149,7 @@ test('shows a conflict message when the match changed before the correction was 
   render(<CorrectionForm match={match} team1Name="Spikers" team2Name="Diggers" />)
   enterCorrection('10', '21')
   fireEvent.click(
-    within(await screen.findByRole('dialog')).getByRole('button', { name: /apply correction/i }),
+    within(await screen.findByRole('dialog', { name: 'Confirm score correction' })).getByRole('button', { name: /apply correction/i }),
   )
 
   expect(await screen.findByText(/updated elsewhere/i)).toBeInTheDocument()

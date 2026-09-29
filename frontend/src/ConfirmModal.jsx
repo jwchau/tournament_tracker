@@ -1,3 +1,6 @@
+import { createPortal } from 'react-dom'
+
+// A string message is a sentence; anything else (a list of effects, say) is laid out by the caller.
 export default function ConfirmModal({
   open,
   title,
@@ -9,11 +12,13 @@ export default function ConfirmModal({
 }) {
   if (!open) return null
 
-  return (
+  // In the page's body: a dialog opened from inside a drawer, or a list that fades
+  // or scrolls, would otherwise be clipped to it.
+  return createPortal(
     <div className="modal-overlay">
       <div className="modal" role="dialog" aria-modal="true" aria-label={title}>
         {title && <h3>{title}</h3>}
-        <p>{message}</p>
+        {typeof message === 'string' ? <p>{message}</p> : message}
         <div className="modal-actions">
           <button type="button" onClick={onCancel}>
             {cancelLabel}
@@ -23,6 +28,7 @@ export default function ConfirmModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

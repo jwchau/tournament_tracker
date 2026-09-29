@@ -63,7 +63,8 @@ def test_patch_tournament_updates_provided_fields(client):
     body = response.json()
     assert body["name"] == "Spring Classic 2026"
     assert body["court_count"] == 4
-    assert body["advance_per_pool"] == 1
+    # Left alone, advance per pool is automatic (null), not a number.
+    assert body["advance_per_pool"] is None
     assert body["playoff_bracket_count"] == 1
 
 

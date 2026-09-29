@@ -17,7 +17,7 @@ test('navigating from the main page to a tournament page and back to a team page
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
+
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 1,
@@ -41,7 +41,7 @@ const pageData = {
   '/tournaments/1': {
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
+
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 1,

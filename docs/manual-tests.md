@@ -46,9 +46,18 @@ change, untick the boxes it touches.
   - Do: signed in, tap Manage. Then press Escape, then open it again and tap the dark backdrop.
   - Expect: the drawer slides in from the right with Settings, Add a team and Delete tournament; Escape and the backdrop both close it. Signed out, there is no Manage button.
 
-- [x] **Unconfirmed settings open the drawer**
-  - Setup: a new tournament whose settings aren't confirmed.
-  - Expect: the Manage drawer opens by itself on the page.
+- [x] **An empty draft opens the drawer**
+  - Setup: a new tournament with no teams yet.
+  - Expect: the Manage drawer opens by itself on the page, and teams can be added at once. Once it has teams, the drawer stays closed.
+
+- [ ] **Settings are grouped, saved as changed, and reviewed when they matter**
+  - Setup: a tournament with a pool of teams, before any score.
+  - Do: in Manage, change the playoff bracket count and Save.
+  - Expect: Save was disabled until the change; a "Review changes" dialog says where pool play would send its teams; Keep editing closes it without saving; Save changes saves. Changing only the name or venue saves with no dialog.
+
+- [ ] **Locks follow play, one setting at a time**
+  - Setup: score one pool match.
+  - Expect: games per pairing and target pool size are disabled with "Locked: play has started."; court count, advance per pool, bracket count, best-of, date and venue still change. After Advance to playoffs, advance per pool and the bracket count lock too. After the first playoff score, the best-of does.
 
 - [x] **Bracket-only tournament**
   - Setup: a tournament that went straight to a bracket (no pools).

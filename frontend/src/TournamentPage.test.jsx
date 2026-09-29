@@ -39,7 +39,6 @@ test('loads the tournament and lists its teams with player counts, linking to th
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -60,7 +59,6 @@ test('the Teams heading counts every registered team', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -80,7 +78,6 @@ test('a tournament without teams shows a count of 0 beside the empty message', a
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -97,7 +94,6 @@ test('adding a team from the Manage drawer updates the count', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -120,7 +116,6 @@ test('links to the court list for scorekeepers', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -139,7 +134,6 @@ test('toggling "show players" fetches and displays each team\'s roster', async (
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -168,7 +162,6 @@ test('toggling "show players" again reuses the cached rosters instead of refetch
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -202,7 +195,6 @@ test('a team added after rosters were cached is fetched while cached teams are n
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -236,88 +228,10 @@ test('a team added after rosters were cached is fetched while cached teams are n
   expect(listPlayers.mock.calls.map(([teamId]) => teamId)).toEqual([10, 11])
 })
 
-test('editing tournament config submits the update, reflects the new values, and notifies', async () => {
-  vi.spyOn(api, 'getTournament').mockResolvedValue({
-    id: 1,
-    name: 'Spring Classic',
-    settings_confirmed: true,
-    advance_per_pool: 1,
-    playoff_bracket_count: 1,
-    court_count: 2,
-  })
-  vi.spyOn(api, 'listTeams').mockResolvedValue([])
-  const updateTournament = vi.spyOn(api, 'updateTournament').mockResolvedValue({
-    id: 1,
-    name: 'Spring Classic 2026',
-    advance_per_pool: 2,
-    playoff_bracket_count: 1,
-    court_count: 4,
-  })
-
-  renderAt(1)
-
-  await screen.findByText('Spring Classic')
-
-  fireEvent.change(screen.getByLabelText(/tournament name/i), {
-    target: { value: 'Spring Classic 2026' },
-  })
-  fireEvent.change(screen.getByLabelText(/advance per pool/i), { target: { value: '2' } })
-  fireEvent.change(screen.getByLabelText(/court count/i), { target: { value: '4' } })
-  fireEvent.click(screen.getByRole('button', { name: /save/i }))
-
-  expect(await screen.findByText('Spring Classic 2026')).toBeInTheDocument()
-  expect(screen.getByRole('status')).toHaveTextContent(/settings saved/i)
-  expect(updateTournament).toHaveBeenCalledWith(
-    '1',
-    expect.objectContaining({
-      name: 'Spring Classic 2026',
-      advance_per_pool: 2,
-      playoff_bracket_count: 1,
-      court_count: 4,
-    }),
-  )
-})
-
-test('games per pairing and target pool size are tournament settings', async () => {
-  vi.spyOn(api, 'getTournament').mockResolvedValue({
-    id: 1,
-    name: 'Spring Classic',
-    settings_confirmed: true,
-    advance_per_pool: 1,
-    playoff_bracket_count: 1,
-    court_count: 2,
-    games_per_pairing: 1,
-    target_pool_size: 4,
-  })
-  vi.spyOn(api, 'listTeams').mockResolvedValue([])
-  const updateTournament = vi
-    .spyOn(api, 'updateTournament')
-    .mockImplementation(async (id, values) => ({ id: 1, ...values }))
-
-  renderAt(1)
-
-  const games = await screen.findByLabelText(/games per pairing/i)
-  const target = screen.getByLabelText(/target pool size/i)
-  expect([games.value, target.value]).toEqual(['1', '4'])
-  expect(games).toHaveAttribute('min', '1')
-  expect(target).toHaveAttribute('min', '2')
-  fireEvent.change(games, { target: { value: '2' } })
-  fireEvent.change(target, { target: { value: '5' } })
-  fireEvent.click(screen.getByRole('button', { name: /save/i }))
-
-  await waitFor(() =>
-    expect(updateTournament).toHaveBeenCalledWith(
-      '1',
-      expect.objectContaining({ games_per_pairing: 2, target_pool_size: 5 }),
-    ),
-  )
-})
-
 test('shows each pool with its standings, leaving the schedule to the pool page', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -343,7 +257,6 @@ test('has a playoffs section showing the tier brackets once the tournament has a
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -365,7 +278,6 @@ test('a tournament that went straight to a bracket shows no standings section', 
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     stage: 'playoffs',
     advance_per_pool: 1,
     playoff_bracket_count: 1,
@@ -391,7 +303,6 @@ test('a team with one player says "1 player"', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -413,83 +324,220 @@ test('a team with one player says "1 player"', async () => {
   )
 })
 
-const unconfirmed = {
+const settings = {
   id: 1,
   name: 'Fall Open',
+  stage: 'draft',
+  date: null,
+  venue: null,
   advance_per_pool: 2,
   playoff_bracket_count: 2,
   court_count: 3,
   games_per_pairing: 1,
   target_pool_size: 4,
-  settings_confirmed: false,
-  settings_locked: false,
+  playoff_best_of: 1,
+  setting_locks: {},
 }
 
-test('a new tournament shows only its settings until they are confirmed', async () => {
-  vi.spyOn(api, 'getTournament').mockResolvedValue(unconfirmed)
-  vi.spyOn(api, 'listTeams').mockResolvedValue([])
-  const listPools = vi.spyOn(api, 'listPools').mockResolvedValue([])
-  const updateTournament = vi
-    .spyOn(api, 'updateTournament')
-    .mockImplementation(async (id, values) => ({ ...unconfirmed, ...values }))
-  const confirmSettings = vi
-    .spyOn(api, 'confirmSettings')
-    .mockImplementation(async () => ({ ...unconfirmed, court_count: 4, settings_confirmed: true }))
+// What saving opens first: what the change would do, none by default.
+function mockPreview(effects = []) {
+  return vi.spyOn(api, 'previewSettings').mockResolvedValue({ effects })
+}
 
-  renderAt(1)
-
-  expect(
-    await screen.findByText('Confirm the tournament settings to add teams, pools, and brackets.'),
-  ).toBeInTheDocument()
-  expect(screen.queryByLabelText(/team name/i)).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /add pool/i })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /generate bracket|advance to playoffs/i })).not.toBeInTheDocument()
-  expect(listPools).not.toHaveBeenCalled()
-
-  fireEvent.change(screen.getByLabelText(/court count/i), { target: { value: '4' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Save and confirm settings' }))
-  const dialog = screen.getByRole('dialog', { name: /confirm settings/i })
-  expect(dialog).toHaveTextContent('Court count: 4')
-  expect(dialog).toHaveTextContent('Advance per pool: 2')
-  expect(updateTournament).not.toHaveBeenCalled()
-  fireEvent.click(within(dialog).getByRole('button', { name: /^confirm$/i }))
-
-  expect(await screen.findByLabelText(/team name/i)).toBeInTheDocument()
-  expect(updateTournament).toHaveBeenCalledWith('1', expect.objectContaining({ court_count: 4 }))
-  expect(confirmSettings).toHaveBeenCalledWith('1')
-  expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
-})
-
-test('once play has started only the tournament name can be edited', async () => {
-  vi.spyOn(api, 'getTournament').mockResolvedValue({
-    ...unconfirmed,
-    settings_confirmed: true,
-    settings_locked: true,
-  })
+function mockSettingsPage(tournament = settings) {
+  vi.spyOn(api, 'getTournament').mockResolvedValue(tournament)
   vi.spyOn(api, 'listTeams').mockResolvedValue([])
   vi.spyOn(api, 'listPools').mockResolvedValue([])
   vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([])
   vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'x' })
+}
+
+test('editing the settings sends only what changed, shows the new values and notifies', async () => {
+  mockSettingsPage({ ...settings, name: 'Spring Classic', advance_per_pool: 1, court_count: 2 })
+  const preview = mockPreview()
+  const updateTournament = vi
+    .spyOn(api, 'updateTournament')
+    .mockResolvedValue({ ...settings, name: 'Spring Classic 2026', advance_per_pool: 2, court_count: 4 })
 
   renderAt(1)
 
-  expect(await screen.findByLabelText(/tournament name/i)).toBeEnabled()
-  for (const label of [/advance per pool/i, /playoff bracket count/i, /court count/i, /games per pairing/i, /target pool size/i]) {
+  await screen.findByText('Spring Classic')
+  fireEvent.change(screen.getByLabelText(/tournament name/i), { target: { value: 'Spring Classic 2026' } })
+  fireEvent.change(screen.getByLabelText(/advance per pool/i), { target: { value: '2' } })
+  fireEvent.change(screen.getByLabelText(/court count/i), { target: { value: '4' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+  expect(await screen.findByText('Spring Classic 2026')).toBeInTheDocument()
+  expect(screen.getByRole('status')).toHaveTextContent(/settings saved/i)
+  const changes = { name: 'Spring Classic 2026', advance_per_pool: 2, court_count: 4 }
+  expect(preview).toHaveBeenCalledWith('1', changes)
+  expect(updateTournament).toHaveBeenCalledWith('1', changes)
+})
+
+test('Save waits until something has changed', async () => {
+  mockSettingsPage()
+  mockPreview()
+
+  renderAt(1)
+
+  const save = await screen.findByRole('button', { name: 'Save' })
+  expect(save).toBeDisabled()
+  fireEvent.change(screen.getByLabelText(/court count/i), { target: { value: '4' } })
+  expect(save).toBeEnabled()
+  fireEvent.change(screen.getByLabelText(/court count/i), { target: { value: '3' } })
+  expect(save).toBeDisabled()
+})
+
+test('games per pairing and target pool size are tournament settings', async () => {
+  mockSettingsPage()
+  mockPreview()
+  const updateTournament = vi
+    .spyOn(api, 'updateTournament')
+    .mockImplementation(async (id, values) => ({ ...settings, ...values }))
+
+  renderAt(1)
+
+  const games = await screen.findByLabelText(/games per pairing/i)
+  const target = screen.getByLabelText(/target pool size/i)
+  expect([games.value, target.value]).toEqual(['1', '4'])
+  expect(games).toHaveAttribute('min', '1')
+  expect(target).toHaveAttribute('min', '2')
+  fireEvent.change(games, { target: { value: '2' } })
+  fireEvent.change(target, { target: { value: '5' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+  await waitFor(() =>
+    expect(updateTournament).toHaveBeenCalledWith('1', { games_per_pairing: 2, target_pool_size: 5 }),
+  )
+})
+
+test('a blank advance per pool is automatic, and clearing the box goes back to it', async () => {
+  mockSettingsPage({ ...settings, advance_per_pool: null })
+  mockPreview()
+  const updateTournament = vi
+    .spyOn(api, 'updateTournament')
+    .mockImplementation(async (id, values) => ({ ...settings, ...values }))
+
+  renderAt(1)
+
+  const advance = await screen.findByLabelText(/advance per pool/i)
+  expect(advance).toHaveValue(null)
+  expect(advance).toHaveAttribute('placeholder', 'Automatic')
+  fireEvent.change(advance, { target: { value: '3' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(updateTournament).toHaveBeenLastCalledWith('1', { advance_per_pool: 3 }))
+
+  fireEvent.change(await screen.findByLabelText(/advance per pool/i), { target: { value: '' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(updateTournament).toHaveBeenLastCalledWith('1', { advance_per_pool: null }))
+})
+
+test('the date and venue are saved and shown under the tournament name', async () => {
+  mockSettingsPage()
+  mockPreview()
+  vi.spyOn(api, 'updateTournament').mockResolvedValue({
+    ...settings,
+    date: '2026-10-04',
+    venue: 'Riverside courts',
+  })
+
+  renderAt(1)
+
+  fireEvent.change(await screen.findByLabelText('Date'), { target: { value: '2026-10-04' } })
+  fireEvent.change(screen.getByLabelText('Venue'), { target: { value: 'Riverside courts' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+  expect(await screen.findByText(/Oct 4, 2026 · Riverside courts/)).toBeInTheDocument()
+  expect(api.updateTournament).toHaveBeenCalledWith('1', { date: '2026-10-04', venue: 'Riverside courts' })
+})
+
+test('clearing the date and venue sends null for each', async () => {
+  mockSettingsPage({ ...settings, date: '2026-10-04', venue: 'Riverside courts' })
+  mockPreview()
+  const updateTournament = vi.spyOn(api, 'updateTournament').mockResolvedValue(settings)
+
+  renderAt(1)
+
+  fireEvent.change(await screen.findByLabelText('Date'), { target: { value: '' } })
+  fireEvent.change(screen.getByLabelText('Venue'), { target: { value: '  ' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+  await waitFor(() => expect(updateTournament).toHaveBeenCalledWith('1', { date: null, venue: null }))
+})
+
+test('a change that affects something is reviewed first, and can be cancelled', async () => {
+  mockSettingsPage()
+  mockPreview(['Pool play will send Bracket 1: 2 teams, Bracket 2: 3 teams.', 'Bracket 1 would have 1 team; every playoff bracket needs at least 2.'])
+  const updateTournament = vi
+    .spyOn(api, 'updateTournament')
+    .mockImplementation(async (id, values) => ({ ...settings, ...values }))
+
+  renderAt(1)
+
+  fireEvent.change(await screen.findByLabelText(/playoff bracket count/i), { target: { value: '3' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+  const dialog = await screen.findByRole('dialog', { name: 'Review changes' })
+  const effects = within(dialog).getAllByRole('listitem').map((item) => item.textContent)
+  expect(effects).toEqual([
+    'Pool play will send Bracket 1: 2 teams, Bracket 2: 3 teams.',
+    'Bracket 1 would have 1 team; every playoff bracket needs at least 2.',
+  ])
+  expect(updateTournament).not.toHaveBeenCalled()
+
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Keep editing' }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(updateTournament).not.toHaveBeenCalled()
+  expect(screen.getByLabelText(/playoff bracket count/i)).toHaveValue(3)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  fireEvent.click(within(await screen.findByRole('dialog', { name: 'Review changes' })).getByRole('button', { name: 'Save changes' }))
+
+  await waitFor(() => expect(updateTournament).toHaveBeenCalledWith('1', { playoff_bracket_count: 3 }))
+  expect(screen.queryByRole('dialog', { name: 'Review changes' })).not.toBeInTheDocument()
+})
+
+test('a setting that has locked is disabled with the reason, and the rest stay open', async () => {
+  mockSettingsPage({
+    ...settings,
+    setting_locks: { games_per_pairing: 'play has started', target_pool_size: 'play has started' },
+  })
+
+  renderAt(1)
+
+  await screen.findByLabelText(/tournament name/i)
+  for (const label of [/games per pairing/i, /target pool size/i]) {
     expect(screen.getByLabelText(label)).toBeDisabled()
   }
-  expect(screen.getByText(/settings are locked once play has started/i)).toBeInTheDocument()
+  expect(screen.getAllByText('Locked: play has started.')).toHaveLength(2)
+  for (const label of [/tournament name/i, /^date$/i, /venue/i, /advance per pool/i, /playoff bracket count/i, /court count/i, /playoff best-of/i]) {
+    expect(screen.getByLabelText(label)).toBeEnabled()
+  }
 })
 
-test('playoff best-of is chosen from odd counts and locks once brackets exist', async () => {
-  const confirmed = { ...unconfirmed, settings_confirmed: true, playoff_best_of: 1, stage: 'draft' }
-  vi.spyOn(api, 'getTournament').mockResolvedValue(confirmed)
-  vi.spyOn(api, 'listTeams').mockResolvedValue([])
-  vi.spyOn(api, 'listPools').mockResolvedValue([])
-  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([])
-  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'x' })
+test('the settings are grouped by what they run', async () => {
+  mockSettingsPage()
+
+  renderAt(1)
+
+  await screen.findByLabelText(/tournament name/i)
+  const fields = (name) =>
+    within(screen.getByRole('group', { name }))
+      .getAllByRole('spinbutton')
+      .concat(within(screen.getByRole('group', { name })).queryAllByRole('combobox'))
+      .map((field) => field.id)
+  expect(fields('Pool play')).toEqual(['target-pool-size', 'games-per-pairing'])
+  expect(fields('Playoffs')).toEqual(['playoff-bracket-count', 'advance-per-pool', 'playoff-best-of'])
+  expect(fields('Courts')).toEqual(['court-count'])
+  expect(within(screen.getByRole('group', { name: 'Tournament' })).getByLabelText('Venue')).toBeInTheDocument()
+})
+
+test('playoff best-of is chosen from odd counts and locks once a playoff match is scored', async () => {
+  mockSettingsPage({ ...settings, playoff_best_of: 1 })
+  mockPreview()
   const updateTournament = vi
     .spyOn(api, 'updateTournament')
-    .mockImplementation(async (id, values) => ({ ...confirmed, ...values }))
+    .mockImplementation(async (id, values) => ({ ...settings, ...values }))
 
   const { unmount } = renderAt(1)
 
@@ -497,15 +545,37 @@ test('playoff best-of is chosen from odd counts and locks once brackets exist', 
   expect([...bestOf.options].map((option) => option.value)).toEqual(['1', '3', '5', '7'])
   fireEvent.change(bestOf, { target: { value: '3' } })
   fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-  await waitFor(() =>
-    expect(updateTournament).toHaveBeenCalledWith('1', expect.objectContaining({ playoff_best_of: 3 })),
-  )
+  await waitFor(() => expect(updateTournament).toHaveBeenCalledWith('1', { playoff_best_of: 3 }))
   unmount()
 
-  api.getTournament.mockResolvedValue({ ...confirmed, stage: 'playoffs' })
+  api.getTournament.mockResolvedValue({
+    ...settings,
+    stage: 'playoffs',
+    setting_locks: { playoff_best_of: 'a playoff match has been scored' },
+  })
   renderAt(1)
   expect(await screen.findByLabelText(/playoff best-of/i)).toBeDisabled()
+  expect(screen.getByText('Locked: a playoff match has been scored.')).toBeInTheDocument()
   expect(screen.getByLabelText(/court count/i)).toBeEnabled()
+})
+
+test('a fresh tournament opens the Manage drawer, and teams can be added at once', async () => {
+  mockSettingsPage()
+
+  renderAt(1)
+
+  expect(await screen.findByLabelText(/team name/i)).toBeInTheDocument()
+  expect(document.querySelector('details.manage').open).toBe(true)
+})
+
+test('a tournament with teams keeps the Manage drawer closed', async () => {
+  mockSettingsPage()
+  api.listTeams.mockResolvedValue([{ id: 10, tournament_id: 1, name: 'Aces', player_count: 0 }])
+
+  renderAt(1)
+
+  await screen.findByRole('link', { name: 'Aces' })
+  expect(document.querySelector('details.manage').open).toBe(false)
 })
 
 // Generating opens the seeding dialog first; this walks through it.
@@ -532,12 +602,17 @@ async function generateFromDialog(format) {
   fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm and generate' }))
 }
 
-test('generating a bracket locks the best-of setting without a reload', async () => {
+test('generating a bracket locks advance per pool and the bracket count without a reload', async () => {
   mockSeedingPreview()
-  const confirmed = { ...unconfirmed, settings_confirmed: true, playoff_best_of: 3, stage: 'draft' }
+  const locked = 'the playoff brackets exist; reset them first'
   vi.spyOn(api, 'getTournament')
-    .mockResolvedValueOnce(confirmed)
-    .mockResolvedValue({ ...confirmed, stage: 'playoffs' })
+    .mockResolvedValueOnce({ ...settings, playoff_best_of: 3 })
+    .mockResolvedValue({
+      ...settings,
+      playoff_best_of: 3,
+      stage: 'playoffs',
+      setting_locks: { advance_per_pool: locked, playoff_bracket_count: locked },
+    })
   vi.spyOn(api, 'listTeams').mockResolvedValue([])
   vi.spyOn(api, 'listPools').mockResolvedValue([])
   vi.spyOn(api, 'listPlayoffBrackets')
@@ -549,34 +624,49 @@ test('generating a bracket locks the best-of setting without a reload', async ()
 
   renderAt(1)
 
-  expect(await screen.findByLabelText(/playoff best-of/i)).toBeEnabled()
+  expect(await screen.findByLabelText(/advance per pool/i)).toBeEnabled()
   await generateFromDialog()
 
-  await waitFor(() => expect(screen.getByLabelText(/playoff best-of/i)).toBeDisabled())
+  await waitFor(() => expect(screen.getByLabelText(/advance per pool/i)).toBeDisabled())
+  expect(screen.getByLabelText(/playoff bracket count/i)).toBeDisabled()
+  expect(screen.getByLabelText(/playoff best-of/i)).toBeEnabled()
 })
 
-test('a refused settings save says why', async () => {
-  vi.spyOn(api, 'getTournament').mockResolvedValue({ ...unconfirmed, settings_confirmed: true })
-  vi.spyOn(api, 'listTeams').mockResolvedValue([])
-  vi.spyOn(api, 'listPools').mockResolvedValue([])
-  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([])
-  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'x' })
+test('a setting the server refuses says why, before anything is saved', async () => {
+  mockSettingsPage()
+  vi.spyOn(api, 'previewSettings').mockRejectedValue({
+    json: () => Promise.resolve({ detail: "Games per pairing can't change now: play has started" }),
+  })
+  const updateTournament = vi.spyOn(api, 'updateTournament')
+
+  renderAt(1)
+
+  fireEvent.change(await screen.findByLabelText(/games per pairing/i), { target: { value: '2' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/can't change now: play has started/)
+  expect(updateTournament).not.toHaveBeenCalled()
+})
+
+test('a save the server refuses says why', async () => {
+  mockSettingsPage()
+  mockPreview()
   vi.spyOn(api, 'updateTournament').mockRejectedValue({
-    json: () => Promise.resolve({ detail: 'play has started, so only the tournament name can still be changed' }),
+    json: () => Promise.resolve({ detail: "Court count can't change now: play has started" }),
   })
 
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Save' }))
+  fireEvent.change(await screen.findByLabelText(/court count/i), { target: { value: '5' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
-  expect(await screen.findByRole('alert')).toHaveTextContent(/play has started/)
+  expect(await screen.findByRole('alert')).toHaveTextContent(/can't change now/)
 })
 
 function mockPlayoffsNotStarted() {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -637,7 +727,6 @@ test('clicking delete tournament shows a confirmation modal that does nothing un
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -660,7 +749,6 @@ test('confirming delete tournament removes it and redirects to the home page', a
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -681,7 +769,6 @@ test('signed out, the tournament is read-only', async () => {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
     name: 'Spring Classic',
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 1,
     court_count: 2,
@@ -722,7 +809,6 @@ function mockCompleteTournament(stage) {
     id: 1,
     name: 'Spring Classic',
     stage,
-    settings_confirmed: true,
     advance_per_pool: 1,
     playoff_bracket_count: 2,
     court_count: 2,

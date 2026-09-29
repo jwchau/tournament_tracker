@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { listTournaments } from './api'
 import { useAuth } from './auth'
-import { IN_PLAY, createdAt, groupTournaments, shortDate, tournamentName } from './homeModel'
+import { IN_PLAY, groupTournaments, heldOn, shortDate, tournamentName } from './homeModel'
 import Loading from './Loading'
 import { useNotifyFailure } from './useNotifyFailure'
 import { stageLabel } from './stage'
@@ -58,7 +58,7 @@ function TodayCard({ tournament }) {
 
 // Tournaments from earlier days: one compact row each.
 function DatedRow({ tournament }) {
-  const date = createdAt(tournament)
+  const date = heldOn(tournament)
   return (
     <li className="dated-row">
       <Link to={`/tournaments/${tournament.id}`} className="dated-name">

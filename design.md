@@ -725,6 +725,9 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
   - The panel slides in over 300ms (`drawer-in`, a 24px translate on `--ease`), with a 32px gap between sections.
   - The panel head is sticky, with an Unbounded 22 title and an icon close button.
   - The danger zone sits last, above a hairline, with its button text in `--accent-text`.
+  - **Settings form** (`.settings-form`, `SettingsForm.jsx`): a fieldset per thing it runs (Tournament, Pool play, Playoffs, Courts), each legend Unbounded 700 18/24, 16px between settings and 24px between groups. A setting is its label over its box with a line under it (`.field-note`, Inter 14/20 `--muted`) saying what it does, or "Locked: <why>." when its box is disabled. Save sits at the left and stays disabled until something changes. Only what changed is sent.
+  - **Review changes dialog**: the standard modal (`ConfirmModal`, in the page's body) with "Saving these settings will:" and a bulleted list of effects (`.effects-list`, Inter 16/24), then Keep editing and Save changes. It only opens when the change would do something to what exists.
+- **Tournament date and venue** (`.board-when`): in the board head's meta row, after the stage chip, "Sat, Oct 3, 2026 · Washington Park", DM Sans 500 16/24 in `--band-text`. Either alone shows alone, and neither shows nothing.
 - **Toasts**: `--toast` fill in both themes, a `--band-ghost` ring plus `--shadow-float`; an error toast swaps the ring for a `--band-accent` edge. They enter over 300ms (`toast-in`) on `--ease`.
 - **Seeding dialog** (`.seeding-modal`, `SeedingDialog.jsx`), opened by Advance to playoffs and Generate bracket:
   - The standard modal (`--surface`, 16px radius, 24px padding, 12px gap) widened to 560px and capped at the viewport height. The head and the actions stay fixed; the brackets between them (`.seeding-tiers`) scroll with a thin `--border` scrollbar.

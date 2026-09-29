@@ -1427,6 +1427,58 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   flex: 1 1 180px;
 }
 
+/* The settings form: one fieldset per thing it runs, a line under each setting. */
+.settings-form {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 24px;
+}
+
+.settings-form fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-form legend {
+  padding: 0;
+  margin-bottom: 12px;
+  font: 700 18px/24px var(--display);
+}
+
+/* Not the drawer's row basis, which is a height in this column. */
+.settings-form .field {
+  flex: none;
+}
+
+.settings-form button[type='submit'] {
+  align-self: flex-start;
+}
+
+.field-note {
+  font: 400 14px/20px var(--ui);
+  color: var(--muted);
+}
+
+/* What saving a change would do, listed in the review dialog. */
+.effects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 1.25em;
+  font: 400 16px/24px var(--ui);
+}
+
+.board-when {
+  font: 500 16px/24px var(--nav);
+  color: var(--band-text);
+}
+
 @keyframes drawer-in {
   from {
     transform: translateX(24px);

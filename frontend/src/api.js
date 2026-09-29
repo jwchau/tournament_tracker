@@ -152,8 +152,10 @@ export function updateTournament(tournamentId, updates) {
   return patchJson(`/tournaments/${tournamentId}`, updates)
 }
 
-export function confirmSettings(tournamentId) {
-  return postJson(`/tournaments/${tournamentId}/confirm-settings`, {})
+// What saving these settings would do to what already exists: `{ effects: [...] }`,
+// empty when there is nothing to affect. Refused (400) for a setting that has locked.
+export function previewSettings(tournamentId, changes) {
+  return postJson(`/tournaments/${tournamentId}/settings/preview`, changes)
 }
 
 export function deleteTournament(tournamentId) {

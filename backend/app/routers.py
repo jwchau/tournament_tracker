@@ -27,7 +27,12 @@ from app.bracket_refs import sync_bracket_refs
 from app.refs import eligible_ref_team_ids, reassign_pool_refs
 from app.results import champion_id
 from app.series import best_of, replace_games, series_result
-from app.settings import require_confirmed_settings
+from app.tournament_settings import (
+    changed_settings,
+    refuse_locked,
+    setting_effects,
+    setting_locks,
+)
 from app.scoring import (
     InvalidScore,
     MatchNotFound,
@@ -61,7 +66,7 @@ def list_tournaments(session: Session = Depends(get_session)) -> list[Tournament
     )
     return [
         TournamentSummary(
-            **tournament.model_dump(),
+            **_view(tournament),
             team_count=counts.get(tournament.id, 0),
             champion_name=_champion_name(session, tournament),
         )
@@ -99,10 +104,15 @@ def _play_has_started(session: Session, tournament_id: int) -> bool:
     )
 
 
+def _view(tournament: Tournament) -> dict:
+    """The tournament as the API shows it: an automatic advance-per-pool is null, not 0."""
+    view = tournament.model_dump()
+    view["advance_per_pool"] = tournament.advance_per_pool or None
+    return view
+
+
 def _detail(session: Session, tournament: Tournament) -> TournamentDetail:
-    return TournamentDetail(
-        **tournament.model_dump(), settings_locked=_play_has_started(session, tournament.id)
-    )
+    return TournamentDetail(**_view(tournament), setting_locks=setting_locks(session, tournament))
 
 
 def _tournament_or_404(session: Session, tournament_id: int) -> Tournament:
@@ -125,48 +135,46 @@ def update_tournament(
     data: TournamentUpdate,
     session: Session = Depends(get_session),
 ) -> TournamentDetail:
-    """Change the name any time; the other settings only until play starts."""
+    """Change the name, date and venue any time; each other setting until it locks.
+
+    What locks a setting is in `tournament_settings`.
+    """
     tournament = _tournament_or_404(session, tournament_id)
     changes = data.model_dump(exclude_unset=True)
-    changed_settings = {
-        field for field, value in changes.items()
-        if field != "name" and value != getattr(tournament, field)
-    }
-    if changed_settings and _play_has_started(session, tournament_id):
-        raise HTTPException(
-            status_code=400,
-            detail="play has started, so only the tournament name can still be changed",
-        )
-    if "playoff_best_of" in changed_settings and session.exec(
-        select(PlayoffBracket.id).where(PlayoffBracket.tournament_id == tournament_id)
-    ).first() is not None:
-        raise HTTPException(
-            status_code=400,
-            detail="brackets already exist; reset them to change the playoff best-of",
-        )
+    changed = changed_settings(tournament, changes)
+    refuse_locked(session, tournament, changed)
 
     for field, value in changes.items():
-        setattr(tournament, field, value)
+        # An automatic advance-per-pool is stored as 0.
+        setattr(tournament, field, (value or 0) if field == "advance_per_pool" else value)
 
     session.add(tournament)
-    if "court_count" in changed_settings:
+    if "court_count" in changed:
         redispatch(session, tournament_id)
     session.commit()
     session.refresh(tournament)
     return _detail(session, tournament)
 
 
-@router.post("/tournaments/{tournament_id}/confirm-settings", response_model=TournamentDetail)
-def confirm_settings(
-    tournament_id: int, session: Session = Depends(get_session)
-) -> TournamentDetail:
-    """Unlocks teams, pools, and brackets. There's no un-confirming."""
+class SettingsPreview(SQLModel):
+    effects: list[str]
+
+
+@router.post("/tournaments/{tournament_id}/settings/preview", response_model=SettingsPreview)
+def preview_settings(
+    tournament_id: int,
+    data: TournamentUpdate,
+    session: Session = Depends(get_session),
+) -> SettingsPreview:
+    """What saving these settings would do to what already exists, before saving them.
+
+    Empty when nothing exists yet to be affected. Refused, as saving would be,
+    when a setting has locked.
+    """
     tournament = _tournament_or_404(session, tournament_id)
-    tournament.settings_confirmed = True
-    session.add(tournament)
-    session.commit()
-    session.refresh(tournament)
-    return _detail(session, tournament)
+    changed = changed_settings(tournament, data.model_dump(exclude_unset=True))
+    refuse_locked(session, tournament, changed)
+    return SettingsPreview(effects=setting_effects(session, tournament, changed))
 
 
 @router.delete("/tournaments/{tournament_id}", status_code=204)
@@ -225,7 +233,6 @@ def create_team(
     tournament = session.get(Tournament, tournament_id)
     if tournament is None:
         raise HTTPException(status_code=404, detail="Tournament not found")
-    require_confirmed_settings(tournament)
 
     team = Team(tournament_id=tournament_id, name=data.name, seed=data.seed)
     session.add(team)

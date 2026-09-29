@@ -33,6 +33,5 @@ def sign_in(client, session, username="organizer"):
 
 
 def create_tournament(client, name="Test Cup"):
-    """A new tournament with its settings confirmed, ready for teams, pools, and brackets."""
-    tournament = client.post("/tournaments", json={"name": name}).json()
-    return client.post(f"/tournaments/{tournament['id']}/confirm-settings").json()
+    """A new tournament, ready for teams, pools, and brackets."""
+    return client.post("/tournaments", json={"name": name}).json()

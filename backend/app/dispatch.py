@@ -238,10 +238,11 @@ def dispatch(session: Session, tournament_id: int) -> None:
 
 
 def redispatch(session: Session, tournament_id: int) -> None:
-    """Take every unfinished playoff match off its court and dispatch afresh, uncommitted.
+    """Take every playoff match not yet started off its court and dispatch afresh, uncommitted.
 
     For when the court count changes, which re-splits the courts between
-    brackets (only possible before play starts). Queue order is kept.
+    brackets. A match already under way stays on its court, even one that no
+    longer exists, and finishes there. Queue order is kept.
     """
     session.flush()
     session.execute(
@@ -249,7 +250,7 @@ def redispatch(session: Session, tournament_id: int) -> None:
         .where(
             Match.tournament_id == tournament_id,
             Match.playoff_bracket_id.is_not(None),
-            Match.status.in_(UNFINISHED),
+            Match.status == "ready",
         )
         .values(court=None, court_set_at=None)
     )
