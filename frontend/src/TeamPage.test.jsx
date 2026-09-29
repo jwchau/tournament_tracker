@@ -159,6 +159,31 @@ test('signed out, the team and roster are read-only', async () => {
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   expect(screen.queryByRole('button')).not.toBeInTheDocument()
 })
+
+test("the title band names the team with its seed and player count, and leads back to the tournament", async () => {
+  vi.spyOn(api, 'getTeam').mockResolvedValue({ id: 10, tournament_id: 1, name: 'Aces', seed: 3 })
+  vi.spyOn(api, 'listPlayers').mockResolvedValue([
+    { id: 100, team_id: 10, name: 'Alex Kim' },
+    { id: 101, team_id: 10, name: 'Jordan Lee' },
+  ])
+
+  renderAt(10)
+
+  expect(await screen.findByRole('heading', { name: 'Aces' })).toBeInTheDocument()
+  expect(await screen.findByText('Seed 3 · 2 players')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Back to tournament' })).toHaveAttribute('href', '/tournaments/1')
+})
+
+test('a team with no seed and no players says so', async () => {
+  vi.spyOn(api, 'getTeam').mockResolvedValue({ id: 10, tournament_id: 1, name: 'Aces', seed: null })
+  vi.spyOn(api, 'listPlayers').mockResolvedValue([])
+
+  renderAt(10)
+
+  expect(await screen.findByText('No seed · 0 players')).toBeInTheDocument()
+  expect(screen.getByText('No players yet.')).toBeInTheDocument()
+})
+
 test('shows a loading placeholder until the team arrives, then the team', async () => {
   let resolveTeam
   vi.spyOn(api, 'getTeam').mockReturnValue(new Promise((resolve) => (resolveTeam = resolve)))

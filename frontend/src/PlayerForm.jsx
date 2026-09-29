@@ -22,13 +22,15 @@ export default function PlayerForm({ teamId, onCreated }) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label htmlFor={`player-name-${teamId}`}>Player name</label>
-      <input
-        id={`player-name-${teamId}`}
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-      />
+    <form onSubmit={handleSubmit} className="player-form">
+      <span className="field">
+        <label htmlFor={`player-name-${teamId}`}>Player name</label>
+        <input
+          id={`player-name-${teamId}`}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+      </span>
       <button type="submit" disabled={adding}>
         {adding ? 'Adding…' : 'Add player'}
       </button>

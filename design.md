@@ -768,6 +768,11 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
   - One line per team: the name at weight 600 in `--text`, and a **score chip** (`.court-link-chip`), a small flip card: `--ink` with a `--band-ghost` top half, as on the large card, a 1px `--flip-seam` seam at .7, a `--hairline` ring, 8px radius, at least 64px wide, padding 4px 10px, the score in Unbounded 700 28/40 `--band-text`.
   - Under the teams, the current match's ref (`.court-link-ref`, Inter 500 14.7/21 in `--muted`): "Ref: Aces" or "Ref: N/A". A free court shows none.
   - A free court (`[data-free]`) has no board: one outlined line, transparent with a 1px inset `--hairline` edge (hover `--accent-text`), and "Free" pushed to the right in Inter 500 14.7/21.
+- **Team page** (`.team-page`, `TeamPage.jsx`, `PlayerForm.jsx`):
+  - **Structure**: the court strip, holding the team's name at board-title scale (32/36, 48/48 from 768px), its seed and player count as the label ("Seed 3 · 4 players", or "No seed"), and Back to tournament. Then the sheet (`.team-sheet`, one column, `--section-gap` apart) and, signed in, Delete team last in a danger zone above a hairline.
+  - **Sheet**: Details (signed in only) and Roster, each a heading outside a panel (`.team-panel`, the pool card's fill, 16px radius, `--elevation-3`, 20px padding, 12px gap). From 1024px they sit side by side in two equal columns 32px apart, top-aligned; a spectator's roster alone stays 640px wide.
+  - **Details**: name (grows, at least 240px) and seed (120px) with Save on one row, wrapping as the width shrinks.
+  - **Roster**: one row per player (`.roster-list`: `--surface-2`, 12px radius, at least 48px tall, the name Inter 600 16/24 wrapping anywhere) with a Remove button at the right (transparent, `--accent-text`), then "No players yet." when empty. Signed in, the add-player form (`.player-form`) sits under a hairline at the bottom of the panel: the name field grows beside Add player.
 - **Pool page** (`.pool-page`, `PoolPage.jsx` and `PoolSchedule.jsx`), the pool as its round-robin sheet:
   - **Structure**: the court strip (reused as is), holding the pool name at board-title scale (32/36, 48/48 from 768px), its courts as the label ("Courts 1, 2") and Back to tournament. Then the sheet (`.pool-sheet`, one column, `--section-gap` apart): Standings (the standings table above, with the advancing places), Results (the grid) and Schedule. From 1024px, standings and the grid sit side by side in two equal columns 32px apart, with the schedule full width below. Signed in, Delete pool sits last in a danger zone above a hairline.
   - **Row limits**: Tall lists stop at a fixed number of items and scroll inside their box (`useRowLimit`): the box is measured as rendered and capped just under the last whole item, plus a 16px peek of the next, at every width. A capped standings table or schedule fades out over its last 32px (`mask-image`) while more waits below.
@@ -863,6 +868,6 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
 
 These pages still use the default `.app-main > section` spacing and have not had a Kiln pass:
 
-- The team page, account and login pages, and the score and correction forms (including Correct on the pool page's finished matches and in the bracket's match panel). `SeriesForm` has had a pass only in its court-board mode; its plain form (fix-game fields, conflict and error lines) has not.
+- The account and login pages, and the score and correction forms (including Correct on the pool page's finished matches and in the bracket's match panel). `SeriesForm` has had a pass only in its court-board mode; its plain form (fix-game fields, conflict and error lines) has not.
 
 Treat how those pages look today as a gap to close, not as a pattern to copy.
