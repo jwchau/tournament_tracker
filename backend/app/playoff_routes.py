@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -24,6 +25,9 @@ router = APIRouter()
 
 class AdvanceRequest(SQLModel):
     format: Literal["single", "double"] = "single"
+    # Team ids per bracket, in seed order, when the organizer changed the
+    # order the standings gave. It must hold the same teams in each bracket.
+    seeding: list[list[int]] | None = None
 
 
 class PlayoffBracketSummary(SQLModel):
@@ -38,7 +42,19 @@ class NotReady(Exception):
     pass
 
 
+@dataclass
+class Plan:
+    """Each playoff bracket's seeded team ids, and where each team finished in its pool."""
+
+    tiers: list[list[int]]
+    pool_finish: dict[int, tuple[str, int]] = field(default_factory=dict)
+
+
 def _plan_tiers(session: Session, tournament: Tournament) -> list[list[int]]:
+    return _plan(session, tournament).tiers
+
+
+def _plan(session: Session, tournament: Tournament) -> Plan:
     """Each playoff bracket's seeded team ids, or NotReady saying why advancing can't happen yet."""
     if not tournament.settings_confirmed:
         raise NotReady("confirm the tournament settings first")
@@ -47,6 +63,7 @@ def _plan_tiers(session: Session, tournament: Tournament) -> list[list[int]]:
     ).first() is not None:
         raise NotReady("this tournament has already advanced to playoffs")
     standings = []
+    pool_finish: dict[int, tuple[str, int]] = {}
     for pool in _pools_in_order(session, tournament.id):
         matches = _pool_matches(session, pool.id)
         teams = session.exec(select(Team).where(Team.pool_id == pool.id)).all()
@@ -54,7 +71,10 @@ def _plan_tiers(session: Session, tournament: Tournament) -> list[list[int]]:
             raise NotReady(f"{pool.name} has no schedule yet")
         if any(match.status != "complete" for match in matches):
             raise NotReady(f"{pool.name} has incomplete matches")
-        standings.append(pool_standings([(team.id, team.name) for team in teams], matches))
+        rows = pool_standings([(team.id, team.name) for team in teams], matches)
+        standings.append(rows)
+        for row in rows:
+            pool_finish[row.team_id] = (pool.name, row.rank)
     tiers = playoff_tiers(standings, tournament.advance_per_pool, tournament.playoff_bracket_count)
     for tier, team_ids in enumerate(tiers, start=1):
         if len(team_ids) < 2:
@@ -63,7 +83,34 @@ def _plan_tiers(session: Session, tournament: Tournament) -> list[list[int]]:
                 f"Bracket {tier} would have {len(team_ids)} {teams}; every playoff bracket "
                 "needs at least 2. Lower advance per pool or the playoff bracket count."
             )
-    return tiers
+    return Plan(tiers, pool_finish)
+
+
+def _plan_single_bracket(session: Session, tournament: Tournament) -> list[list[int]]:
+    """A tournament without pools: every team in one bracket, seeded by seed.
+
+    Raises BracketNotReady when the teams can't make a bracket yet.
+    """
+    teams = session.exec(select(Team).where(Team.tournament_id == tournament.id)).all()
+    players = session.exec(
+        select(Player).where(Player.team_id.in_([team.id for team in teams]))
+    ).all()
+    validate_teams_for_bracket(teams, players)
+    return [[team.id for team in sorted(teams, key=lambda team: (team.seed is None, team.seed))]]
+
+
+def _seeded(planned: list[list[int]], seeding: list[list[int]] | None) -> list[list[int]]:
+    """The organizer's order for each bracket, if they gave one; it may only reorder teams."""
+    if seeding is None:
+        return planned
+    if len(seeding) != len(planned) or any(
+        sorted(chosen) != sorted(team_ids) for chosen, team_ids in zip(seeding, planned)
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="the seeding must list the same teams in each bracket; reload and try again",
+        )
+    return seeding
 
 
 class PlayoffReadiness(SQLModel):
@@ -95,8 +142,68 @@ def advance_to_playoffs(
         tiers = _plan_tiers(session, tournament)
     except NotReady as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    created = _create_playoffs(session, tournament_id, tiers, data.format)
+    created = _create_playoffs(session, tournament_id, _seeded(tiers, data.seeding), data.format)
     return _summaries(session, [bracket for bracket, _ in created])
+
+
+class SeedEntry(SQLModel):
+    team_id: int
+    name: str
+    pool: str | None
+    pool_rank: int | None
+
+
+class SeedingTier(SQLModel):
+    tier: int
+    teams: list[SeedEntry]
+
+
+class PlayoffSeeding(SQLModel):
+    ready: bool
+    reason: str | None
+    tiers: list[SeedingTier]
+
+
+@router.get("/tournaments/{tournament_id}/playoff-seeding", response_model=PlayoffSeeding)
+def playoff_seeding(tournament_id: int, session: Session = Depends(get_session)) -> PlayoffSeeding:
+    """The seed order each bracket would start with, to review or change before creating them."""
+    tournament = _tournament_or_404(session, tournament_id)
+    try:
+        if _pools_in_order(session, tournament_id):
+            plan = _plan(session, tournament)
+        else:
+            if not tournament.settings_confirmed:
+                raise NotReady("confirm the tournament settings first")
+            if session.exec(
+                select(PlayoffBracket.id).where(PlayoffBracket.tournament_id == tournament_id)
+            ).first() is not None:
+                raise NotReady("this tournament has already advanced to playoffs")
+            plan = Plan(_plan_single_bracket(session, tournament))
+    except (NotReady, BracketNotReady) as exc:
+        return PlayoffSeeding(ready=False, reason=str(exc), tiers=[])
+    names = {
+        team.id: team.name
+        for team in session.exec(select(Team).where(Team.tournament_id == tournament_id)).all()
+    }
+    return PlayoffSeeding(
+        ready=True,
+        reason=None,
+        tiers=[
+            SeedingTier(
+                tier=tier,
+                teams=[
+                    SeedEntry(
+                        team_id=team_id,
+                        name=names[team_id],
+                        pool=plan.pool_finish.get(team_id, (None, None))[0],
+                        pool_rank=plan.pool_finish.get(team_id, (None, None))[1],
+                    )
+                    for team_id in team_ids
+                ],
+            )
+            for tier, team_ids in enumerate(plan.tiers, start=1)
+        ],
+    )
 
 
 @router.post(
@@ -117,16 +224,12 @@ def generate_single_bracket(
             detail="this tournament has pools; advance to playoffs once pool play is done",
         )
     format = data.format if data is not None else "single"
-    teams = session.exec(select(Team).where(Team.tournament_id == tournament_id)).all()
-    players = session.exec(
-        select(Player).where(Player.team_id.in_([team.id for team in teams]))
-    ).all()
     try:
-        validate_teams_for_bracket(teams, players)
+        planned = _plan_single_bracket(session, _tournament_or_404(session, tournament_id))
     except BracketNotReady as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    seeded = [team.id for team in sorted(teams, key=lambda team: (team.seed is None, team.seed))]
-    [(_, matches)] = _create_playoffs(session, tournament_id, [seeded], format)
+    seeding = data.seeding if data is not None else None
+    [(_, matches)] = _create_playoffs(session, tournament_id, _seeded(planned, seeding), format)
     return matches
 
 

@@ -508,7 +508,32 @@ test('playoff best-of is chosen from odd counts and locks once brackets exist', 
   expect(screen.getByLabelText(/court count/i)).toBeEnabled()
 })
 
+// Generating opens the seeding dialog first; this walks through it.
+function mockSeedingPreview() {
+  vi.spyOn(api, 'getPlayoffSeeding').mockResolvedValue({
+    ready: true,
+    reason: null,
+    tiers: [
+      {
+        tier: 1,
+        teams: [
+          { team_id: 1, name: 'Aces', pool: null, pool_rank: null },
+          { team_id: 2, name: 'Bees', pool: null, pool_rank: null },
+        ],
+      },
+    ],
+  })
+}
+
+async function generateFromDialog(format) {
+  fireEvent.click(await screen.findByRole('button', { name: /generate bracket/i }))
+  const dialog = await screen.findByRole('dialog', { name: 'Confirm playoff seeding' })
+  if (format) fireEvent.change(within(dialog).getByLabelText(/playoff format/i), { target: { value: format } })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm and generate' }))
+}
+
 test('generating a bracket locks the best-of setting without a reload', async () => {
+  mockSeedingPreview()
   const confirmed = { ...unconfirmed, settings_confirmed: true, playoff_best_of: 3, stage: 'draft' }
   vi.spyOn(api, 'getTournament')
     .mockResolvedValueOnce(confirmed)
@@ -525,7 +550,7 @@ test('generating a bracket locks the best-of setting without a reload', async ()
   renderAt(1)
 
   expect(await screen.findByLabelText(/playoff best-of/i)).toBeEnabled()
-  fireEvent.click(await screen.findByRole('button', { name: /generate bracket/i }))
+  await generateFromDialog()
 
   await waitFor(() => expect(screen.getByLabelText(/playoff best-of/i)).toBeDisabled())
 })
@@ -563,15 +588,18 @@ function mockPlayoffsNotStarted() {
 
 test('without pools the playoffs section generates a bracket in the chosen format', async () => {
   mockPlayoffsNotStarted()
+  mockSeedingPreview()
   vi.spyOn(api, 'listPools').mockResolvedValue([])
   const generateBracket = vi.spyOn(api, 'generateBracket').mockResolvedValue([])
 
   renderAt(1)
 
-  const format = await screen.findByLabelText(/playoff format/i)
+  fireEvent.click(await screen.findByRole('button', { name: /generate bracket/i }))
+  const dialog = await screen.findByRole('dialog', { name: 'Confirm playoff seeding' })
+  const format = within(dialog).getByLabelText(/playoff format/i)
   expect(format).toHaveValue('single')
   fireEvent.change(format, { target: { value: 'double' } })
-  fireEvent.click(screen.getByRole('button', { name: /generate bracket/i }))
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm and generate' }))
 
   await waitFor(() => expect(generateBracket).toHaveBeenCalledWith('1', { format: 'double' }))
   expect(screen.queryByRole('heading', { name: /^bracket$/i })).not.toBeInTheDocument()
@@ -592,6 +620,7 @@ test('once a pool exists the playoffs section advances instead of generating', a
 
 test('shows a notification with the validation detail when generating a bracket is rejected', async () => {
   mockPlayoffsNotStarted()
+  mockSeedingPreview()
   vi.spyOn(api, 'listPools').mockResolvedValue([])
   vi.spyOn(api, 'generateBracket').mockRejectedValue({
     json: () => Promise.resolve({ detail: 'at least 2 teams are required to generate a bracket' }),
@@ -599,7 +628,7 @@ test('shows a notification with the validation detail when generating a bracket 
 
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /generate bracket/i }))
+  await generateFromDialog()
 
   expect(await screen.findByRole('alert')).toHaveTextContent(/at least 2 teams are required/i)
 })

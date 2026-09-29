@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from './testUtils'
+import { fireEvent, render, screen, waitFor, within } from './testUtils'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
@@ -6,9 +6,33 @@ import * as api from './api'
 import { NotificationProvider } from './NotificationContext'
 import PlayoffsPanel from './PlayoffsPanel'
 
+const seeding = {
+  ready: true,
+  reason: null,
+  tiers: [
+    {
+      tier: 1,
+      teams: [
+        { team_id: 1, name: 'Aces', pool: 'Pool A', pool_rank: 1 },
+        { team_id: 2, name: 'Bees', pool: 'Pool B', pool_rank: 1 },
+        { team_id: 3, name: 'Cats', pool: 'Pool A', pool_rank: 2 },
+      ],
+    },
+  ],
+}
+
 beforeEach(() => {
   vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([])
+  vi.spyOn(api, 'getPlayoffSeeding').mockResolvedValue(seeding)
 })
+
+// Opens the seeding dialog from the panel's own button, and returns it.
+async function openDialog(name) {
+  const button = await screen.findByRole('button', { name })
+  await waitFor(() => expect(button).toBeEnabled())
+  fireEvent.click(button)
+  return screen.findByRole('dialog', { name: 'Confirm playoff seeding' })
+}
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -50,12 +74,12 @@ test('advancing once pools are complete shows each tier bracket', async () => {
 
   renderPanel()
 
-  const button = await screen.findByRole('button', { name: /advance to playoffs/i })
-  await waitFor(() => expect(button).toBeEnabled())
-  fireEvent.change(screen.getByLabelText(/playoff format/i), { target: { value: 'double' } })
-  fireEvent.click(button)
+  const dialog = await openDialog(/advance to playoffs/i)
+  fireEvent.change(within(dialog).getByLabelText(/playoff format/i), { target: { value: 'double' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm and advance' }))
 
   await waitFor(() => expect(advance).toHaveBeenCalledWith(5, { format: 'double' }))
+  expect(advance.mock.calls[0][1].seeding).toBeUndefined()
   expect(await screen.findByRole('heading', { name: 'Bracket 1' })).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: 'Bracket 2' })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /advance to playoffs/i })).not.toBeInTheDocument()
@@ -83,13 +107,13 @@ test('advancing cannot be sent twice while it is in progress', async () => {
 
   renderPanel()
 
-  const button = await screen.findByRole('button', { name: /advance to playoffs/i })
-  await waitFor(() => expect(button).toBeEnabled())
-  fireEvent.click(button)
-  fireEvent.click(button)
+  const dialog = await openDialog(/advance to playoffs/i)
+  const confirm = within(dialog).getByRole('button', { name: 'Confirm and advance' })
+  fireEvent.click(confirm)
+  fireEvent.click(confirm)
 
   expect(advance).toHaveBeenCalledTimes(1)
-  expect(screen.getByRole('button', { name: 'Advancing…' })).toBeDisabled()
+  expect(within(dialog).getByRole('button', { name: 'Working…' })).toBeDisabled()
 
   finish([{ id: 30, tournament_id: 5, tier: 1, format: 'single', has_scores: false }])
 
@@ -105,10 +129,11 @@ test('a tournament without pools generates one bracket instead of advancing', as
 
   renderPanel({ hasPools: false })
 
-  const button = await screen.findByRole('button', { name: /generate bracket/i })
+  await screen.findByRole('button', { name: /generate bracket/i })
   expect(screen.queryByRole('button', { name: /advance to playoffs/i })).not.toBeInTheDocument()
   expect(screen.queryByText('no pools')).not.toBeInTheDocument()
-  fireEvent.click(button)
+  const dialog = await openDialog(/generate bracket/i)
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm and generate' }))
 
   await waitFor(() => expect(generate).toHaveBeenCalledWith(5, { format: 'single' }))
   expect(await screen.findByRole('heading', { name: 'Bracket 1' })).toBeInTheDocument()
@@ -172,4 +197,55 @@ test('a tournament already in playoffs shows its brackets instead of the advance
 
   expect(await screen.findByRole('heading', { name: 'Bracket 2' })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /advance to playoffs/i })).not.toBeInTheDocument()
+})
+
+test('the seeding dialog lists each bracket in seed order and cancelling creates nothing', async () => {
+  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([])
+  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: true, reason: null })
+  const advance = vi.spyOn(api, 'advanceToPlayoffs')
+
+  renderPanel()
+
+  const dialog = await openDialog(/advance to playoffs/i)
+  const seeds = within(dialog).getAllByRole('listitem')
+  expect(seeds.map((seed) => seed.textContent)).toEqual([
+    expect.stringMatching(/^1Aces\s*Pool A · 1st/),
+    expect.stringMatching(/^2Bees\s*Pool B · 1st/),
+    expect.stringMatching(/^3Cats\s*Pool A · 2nd/),
+  ])
+
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(advance).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: /advance to playoffs/i })).toBeEnabled()
+})
+
+test('a changed seeding is sent with the advance request', async () => {
+  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([])
+  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: true, reason: null })
+  const advance = vi.spyOn(api, 'advanceToPlayoffs').mockResolvedValue(tierBrackets)
+
+  renderPanel()
+
+  const dialog = await openDialog(/advance to playoffs/i)
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Move Cats up' }))
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm and advance' }))
+
+  await waitFor(() => expect(advance).toHaveBeenCalledWith(5, { format: 'single', seeding: [[1, 3, 2]] }))
+})
+
+test('a seeding that cannot be read keeps the dialog closed and says why', async () => {
+  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([])
+  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: true, reason: null })
+  api.getPlayoffSeeding.mockResolvedValue({ ready: false, reason: 'Pool A has incomplete matches', tiers: [] })
+
+  renderPanel()
+
+  const button = await screen.findByRole('button', { name: /advance to playoffs/i })
+  await waitFor(() => expect(button).toBeEnabled())
+  fireEvent.click(button)
+
+  expect(await screen.findByText('Pool A has incomplete matches')).toBeInTheDocument()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })

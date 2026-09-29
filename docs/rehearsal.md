@@ -99,11 +99,14 @@ confirm.
 
 ## 6. Advance to playoffs (ticket 09)
 
-On the tournament page, choose **Double elimination** and click
-**Advance to playoffs**.
+On the tournament page, click **Advance to playoffs**. In the seeding dialog,
+choose **Double elimination**, move one team up a place in Bracket 1, and
+click **Confirm and advance**.
 
+- [ ] The dialog lists each bracket's teams in standings order first, and
+      **Cancel** builds nothing.
 - [ ] Two brackets exist, one per tier, and seeding follows the pool
-      standings.
+      standings, except for the team you moved.
 - [ ] Courts fill with first-round matches without anyone setting a court
       by hand. The courts page shows what's on each one.
 
