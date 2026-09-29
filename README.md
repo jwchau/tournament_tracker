@@ -30,7 +30,7 @@ cookie from `POST /auth/login` and answers `401` without one.
 | -------- | --------- |
 | Auth | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/password` |
 | Tournaments | `GET/POST /tournaments`, `GET/PATCH/DELETE /tournaments/{id}` (settings lock as play goes; each setting's reason is in `setting_locks`), `POST /tournaments/{id}/settings/preview` (what a settings change would do, before saving it), `GET /tournaments/{id}/results` |
-| Teams | `GET/POST /tournaments/{id}/teams`, `GET/PATCH/DELETE /teams/{id}` |
+| Teams | `GET/POST /tournaments/{id}/teams` (adding is refused once any pool match has a score), `GET/PATCH/DELETE /teams/{id}` |
 | Players | `GET/POST /teams/{id}/players`, `DELETE /teams/{id}/players/{playerId}` |
 | Pools | `GET/POST /tournaments/{id}/pools`, `POST /tournaments/{id}/pools/auto-assign`, `GET/PATCH/DELETE /pools/{id}`, `POST /pools/{id}/generate-schedule`, `GET /pools/{id}/matches`, `GET /pools/{id}/standings` |
 | Playoffs | `POST /tournaments/{id}/bracket/generate` (no pools), `GET /tournaments/{id}/playoff-readiness`, `GET /tournaments/{id}/playoff-seeding` (each bracket's seed order, to review), `POST /tournaments/{id}/advance-to-playoffs` (optional `seeding` to change the order), `GET/DELETE /tournaments/{id}/playoff-brackets`, `GET /playoff-brackets/{id}`, `GET /playoff-brackets/{id}/matches`, `GET /playoff-brackets/{id}/dispatch` (courts and queue) |

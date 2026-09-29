@@ -90,6 +90,8 @@ class TournamentDetail(SQLModel):
     created_at: datetime
     # Settings that can't change right now, each with the reason.
     setting_locks: dict[str, str]
+    # Whether any pool match has a score, after which teams can't be added.
+    pool_play_started: bool
 
 
 class TournamentSummary(SQLModel):

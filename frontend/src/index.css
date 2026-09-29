@@ -1275,6 +1275,21 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   gap: 4px;
 }
 
+/* Adding a team: the name box and its button on one line above the list, the
+   label over them. */
+.team-add-bar form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 4px 12px;
+  max-width: 560px;
+}
+
+.team-add-bar label,
+.team-add-bar .field-note {
+  grid-column: 1 / -1;
+}
+
 /* The teams sit in a panel, like the pool and bracket cards above them. */
 .team-list {
   list-style: none;

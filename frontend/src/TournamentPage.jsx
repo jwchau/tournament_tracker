@@ -233,15 +233,6 @@ export default function TournamentPage() {
               <h4 id="settings-heading">Settings</h4>
               <SettingsForm tournamentId={tournamentId} tournament={tournament} onSaved={setTournament} />
             </section>
-            <section aria-labelledby="add-team-heading">
-              <h4 id="add-team-heading">Add a team</h4>
-              <TeamForm
-                tournamentId={tournamentId}
-                onCreated={(team) =>
-                  setTeams((current) => [...current, { ...team, player_count: 0 }])
-                }
-              />
-            </section>
             <section className="danger-zone">
               <button type="button" onClick={() => setShowDeleteConfirm(true)}>
                 Delete tournament
@@ -273,6 +264,21 @@ export default function TournamentPage() {
             Show players
           </label>
         </div>
+        {user && (
+          <div className="team-add-bar">
+            <TeamForm
+              tournamentId={tournamentId}
+              disabledReason={
+                tournament.pool_play_started
+                  ? "Pool play has started, so teams can't be added."
+                  : null
+              }
+              onCreated={(team) =>
+                setTeams((current) => [...current, { ...team, player_count: 0 }])
+              }
+            />
+          </div>
+        )}
         {teams.length === 0 && <p className="setup-note">No teams yet.</p>}
         <ul className="team-list">
           {teams.map((team) => (
