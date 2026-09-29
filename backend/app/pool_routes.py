@@ -71,7 +71,17 @@ def auto_assign_pools(
     """
     tournament = _tournament_or_404(session, tournament_id)
     pools = _pools_in_order(session, tournament_id)
-    schedules =[match for pool in pools for match in _pool_matches(session, pool.id)]
+    schedules = (
+        list(
+            session.exec(
+                select(Match)
+                .where(Match.pool_id.in_([pool.id for pool in pools]))
+                .order_by(Match.round, Match.position)
+            ).all()
+        )
+        if pools
+        else []
+    )
     if _any_scored(schedules):
         raise HTTPException(
             status_code=400, detail="pool play has started; teams can't be reassigned"
@@ -102,8 +112,8 @@ def auto_assign_pools(
         session.add(team)
     _sync_pool_stage(session, tournament)
     session.commit()
-    for team in teams:
-        session.refresh(team)
+    # One read puts every expired team's row back, instead of a refresh for each.
+    session.exec(select(Team).where(Team.tournament_id == tournament_id)).all()
     return teams
 
 
