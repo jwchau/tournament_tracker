@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 
-import { createdAt, groupTournaments, shortDate, tournamentName } from './homeModel'
+import { createdAt, groupTournaments, heldOn, shortDate, tournamentName } from './homeModel'
 
 // Noon on Sep 28 2026, local time.
 const now = new Date(2026, 8, 28, 12)
@@ -67,4 +67,30 @@ test('dates show the year only when it isn’t this one', () => {
 test('a blank name shows as Untitled tournament', () => {
   expect(tournamentName({ name: '  ' })).toBe('Untitled tournament')
   expect(tournamentName({ name: 'Spring Classic' })).toBe('Spring Classic')
+})
+
+test('a tournament is held on its date when it has one, else the day it was created', () => {
+  expect(heldOn({ date: '2026-10-04', created_at: at(2) })).toEqual(new Date(2026, 9, 4))
+  expect(heldOn({ date: null, created_at: '2026-09-25T05:27:05Z' }).toISOString()).toBe(
+    '2026-09-25T05:27:05.000Z',
+  )
+  expect(heldOn({ date: 'not a date' })).toBeNull()
+  expect(heldOn({})).toBeNull()
+})
+
+test('a tournament is grouped by its date, not by when it was created', () => {
+  const groups = groupTournaments(
+    [
+      // Created long ago, but held today.
+      { id: 1, stage: 'draft', date: '2026-09-28', created_at: at(2) },
+      // Created today, but held last week.
+      { id: 2, stage: 'draft', date: '2026-09-24', created_at: at(28) },
+    ],
+    now,
+  )
+
+  expect(groups.map((group) => [group.label, group.tournaments.map((t) => t.id)])).toEqual([
+    ['Today', [1]],
+    ['This week', [2]],
+  ])
 })

@@ -12,8 +12,10 @@ function signed(value) {
 // Without `refreshKey` the standings poll on their own. With one, they only
 // reload when it changes, e.g. when the pool's matches do.
 // `advancing` is how many places go through to the playoffs; those rows are marked.
+// null means automatic: the pool is split evenly across `bracketCount` brackets, so
+// bracket 1 takes its share (at least one place). 0 marks nothing.
 // Past eight teams the table scrolls under its pinned header.
-export default function PoolStandings({ poolId, refreshKey, advancing = 0 }) {
+export default function PoolStandings({ poolId, refreshKey, advancing = 0, bracketCount = 1 }) {
   // null until the first load; later reloads keep the current table on screen.
   const [rows, setRows] = useState(null)
   const scrollRef = useRef(null)
@@ -25,6 +27,8 @@ export default function PoolStandings({ poolId, refreshKey, advancing = 0 }) {
     refreshKey === undefined ? poolId : `${poolId}:${refreshKey}`,
     { auto: refreshKey === undefined },
   )
+
+  const marked = advancing ?? Math.max(1, Math.floor((rows?.length ?? 0) / bracketCount))
 
   const refreshButton = (
     <button type="button" className="standings-refresh" onClick={refresh} disabled={!canRefresh}>
@@ -61,7 +65,7 @@ export default function PoolStandings({ poolId, refreshKey, advancing = 0 }) {
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.team_id} className={row.rank <= advancing ? 'advancing' : undefined}>
+              <tr key={row.team_id} className={row.rank <= marked ? 'advancing' : undefined}>
                 <td>{row.rank}</td>
                 <td>{row.name}</td>
                 <td>{row.played}</td>
@@ -77,8 +81,8 @@ export default function PoolStandings({ poolId, refreshKey, advancing = 0 }) {
         </div>
       )}
       <div className="standings-foot">
-        {rows !== null && advancing > 0 && (
-          <p className="advance-note">Top {advancing} advance to the playoffs</p>
+        {rows !== null && marked > 0 && (
+          <p className="advance-note">Top {marked} advance to the playoffs</p>
         )}
         {refreshButton}
       </div>

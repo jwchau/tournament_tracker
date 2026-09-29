@@ -16,7 +16,7 @@ class _Playoffs:
 
     def __init__(self, session):
         self.session = session
-        tournament = Tournament(name="Ref Cup", court_count=2, settings_confirmed=True)
+        tournament = Tournament(name="Ref Cup", court_count=2)
         session.add(tournament)
         session.flush()
         self.tournament_id = tournament.id

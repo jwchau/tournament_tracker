@@ -35,19 +35,20 @@ cloudflared tunnel run tournament-tracker            # in another terminal
 On the laptop, signed in:
 
 1. Create a tournament named "Rehearsal <date>".
-2. Set the settings, then **Save and confirm settings**:
+2. Open **Manage**, set the settings, and **Save** (leave the advance per pool box blank):
 
    | Setting | Value |
    | ------- | ----- |
    | Court count | 4 |
    | Target pool size | 4 |
-   | Advance per pool | 2 |
+   | Advance per pool | (blank: automatic) |
    | Playoff bracket count | 2 |
    | Games per pairing | 1 |
    | Playoff best-of | 3 |
 
-- [ ] The confirm dialog lists exactly these values.
-- [ ] Afterwards, the page offers teams and pools.
+- [ ] Saving with no teams or pools yet goes straight through, with no review dialog.
+- [ ] Teams and pools can be added straight away.
+- [ ] Set a date and a venue: both show under the tournament's name.
 
 ## 2. Teams (ticket 14)
 

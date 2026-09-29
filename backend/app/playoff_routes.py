@@ -18,7 +18,6 @@ from app.pool_routes import _pool_matches, _pools_in_order, _tournament_or_404, 
 from app.playoffs import playoff_tiers
 from app.pools import pool_standings
 from app.results import placings
-from app.settings import require_confirmed_settings
 
 router = APIRouter()
 
@@ -56,8 +55,6 @@ def _plan_tiers(session: Session, tournament: Tournament) -> list[list[int]]:
 
 def _plan(session: Session, tournament: Tournament) -> Plan:
     """Each playoff bracket's seeded team ids, or NotReady saying why advancing can't happen yet."""
-    if not tournament.settings_confirmed:
-        raise NotReady("confirm the tournament settings first")
     if session.exec(
         select(PlayoffBracket.id).where(PlayoffBracket.tournament_id == tournament.id)
     ).first() is not None:
@@ -172,8 +169,6 @@ def playoff_seeding(tournament_id: int, session: Session = Depends(get_session))
         if _pools_in_order(session, tournament_id):
             plan = _plan(session, tournament)
         else:
-            if not tournament.settings_confirmed:
-                raise NotReady("confirm the tournament settings first")
             if session.exec(
                 select(PlayoffBracket.id).where(PlayoffBracket.tournament_id == tournament_id)
             ).first() is not None:
@@ -217,7 +212,6 @@ def generate_single_bracket(
     session: Session = Depends(get_session),
 ) -> list[Match]:
     """A tournament without pools: every team in one tier-1 bracket, seeded by seed."""
-    require_confirmed_settings(_tournament_or_404(session, tournament_id))
     if _pools_in_order(session, tournament_id):
         raise HTTPException(
             status_code=400,

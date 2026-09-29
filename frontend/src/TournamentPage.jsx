@@ -3,18 +3,17 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import ConfirmModal from './ConfirmModal'
 import {
-  confirmSettings,
   deleteTournament,
   getTournament,
   getTournamentResults,
   listPlayers,
   listTeams,
-  updateTournament,
 } from './api'
 import { useAuth } from './auth'
 import Loading from './Loading'
 import NotFound from './NotFound'
 import { useNotify } from './NotificationContext'
+import SettingsForm from './SettingsForm'
 import { useNotifyFailure } from './useNotifyFailure'
 import PlayoffsPanel from './PlayoffsPanel'
 import PoolsPanel from './PoolsPanel'
@@ -23,138 +22,15 @@ import { stageLabel } from './stage'
 import TeamForm from './TeamForm'
 import { useLoad } from './useLoad'
 
-// The settings everything else is built on. A new tournament confirms them
-// once (after reviewing them in a dialog) before teams, pools, and brackets
-// can be added; after the first score only the name can still change.
-function ConfigForm({ tournamentId, tournament, onSaved }) {
-  const [name, setName] = useState(tournament.name)
-  const [advancePerPool, setAdvancePerPool] = useState(tournament.advance_per_pool)
-  const [playoffBracketCount, setPlayoffBracketCount] = useState(
-    tournament.playoff_bracket_count,
-  )
-  const [courtCount, setCourtCount] = useState(tournament.court_count)
-  const [gamesPerPairing, setGamesPerPairing] = useState(tournament.games_per_pairing ?? 1)
-  const [targetPoolSize, setTargetPoolSize] = useState(tournament.target_pool_size ?? 4)
-  const [playoffBestOf, setPlayoffBestOf] = useState(tournament.playoff_best_of ?? 1)
-  const [reviewing, setReviewing] = useState(false)
-  const notify = useNotify()
-  const locked = tournament.settings_locked
-  const confirmed = tournament.settings_confirmed
-
-  const settings = [
-    ['Advance per pool', 'advance-per-pool', advancePerPool, setAdvancePerPool, undefined],
-    ['Playoff bracket count', 'playoff-bracket-count', playoffBracketCount, setPlayoffBracketCount, undefined],
-    ['Court count', 'court-count', courtCount, setCourtCount, undefined],
-    ['Games per pairing', 'games-per-pairing', gamesPerPairing, setGamesPerPairing, '1'],
-    ['Target pool size', 'target-pool-size', targetPoolSize, setTargetPoolSize, '2'],
-  ]
-
-  async function save() {
-    const updated = await updateTournament(tournamentId, {
-      name,
-      advance_per_pool: Number(advancePerPool),
-      playoff_bracket_count: Number(playoffBracketCount),
-      court_count: Number(courtCount),
-      games_per_pairing: Number(gamesPerPairing),
-      target_pool_size: Number(targetPoolSize),
-      playoff_best_of: Number(playoffBestOf),
-    })
-    if (confirmed) {
-      notify('Tournament settings saved')
-      onSaved(updated)
-      return
-    }
-    onSaved(await confirmSettings(tournamentId))
-    notify('Tournament settings confirmed')
-  }
-
-  async function saveOrExplain() {
-    try {
-      await save()
-    } catch (error) {
-      const body = await error?.json?.().catch(() => null)
-      notify(body?.detail ?? 'Failed to save settings', { type: 'error' })
-    }
-  }
-
-  async function handleSubmit(event) {
-    event.preventDefault()
-    if (confirmed) {
-      await saveOrExplain()
-    } else {
-      setReviewing(true)
-    }
-  }
-
-  async function handleConfirm() {
-    setReviewing(false)
-    await saveOrExplain()
-  }
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <label htmlFor="tournament-name">Tournament name</label>
-      <input
-        id="tournament-name"
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-      />
-
-      {settings.map(([label, id, value, setValue, min]) => (
-        <span key={id}>
-          <label htmlFor={id}>{label}</label>
-          <input
-            id={id}
-            type="number"
-            min={min}
-            value={value}
-            disabled={locked}
-            onChange={(event) => setValue(event.target.value)}
-          />
-        </span>
-      ))}
-
-      <label htmlFor="playoff-best-of">Playoff best-of</label>
-      <select
-        id="playoff-best-of"
-        value={playoffBestOf}
-        // Every playoff match is played to this many games; it's fixed once brackets exist.
-        disabled={locked || ['playoffs', 'complete'].includes(tournament.stage)}
-        onChange={(event) => setPlayoffBestOf(event.target.value)}
-      >
-        {[1, 3, 5, 7].map((count) => (
-          <option key={count} value={count}>
-            {count}
-          </option>
-        ))}
-      </select>
-
-      <button type="submit">{confirmed ? 'Save' : 'Save and confirm settings'}</button>
-      {locked && <p>Settings are locked once play has started; only the name can change.</p>}
-
-      <ConfirmModal
-        open={reviewing}
-        title="Confirm settings"
-        message={
-          <>
-            Teams, pools, and brackets are built on these settings:
-            {settings.map(([label, id, value]) => (
-              <span key={id}>
-                <br />
-                {label}: {value}
-              </span>
-            ))}
-            <br />
-            Playoff best-of: {playoffBestOf}
-          </>
-        }
-        confirmLabel="Confirm"
-        cancelLabel="Keep editing"
-        onConfirm={handleConfirm}
-        onCancel={() => setReviewing(false)}
-      />
-    </form>
-  )
+// A tournament's date as people say it: "Sat, Oct 4, 2026".
+function formatDate(value) {
+  const [year, month, day] = value.split('-').map(Number)
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(year, month - 1, day))
 }
 
 // The organizer's tools, off the board: a side drawer on a laptop, full
@@ -309,7 +185,11 @@ export default function TournamentPage() {
         onTeamsChanged={setTeams}
         onPoolsChanged={(pools) => setPoolCount(pools.length)}
         renderPool={(pool) => (
-          <PoolStandings poolId={pool.id} advancing={tournament.advance_per_pool} />
+          <PoolStandings
+            poolId={pool.id}
+            advancing={tournament.advance_per_pool}
+            bracketCount={tournament.playoff_bracket_count}
+          />
         )}
       />
     </section>
@@ -337,26 +217,31 @@ export default function TournamentPage() {
             {tournament.stage && (
               <span className="stage-chip">Stage: {stageLabel(tournament.stage)}</span>
             )}
+            {(tournament.date || tournament.venue) && (
+              <span className="board-when">
+                {[tournament.date && formatDate(tournament.date), tournament.venue]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </span>
+            )}
             <Link to={`/tournaments/${tournamentId}/courts`}>Courts (scorekeeper view)</Link>
           </div>
         </div>
         {user && (
-          <ManageDrawer startOpen={!tournament.settings_confirmed}>
+          <ManageDrawer startOpen={teams.length === 0 && tournament.stage === 'draft'}>
             <section aria-labelledby="settings-heading">
               <h4 id="settings-heading">Settings</h4>
-              <ConfigForm tournamentId={tournamentId} tournament={tournament} onSaved={setTournament} />
+              <SettingsForm tournamentId={tournamentId} tournament={tournament} onSaved={setTournament} />
             </section>
-            {tournament.settings_confirmed && (
-              <section aria-labelledby="add-team-heading">
-                <h4 id="add-team-heading">Add a team</h4>
-                <TeamForm
-                  tournamentId={tournamentId}
-                  onCreated={(team) =>
-                    setTeams((current) => [...current, { ...team, player_count: 0 }])
-                  }
-                />
-              </section>
-            )}
+            <section aria-labelledby="add-team-heading">
+              <h4 id="add-team-heading">Add a team</h4>
+              <TeamForm
+                tournamentId={tournamentId}
+                onCreated={(team) =>
+                  setTeams((current) => [...current, { ...team, player_count: 0 }])
+                }
+              />
+            </section>
             <section className="danger-zone">
               <button type="button" onClick={() => setShowDeleteConfirm(true)}>
                 Delete tournament
@@ -368,53 +253,43 @@ export default function TournamentPage() {
 
       {tournament.stage === 'complete' && <Results tournamentId={tournamentId} />}
 
-      {!tournament.settings_confirmed ? (
-        <p className="setup-note">
-          {user
-            ? 'Confirm the tournament settings to add teams, pools, and brackets.'
-            : 'This tournament is still being set up.'}
-        </p>
-      ) : (
-        <>
-          {inPlayoffs ? playoffs : standings}
-          {/* A tournament that went straight to a bracket has no standings to show. */}
-          {inPlayoffs ? poolCount !== 0 && standings : playoffs}
+      {inPlayoffs ? playoffs : standings}
+      {/* A tournament that went straight to a bracket has no standings to show. */}
+      {inPlayoffs ? poolCount !== 0 && standings : playoffs}
 
-          <section className="board-section" aria-labelledby="teams-heading">
-            <div className="section-head">
-              <h3 id="teams-heading">
-                Teams<span className="visually-hidden">,</span>{' '}
-                <span className="heading-count">{teams.length}</span>
-              </h3>
-              <label htmlFor="show-rosters">
-                <input
-                  id="show-rosters"
-                  type="checkbox"
-                  checked={showRosters}
-                  onChange={handleToggleRosters}
-                />
-                Show players
-              </label>
-            </div>
-            {teams.length === 0 && <p className="setup-note">No teams yet.</p>}
-            <ul className="team-list">
-              {teams.map((team) => (
-                <li key={team.id}>
-                  <Link to={`/teams/${team.id}`}>{team.name}</Link> ({team.player_count}{' '}
-                  {team.player_count === 1 ? 'player' : 'players'})
-                  {showRosters && (
-                    <ul>
-                      {(playersByTeam[team.id] ?? []).map((player) => (
-                        <li key={player.id}>{player.name}</li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </section>
-        </>
-      )}
+      <section className="board-section" aria-labelledby="teams-heading">
+        <div className="section-head">
+          <h3 id="teams-heading">
+            Teams<span className="visually-hidden">,</span>{' '}
+            <span className="heading-count">{teams.length}</span>
+          </h3>
+          <label htmlFor="show-rosters">
+            <input
+              id="show-rosters"
+              type="checkbox"
+              checked={showRosters}
+              onChange={handleToggleRosters}
+            />
+            Show players
+          </label>
+        </div>
+        {teams.length === 0 && <p className="setup-note">No teams yet.</p>}
+        <ul className="team-list">
+          {teams.map((team) => (
+            <li key={team.id}>
+              <Link to={`/teams/${team.id}`}>{team.name}</Link> ({team.player_count}{' '}
+              {team.player_count === 1 ? 'player' : 'players'})
+              {showRosters && (
+                <ul>
+                  {(playersByTeam[team.id] ?? []).map((player) => (
+                    <li key={player.id}>{player.name}</li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <ConfirmModal
         open={showDeleteConfirm}

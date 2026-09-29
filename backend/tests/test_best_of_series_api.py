@@ -391,13 +391,15 @@ def test_playoff_best_of_must_be_odd_and_one_to_seven(client, value):
     assert client.get(f"/tournaments/{tournament_id}").json()["playoff_best_of"] == 1
 
 
-def test_playoff_best_of_is_locked_while_brackets_exist(client):
+def test_playoff_best_of_can_change_with_brackets_until_a_playoff_match_is_scored(client):
     tournament_id, _ = _tournament(client, team_count=4)
-    client.post(f"/tournaments/{tournament_id}/bracket/generate")
+    matches = _bracket(client, tournament_id)
+    semi = matches[("winners", 1, 1)]
 
-    refused = client.patch(f"/tournaments/{tournament_id}", json={"playoff_best_of": 3})
-    client.delete(f"/tournaments/{tournament_id}/playoff-brackets")
     allowed = client.patch(f"/tournaments/{tournament_id}", json={"playoff_best_of": 3})
+    _game(client, semi["id"], 21, 15)
+    refused = client.patch(f"/tournaments/{tournament_id}", json={"playoff_best_of": 5})
 
-    assert refused.status_code == 400 and "brackets" in refused.json()["detail"]
     assert allowed.status_code == 200 and allowed.json()["playoff_best_of"] == 3
+    assert refused.status_code == 400 and "playoff match has been scored" in refused.json()["detail"]
+    assert client.get(f"/tournaments/{tournament_id}").json()["playoff_best_of"] == 3

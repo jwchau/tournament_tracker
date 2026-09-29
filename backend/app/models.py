@@ -1,3 +1,4 @@
+from datetime import date as Date
 from datetime import datetime, timezone
 from typing import Literal
 
@@ -43,13 +44,16 @@ class Tournament(SQLModel, table=True):
     name: str
     format: str = ""
     stage: str = "draft"
-    advance_per_pool: int = 1
+    # How many of each pool's teams go to bracket 1, then bracket 2, and so on.
+    # 0 means automatic: each pool is split evenly across the brackets.
+    advance_per_pool: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
     playoff_bracket_count: int = 1
     court_count: int = 1
     games_per_pairing: int = Field(default=1, sa_column_kwargs={"server_default": "1"})
     target_pool_size: int = Field(default=4, sa_column_kwargs={"server_default": "4"})
     playoff_best_of: int = Field(default=1, sa_column_kwargs={"server_default": "1"})
-    settings_confirmed: bool = Field(default=False, sa_column_kwargs={"server_default": "0"})
+    date: Date | None = None
+    venue: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -59,7 +63,10 @@ class TournamentCreate(SQLModel):
 
 class TournamentUpdate(SQLModel):
     name: str | None = None
-    advance_per_pool: int | None = None
+    date: Date | None = None
+    venue: str | None = None
+    # null sets it back to automatic
+    advance_per_pool: int | None = Field(default=None, ge=1)
     playoff_bracket_count: int | None = None
     court_count: int | None = None
     games_per_pairing: int | None = Field(default=None, ge=1)
@@ -72,15 +79,17 @@ class TournamentDetail(SQLModel):
     name: str
     format: str
     stage: str
-    advance_per_pool: int
+    date: Date | None
+    venue: str | None
+    advance_per_pool: int | None
     playoff_bracket_count: int
     court_count: int
     games_per_pairing: int
     target_pool_size: int
     playoff_best_of: int
-    settings_confirmed: bool
     created_at: datetime
-    settings_locked: bool
+    # Settings that can't change right now, each with the reason.
+    setting_locks: dict[str, str]
 
 
 class TournamentSummary(SQLModel):
@@ -88,13 +97,14 @@ class TournamentSummary(SQLModel):
     name: str
     format: str
     stage: str
-    advance_per_pool: int
+    date: Date | None
+    venue: str | None
+    advance_per_pool: int | None
     playoff_bracket_count: int
     court_count: int
     games_per_pairing: int
     target_pool_size: int
     playoff_best_of: int
-    settings_confirmed: bool
     created_at: datetime
     team_count: int
     # The top playoff bracket's winner once the tournament is complete, else None.

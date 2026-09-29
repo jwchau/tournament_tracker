@@ -76,3 +76,47 @@ test('shows a loading placeholder, not an empty table, until the standings arriv
   expect(screen.getByRole('status', { name: 'Loading standings' })).toBeInTheDocument()
   expect(screen.queryByRole('table')).not.toBeInTheDocument()
 })
+
+const sevenTeams = Array.from({ length: 7 }, (_, index) => ({
+  team_id: 20 + index,
+  name: `Team ${index + 1}`,
+  played: 6,
+  wins: 6 - index,
+  losses: index,
+  points: 3 * (6 - index),
+  points_for: 100 - index,
+  point_diff: 20 - index,
+  rank: index + 1,
+}))
+
+test('an automatic setting marks the top places, the pool split evenly over the brackets', async () => {
+  vi.spyOn(api, 'getPoolStandings').mockResolvedValue(sevenTeams)
+
+  render(<PoolStandings poolId={1} advancing={null} bracketCount={2} />)
+
+  const table = await screen.findByRole('table', { name: /standings/i })
+  const marked = within(table)
+    .getAllByRole('row')
+    .slice(1)
+    .filter((row) => row.className === 'advancing')
+  expect(marked).toHaveLength(3)
+  expect(screen.getByText('Top 3 advance to the playoffs')).toBeInTheDocument()
+})
+
+test('an automatic setting marks at least one place, even for a small pool', async () => {
+  vi.spyOn(api, 'getPoolStandings').mockResolvedValue(standings)
+
+  render(<PoolStandings poolId={1} advancing={null} bracketCount={5} />)
+
+  expect(await screen.findByText('Top 1 advance to the playoffs')).toBeInTheDocument()
+})
+
+test('a number of places wins over the automatic split, and 0 marks nothing', async () => {
+  vi.spyOn(api, 'getPoolStandings').mockResolvedValue(sevenTeams)
+
+  const { rerender } = render(<PoolStandings poolId={1} advancing={2} bracketCount={2} />)
+  expect(await screen.findByText('Top 2 advance to the playoffs')).toBeInTheDocument()
+
+  rerender(<PoolStandings poolId={1} advancing={0} bracketCount={2} />)
+  expect(screen.queryByText(/advance to the playoffs/)).not.toBeInTheDocument()
+})

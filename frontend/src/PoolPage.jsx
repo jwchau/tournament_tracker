@@ -30,6 +30,7 @@ export default function PoolPage() {
   const [pool, setPool] = useState(null)
   const [teams, setTeams] = useState([])
   const [advancing, setAdvancing] = useState(0)
+  const [bracketCount, setBracketCount] = useState(1)
   const [matchesKey, setMatchesKey] = useState(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const navigate = useNavigate()
@@ -51,7 +52,9 @@ export default function PoolPage() {
       onData: ([loaded, loadedTeams, tournament]) => {
         setPool(loaded)
         setTeams(loadedTeams)
-        setAdvancing(tournament?.advance_per_pool ?? 0)
+        // No tournament (it failed to load) marks nothing; an automatic setting is null.
+        setAdvancing(tournament ? tournament.advance_per_pool : 0)
+        setBracketCount(tournament?.playoff_bracket_count ?? 1)
       },
       failureMessage: "Couldn't load the pool",
     },
@@ -91,7 +94,12 @@ export default function PoolPage() {
             // Standings follow the schedule, so they start loading once it has.
             <Loading label="Loading standings" rows={4} />
           ) : (
-            <PoolStandings poolId={pool.id} refreshKey={matchesKey} advancing={advancing} />
+            <PoolStandings
+              poolId={pool.id}
+              refreshKey={matchesKey}
+              advancing={advancing}
+              bracketCount={bracketCount}
+            />
           )}
         </section>
 

@@ -1,4 +1,6 @@
-from app.playoffs import playoff_tiers
+import pytest
+
+from app.playoffs import playoff_tiers, pool_split
 from app.pools import StandingsRow
 
 
@@ -53,3 +55,40 @@ def test_teams_level_per_match_keep_pool_order():
     [tier] = playoff_tiers([[first], [second]], advance_per_pool=1, bracket_count=1)
 
     assert tier == [1, 2]
+
+
+@pytest.mark.parametrize(
+    ("pool_size", "advance", "brackets", "expected"),
+    [
+        # A number of places: ranks 1..k to bracket 1, and so on; the last takes the rest.
+        (6, 2, 2, [2, 4]),
+        (6, 2, 3, [2, 2, 2]),
+        (5, 3, 3, [3, 2, 0]),
+        (8, 4, 1, [8]),
+        # Automatic: an even split, the extras going to the later brackets.
+        (7, 0, 2, [3, 4]),
+        (8, 0, 3, [2, 3, 3]),
+        (6, 0, 3, [2, 2, 2]),
+        (6, 0, 4, [1, 1, 2, 2]),
+        (4, 0, 1, [4]),
+        # Fewer teams than brackets: one each to the first brackets.
+        (2, 0, 3, [1, 1, 0]),
+        (1, 0, 2, [1, 0]),
+    ],
+)
+def test_a_pool_is_split_across_the_brackets(pool_size, advance, brackets, expected):
+    sizes = pool_split(pool_size, advance, brackets)
+
+    assert sizes == expected
+    assert sum(sizes) == pool_size
+
+
+def test_automatic_tiers_take_each_pools_teams_in_rank_order():
+    pool_a = [_row(team_id, 3, 3 - index, 30, 10) for index, team_id in enumerate([1, 2, 3, 4])]
+    pool_b = [_row(team_id, 3, 3 - index, 30, 10) for index, team_id in enumerate([5, 6, 7, 8, 9])]
+
+    tiers = playoff_tiers([pool_a, pool_b], 0, 2)
+
+    # A pool of 4 sends 2 and 2; a pool of 5 sends 2 and 3.
+    assert {team for team in tiers[0]} == {1, 2, 5, 6}
+    assert {team for team in tiers[1]} == {3, 4, 7, 8, 9}
