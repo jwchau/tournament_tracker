@@ -709,7 +709,8 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
   - The grid is `repeat(auto-fit, minmax(min(100%, 340px), 1fr))` with a 16px gap: side by side on a laptop, stacked on a phone.
   - Each card has a `--panel` fill, 16px radius, `--elevation-3`, 20px padding and a 12px internal gap.
   - The head row pairs the Unbounded name with a DM Sans link that is at least 48px tall.
-  - The playoffs panel uses the same card for each bracket tier, with an "Open Bracket X" link to the bracket page. Its read-only diagram scrolls sideways inside the card (`.bracket-scroll`).
+  - The playoffs panel uses the same card for each bracket tier, with an "Open Bracket X" link to the bracket page. Inside it the bracket is drawn as on the bracket page (see "Read-only bracket" below); on a laptop the tree is a window onto the bracket, capped at 420px tall and scrolling in place, sideways too if it must (`.pool-card .bracket-scroll`).
+  - The tournament page's Standings section uses the same card for each pool, with its table on `--panel-flat`. The Teams list sits in a matching panel (`.team-list`: `--panel`, 16px radius, `--elevation-3`, 20px padding, chips on `--surface-3`). Both section headings stay outside their panels, as Playoffs' does.
 - **Standings** (`table[aria-label='Standings']`):
   - Full width with `--hairline` row rules. Numbers are right-aligned, the team name is left-aligned at weight 600, and the rank is in `--muted`.
   - Advancing rows (`tr.advancing`) get a full-row `--amber-tint` background, and their rank switches to `--amber-text` at 700. They have no side stripe or border accent.
@@ -728,11 +729,9 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
 - **Champion banner** (`.champion`, `ChampionBanner` in `BracketDiagram.jsx`), on the tournament page's bracket cards and on the bracket page once a champion is decided:
   - One sentence, no label above it: "Aces win the bracket", in Unbounded 700 22/26.4 `--text`, wrapping anywhere.
   - An `--amber-tint` block, 16px radius, padding 16px 20px, 16px below it.
-- **Read-only bracket tree** (`.bracket-svg`, `BracketDiagram.jsx`), on the tournament page only:
-  - An SVG tree of boxes: Inter 16/22 with tabular numerals. Team names are 16px; meta lines (`.bracket-meta`, court, place in line and time) are 14px in `--muted`.
-  - The winning score (`.bracket-score-won`) is in `--amber-text`, and the winning row is bold.
-  - Match boxes are 176px wide with 12px corners, on `--surface-3` with a hairline stroke. Connectors are straight `--border` lines at 1.5px, and rounds are 60px apart.
-  - Nothing in it is interactive; the bracket page is where matches open.
+- **Read-only bracket** (`BracketDiagram.jsx`), on the tournament page: the bracket page's own drawing, with nothing new to style.
+  - From 900px it is `CardTree` (the same match cards, elbow connectors and round heads) inside the pool card's panel; below that it is `RoundPages` (round tabs over swiping pages of cards).
+  - A card opens nothing here: tapping it goes to the bracket page, where the match panel and its tools live. The court link and the queue and ref lines are the same as on the bracket page.
 - **Court strip** (`.court-strip`, court view, courts list, pool page and bracket page):
   - An ink band like the board head but without the glow: `--ink` fill, `--band-text`, pulled up under the app bar (margin-top -24px), padding 12px `--gutter`. At 1200px and wider its bottom corners round to 16px.
   - Holds the court name (Unbounded 28/32), the court label in `--band-muted` (Inter 500 at 14.7/21), on the court view the current match's ref beneath it in the same style ("Ref: Aces" or "Ref: N/A"), and on the right a DM Sans link in `--band-accent`, at least 48px tall ("All courts" on the court view, "Back to tournament" on the list, the pool page and the bracket page).

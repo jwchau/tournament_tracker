@@ -1,4 +1,5 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { act, fireEvent, render, screen, within } from './testUtils'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
@@ -6,8 +7,24 @@ import BracketDiagram from './BracketDiagram'
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   vi.useRealTimers()
 })
+
+// Tests run without matchMedia, so the diagram shows its phone layout: round
+// pages with a card per match, the same as the bracket page.
+function renderDiagram(props = {}) {
+  return render(
+    <MemoryRouter>
+      <BracketDiagram playoffBracketId={1} tournamentId={3} {...props} />
+    </MemoryRouter>,
+  )
+}
+
+// The card whose open button carries this name, e.g. "Semis · match 2".
+const card = async (label) =>
+  (await screen.findByRole('button', { name: new RegExp(`^${label}:`) })).closest('.round-card')
+const matchButtons = () => screen.getAllByRole('button', { name: / vs / })
 
 const eightTeamBracket = [
   { id: 1, round: 1, position: 1, team1_id: 10, team2_id: 80, status: 'ready', winner_next_match_id: 5, winner_next_slot: 1 },
@@ -19,14 +36,15 @@ const eightTeamBracket = [
   { id: 7, round: 3, position: 1, team1_id: null, team2_id: null, status: 'pending', winner_next_match_id: null, winner_next_slot: null },
 ]
 
-test('renders all rounds, matches, and connecting lines for an 8-team bracket', async () => {
+test('shows every round and match of an 8-team bracket as cards', async () => {
   vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(eightTeamBracket)
 
-  render(<BracketDiagram playoffBracketId={1} />)
+  renderDiagram()
 
-  expect(await screen.findByTestId('match-3-1')).toBeInTheDocument()
-  expect(screen.getAllByTestId(/^match-/)).toHaveLength(7)
-  expect(screen.getAllByTestId(/^line-/)).toHaveLength(6)
+  await screen.findByRole('button', { name: /^Final:/ })
+  expect(matchButtons()).toHaveLength(7)
+  const rounds = within(screen.getByRole('navigation', { name: 'Rounds' })).getAllByRole('button')
+  expect(rounds.map((tab) => tab.textContent)).toEqual(['Quarters', 'Semis', 'Final'])
   expect(screen.queryByText('Losers bracket')).not.toBeInTheDocument()
 })
 
@@ -34,10 +52,10 @@ test('shows a loading placeholder, not an empty diagram, until the matches arriv
   vi.spyOn(api, 'getPlayoffBracketMatches').mockReturnValue(new Promise(() => {}))
   vi.spyOn(api, 'getBracketDispatch').mockReturnValue(new Promise(() => {}))
 
-  render(<BracketDiagram playoffBracketId={1} />)
+  renderDiagram()
 
   expect(screen.getByRole('status', { name: 'Loading matches' })).toBeInTheDocument()
-  expect(screen.queryAllByTestId(/^match-/)).toHaveLength(0)
+  expect(screen.queryAllByRole('button', { name: / vs / })).toHaveLength(0)
 })
 
 const fiveTeamBracket = [
@@ -50,14 +68,13 @@ const fiveTeamBracket = [
   { id: 17, round: 3, position: 1, team1_id: null, team2_id: null, status: 'pending', winner_next_match_id: null, winner_next_slot: null },
 ]
 
-test('renders byes as pre-completed matches for a 5-team bracket', async () => {
+test('shows byes as pre-completed matches for a 5-team bracket', async () => {
   vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
 
-  render(<BracketDiagram playoffBracketId={1} />)
+  renderDiagram()
 
-  expect(await screen.findByTestId('match-3-1')).toBeInTheDocument()
-  expect(screen.getAllByTestId(/^match-/)).toHaveLength(7)
-  expect(screen.getAllByTestId(/^line-/)).toHaveLength(6)
+  await screen.findByRole('button', { name: /^Final:/ })
+  expect(matchButtons()).toHaveLength(7)
   expect(screen.getAllByText('BYE')).toHaveLength(3)
 })
 
@@ -69,9 +86,9 @@ const teams = [
 test('shows team names instead of team ids', async () => {
   vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
 
-  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
+  renderDiagram({ teams })
 
-  await screen.findByTestId('match-3-1')
+  await screen.findByRole('button', { name: /^Final:/ })
   expect(screen.getAllByText('Spikers')).toHaveLength(2)
   expect(screen.getByText('Team 40')).toBeInTheDocument()
   expect(screen.queryByText('Team 20')).not.toBeInTheDocument()
@@ -85,7 +102,7 @@ test('shows the champion once the final match is complete', async () => {
   )
   vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(finished)
 
-  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
+  renderDiagram({ teams })
 
   const champion = await screen.findByRole('region', { name: 'Champion' })
   expect(champion).toHaveTextContent('Diggers')
@@ -94,9 +111,9 @@ test('shows the champion once the final match is complete', async () => {
 test('does not show a champion while the final is unfinished', async () => {
   vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
 
-  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
+  renderDiagram({ teams })
 
-  await screen.findByTestId('match-3-1')
+  await screen.findByRole('button', { name: /^Final:/ })
   expect(screen.queryByRole('region', { name: 'Champion' })).not.toBeInTheDocument()
 })
 
@@ -128,27 +145,21 @@ const fourTeamDouble = [
   doubleMatch(6, 'grand_final', 1, 1),
 ]
 
-test('lays out a double-elimination bracket in winners, losers, and grand final sections', async () => {
+test('lays out a double-elimination bracket in winners, losers, and grand final rounds', async () => {
   vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fourTeamDouble)
 
-  render(<BracketDiagram playoffBracketId={1} />)
+  renderDiagram()
 
-  expect(await screen.findByText('Winners bracket')).toBeInTheDocument()
-  expect(screen.getByText('Losers bracket')).toBeInTheDocument()
-  expect(screen.getByText('Grand final')).toBeInTheDocument()
-  for (const testId of [
-    'match-1-1',
-    'match-1-2',
-    'match-2-1',
-    'match-losers-1-1',
-    'match-losers-2-1',
-    'match-grand_final-1-1',
-  ]) {
-    expect(screen.getByTestId(testId)).toBeInTheDocument()
-  }
-  expect(screen.queryByTestId('match-grand_final-2-1')).not.toBeInTheDocument()
-  // Only winner links are drawn: 1→3, 2→3, 3→GF, L1→L2, L2→GF.
-  expect(screen.getAllByTestId(/^line-/)).toHaveLength(5)
+  await screen.findByRole('button', { name: /^Grand final:/ })
+  const tabs = within(screen.getByRole('navigation', { name: 'Rounds' })).getAllByRole('button')
+  expect(tabs.map((tab) => tab.textContent)).toEqual([
+    'Winners Semis',
+    'Winners final',
+    'Losers 1',
+    'Losers final',
+    'Grand final',
+  ])
+  expect(matchButtons()).toHaveLength(6)
 })
 
 test('shows the grand final reset match once it exists', async () => {
@@ -157,9 +168,9 @@ test('shows the grand final reset match once it exists', async () => {
     doubleMatch(7, 'grand_final', 2, 1, { team1_id: 10, team2_id: 20, status: 'ready' }),
   ])
 
-  render(<BracketDiagram playoffBracketId={1} />)
+  renderDiagram()
 
-  expect(await screen.findByTestId('match-grand_final-2-1')).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: /^Reset:/ })).toBeInTheDocument()
 })
 
 function withGrandFinals(...grandFinals) {
@@ -173,7 +184,7 @@ test('the winners champion taking grand final one is the champion', async () => 
     ),
   )
 
-  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
+  renderDiagram({ teams })
 
   expect(await screen.findByRole('region', { name: 'Champion' })).toHaveTextContent('Spikers')
 })
@@ -185,9 +196,9 @@ test('no champion yet when the losers champion takes grand final one', async () 
     ),
   )
 
-  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
+  renderDiagram({ teams })
 
-  await screen.findByTestId('match-grand_final-1-1')
+  await screen.findByRole('button', { name: /^Grand final:/ })
   expect(screen.queryByRole('region', { name: 'Champion' })).not.toBeInTheDocument()
 })
 
@@ -199,22 +210,23 @@ test('the reset match decides the champion', async () => {
     ),
   )
 
-  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
+  renderDiagram({ teams })
 
   expect(await screen.findByRole('region', { name: 'Champion' })).toHaveTextContent('Spikers')
 })
 
-test('shows each match court and time in its box, and has no controls', async () => {
+test('shows each match court and time on its card, and no scoring controls', async () => {
   const scheduled = fiveTeamBracket.map((match) =>
     match.id === 16 ? { ...match, court: 2, scheduled_time: '2026-10-03T10:30:00' } : match,
   )
   vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(scheduled)
 
-  render(<BracketDiagram playoffBracketId={1} teams={teams} />)
+  renderDiagram({ teams })
 
-  const box = await screen.findByTestId('match-2-2')
-  expect(box).toHaveTextContent('Court 2 · Sat 10:30')
-  expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  const semi = await card('Semis · match 2')
+  expect(semi).toHaveTextContent('Court 2 · Sat 10:30')
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
 })
 
 const dispatched = eightTeamBracket.map((match) => ({
@@ -238,14 +250,14 @@ test('shows the court each match was dispatched to and the queue position of tho
     overflow: false,
   })
 
-  render(<BracketDiagram playoffBracketId={1} readOnly />)
+  renderDiagram()
 
   expect(await screen.findByText('Waiting for a court · #1')).toBeInTheDocument()
-  expect(screen.getByTestId('match-1-1')).toHaveTextContent('Court 1')
-  expect(screen.getByTestId('match-1-2')).toHaveTextContent('Court 2')
-  expect(screen.getByTestId('match-1-4')).toHaveTextContent('Waiting for a court · #1')
-  expect(screen.getByTestId('match-1-3')).toHaveTextContent('Waiting for a court · #3')
-  expect(screen.getByTestId('match-2-1')).not.toHaveTextContent(/waiting|court/i)
+  expect(await card('Quarters · match 1')).toHaveTextContent('Court 1')
+  expect(await card('Quarters · match 2')).toHaveTextContent('Court 2')
+  expect(await card('Quarters · match 4')).toHaveTextContent('Waiting for a court · #1')
+  expect(await card('Quarters · match 3')).toHaveTextContent('Waiting for a court · #3')
+  expect(await card('Semis · match 1')).not.toHaveTextContent(/waiting for a court|court \d/i)
 })
 
 test("an overflow bracket's waiting matches take any free court", async () => {
@@ -256,36 +268,34 @@ test("an overflow bracket's waiting matches take any free court", async () => {
     overflow: true,
   })
 
-  render(<BracketDiagram playoffBracketId={1} readOnly />)
+  renderDiagram()
 
   expect(await screen.findByText('Waiting (any court) · #1')).toBeInTheDocument()
-  expect(screen.getByTestId('match-1-4')).toHaveTextContent('Waiting (any court) · #2')
+  expect(await card('Quarters · match 4')).toHaveTextContent('Waiting (any court) · #2')
   expect(await screen.findByText(/no courts of its own/i)).toBeInTheDocument()
 })
 
-test('a best-of series shows games won in its box', async () => {
+test('a best-of series shows games won on its card', async () => {
   const inSeries = fiveTeamBracket.map((match) =>
     match.id === 16
       ? { ...match, status: 'in_progress', team1_score: 1, team2_score: 0, version: 2 }
       : match,
   )
   vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(inSeries)
-  vi.spyOn(api, 'listGames').mockImplementation(async (matchId) =>
-    matchId === 16 ? [{ number: 1, team1_score: 21, team2_score: 15 }] : [],
-  )
 
-  render(<BracketDiagram playoffBracketId={1} teams={teams} bestOf={3} />)
+  renderDiagram({ teams, bestOf: 3 })
 
-  const spikers = await screen.findByTestId('team1-match-2-2')
-  expect(within(spikers).getByText('1')).toBeInTheDocument()
-  expect(within(screen.getByTestId('team2-match-2-2')).getByText('0')).toBeInTheDocument()
+  const semi = within(await card('Semis · match 2'))
+  const [spikers, diggers] = semi.getAllByText(/^[01]$/)
+  expect(spikers).toHaveTextContent('1')
+  expect(diggers).toHaveTextContent('0')
 })
 
 test('stops polling after 3 consecutive failures and resumes after the cooldown', async () => {
   vi.useFakeTimers()
   const loadMatches = vi.spyOn(api, 'getPlayoffBracketMatches').mockRejectedValue(new Error('network down'))
 
-  render(<BracketDiagram playoffBracketId={1} />)
+  renderDiagram()
 
   await act(() => vi.advanceTimersByTimeAsync(0))
   await act(() => vi.advanceTimersByTimeAsync(4000))
@@ -308,38 +318,74 @@ const finishedSemifinal = fiveTeamBracket.map((match) =>
     : match,
 )
 
-test("a finished match shows each team's final score beside it, with the winner in bold", async () => {
+test("a finished match shows each team's final score beside it, the winner's in amber", async () => {
   vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(finishedSemifinal)
 
-  render(<BracketDiagram playoffBracketId={1} teams={teams} readOnly />)
+  renderDiagram({ teams })
 
-  const winner = await screen.findByTestId('team1-match-2-2')
-  const loser = screen.getByTestId('team2-match-2-2')
-  expect(within(winner).getByText('Spikers')).toBeInTheDocument()
-  expect(within(winner).getByText('21')).toBeInTheDocument()
-  expect(within(loser).getByText('Diggers')).toBeInTheDocument()
-  expect(within(loser).getByText('17')).toBeInTheDocument()
-  expect(winner).toHaveAttribute('font-weight', 'bold')
-  expect(loser).not.toHaveAttribute('font-weight')
+  const semi = within(await card('Semis · match 2'))
+  expect(semi.getByText('Spikers')).toBeInTheDocument()
+  expect(semi.getByText('Diggers')).toBeInTheDocument()
+  expect(semi.getByText('21')).toHaveClass('score-won')
+  expect(semi.getByText('17')).not.toHaveClass('score-won')
 })
 
-test('an unfinished match and a bye show no scores', async () => {
+test("a game in progress shows its running score, muted, and a bye shows none", async () => {
   const partlyScored = fiveTeamBracket.map((match) =>
     match.id === 12 ? { ...match, status: 'in_progress', team1_score: 9, team2_score: 4 } : match,
   )
   vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(partlyScored)
 
-  render(<BracketDiagram playoffBracketId={1} teams={teams} readOnly />)
+  renderDiagram({ teams })
 
-  expect(await screen.findByTestId('team1-match-1-2')).not.toHaveTextContent('9')
-  expect(screen.getByTestId('team2-match-1-2')).not.toHaveTextContent('4')
-  expect(screen.getByTestId('team1-match-1-1')).toHaveTextContent(/^Team 10$/)
+  const running = within(await card('Quarters · match 2'))
+  expect(running.getByText('9')).toHaveClass('score-live')
+  expect(running.getByText('4')).toHaveClass('score-live')
+  expect((await card('Quarters · match 1')).querySelector('.score-chip')).toBeNull()
 })
 
 test('a finished match no longer shows the court it was played on', async () => {
   vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(finishedSemifinal)
 
-  render(<BracketDiagram playoffBracketId={1} teams={teams} readOnly />)
+  renderDiagram({ teams })
 
-  expect(await screen.findByTestId('match-2-2')).not.toHaveTextContent(/court/i)
+  expect(await card('Semis · match 2')).not.toHaveTextContent(/court/i)
+})
+
+test('a card leads to the bracket page', async () => {
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
+
+  render(
+    <MemoryRouter>
+      <Routes>
+        <Route path="/" element={<BracketDiagram playoffBracketId={1} tournamentId={3} teams={teams} />} />
+        <Route path="/brackets/:bracketId" element={<p>The bracket page</p>} />
+      </Routes>
+    </MemoryRouter>,
+  )
+
+  fireEvent.click(await screen.findByRole('button', { name: /^Semis · match 2:/ }))
+
+  expect(screen.getByText('The bracket page')).toBeInTheDocument()
+})
+
+test('a wide screen draws the tree of cards, with each round named over its column', async () => {
+  vi.stubGlobal('matchMedia', (query) => ({
+    matches: true,
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }))
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(eightTeamBracket)
+
+  const { container } = renderDiagram()
+
+  await screen.findByRole('button', { name: /^Final:/ })
+  expect(container.querySelectorAll('.card-tree > .round-card')).toHaveLength(7)
+  expect([...container.querySelectorAll('.card-tree-head')].map((head) => head.textContent)).toEqual([
+    'Quarters',
+    'Semis',
+    'Final',
+  ])
+  expect(screen.queryByRole('navigation', { name: 'Rounds' })).not.toBeInTheDocument()
 })
