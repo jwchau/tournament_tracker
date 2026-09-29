@@ -78,7 +78,7 @@ export default function PoolsPanel({
       ) : (
         <ul className="pool-grid">
           {pools.map((pool) => (
-            <li key={pool.id} className="pool-card">
+            <li key={pool.id} className="pool-card pool-card-flat">
               <div className="pool-card-head">
                 <h4>{pool.name}</h4>
                 <Link to={`/pools/${pool.id}`}>Open {pool.name}</Link>

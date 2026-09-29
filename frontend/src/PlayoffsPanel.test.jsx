@@ -157,7 +157,7 @@ test('tier diagrams here are read-only and link to each bracket page for scoring
     'href',
     '/brackets/30',
   )
-  await screen.findByTestId('match-1-2')
+  await screen.findByRole('button', { name: /^Final · match 2:/ })
   expect(screen.queryByRole('button', { name: /save schedule|submit score|^correct/i })).not.toBeInTheDocument()
 })
 

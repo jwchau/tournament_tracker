@@ -1116,6 +1116,24 @@ form > select {
   --standings-head: var(--panel-flat);
 }
 
+/* A pool's standings on the tournament page sit on the page like the pool
+   page's do: no raised panel, just the name over the table, pools divided by
+   a hairline. */
+.pool-card-flat {
+  background: none;
+  box-shadow: none;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.pool-card-flat .standings-scroll {
+  --standings-head: var(--surface);
+}
+
+.pool-card-flat .pool-card-head h4 {
+  font: 700 28px/32px var(--display);
+}
+
 .standings-scroll:focus-visible {
   outline: none;
   box-shadow: var(--focus);
@@ -1548,36 +1566,6 @@ table[aria-label='Standings'] tr.advancing td:first-child {
 }
 
 /* ---------- Bracket diagram ---------- */
-
-.bracket-canvas {
-  position: relative;
-  margin: 0;
-}
-
-.bracket-svg {
-  display: block;
-  overflow: visible;
-  font: 400 16px/22px var(--ui);
-  font-variant-numeric: tabular-nums;
-}
-
-.bracket-svg text {
-  fill: var(--text);
-}
-
-.bracket-svg text.bracket-meta {
-  fill: var(--muted);
-  font-size: 14px;
-}
-
-.bracket-svg text.bracket-score-won {
-  fill: var(--amber-text);
-}
-
-.bracket-box {
-  fill: var(--surface-3);
-  stroke: var(--hairline);
-}
 
 /* A decided bracket names its champion above the diagram, in the
    tournament-name face with amber for the win. */
