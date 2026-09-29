@@ -31,9 +31,10 @@ Home
 
 ### The trail
 
-- In the app bar between the two arrows: `Home › Spring Classic › Pool A ›
-  Court 2`. Earlier crumbs are links, the current page isn't
-  (`aria-current="page"`). It's a `nav` labelled "Breadcrumb".
+- On its own row in the app bar, under the brand and the account links,
+  between the two arrows: `Home › Spring Classic › Pool A › Court 2`.
+  Earlier crumbs are links, the current page isn't (`aria-current="page"`).
+  It's a `nav` labelled "Breadcrumb".
 - Names come from the page data the pages already load (cached): the
   tournament's, pool's and team's names, "Bracket N", "Courts", "Court N".
   A blank or unloadable name shows a placeholder ("Tournament", "Team").
@@ -44,9 +45,8 @@ Home
   current one, dimmed.
 - The separate Home link goes; the trail starts at Home, and the brand still
   links there.
-- **Phones (below 640px):** the trail takes its own row in the bar, between
-  the arrows, scrolling sideways with the current page kept in view and the
-  start fading out while scrolled.
+- **Phones (below 640px):** the trail scrolls sideways with the current page
+  kept in view and the start fading out while scrolled.
 
 ## Done / demoable
 

@@ -333,18 +333,20 @@ form > select {
   border-bottom: 1px solid var(--band-divider);
 }
 
+/* Two rows: the brand and account links on top, the page trail below. */
 .app-bar-inner {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 8px var(--gutter);
+  padding: 8px var(--gutter) 4px;
   min-height: 64px;
   display: flex;
   align-items: center;
-  gap: 12px 20px;
+  gap: 4px 20px;
   flex-wrap: wrap;
 }
 
 .app-bar h1 {
+  margin-right: auto;
   font-size: inherit;
 }
 
@@ -411,11 +413,11 @@ form > select {
 }
 
 /* The page trail: an arrow up, Home › Tournament › Pool A › Court 2, an arrow
-   back down. It takes the bar's free width, its middle crumbs giving way first. */
-/* A zero basis, so the bar never wraps to fit the trail's full width; it
-   grows into the free space and its crumbs give way instead. */
+   back down, on the bar's second row at full width. When it doesn't fit,
+   the crumbs between Home and the current page give way first. */
 .page-trail {
-  flex: 1 1 0;
+  order: 1;
+  flex: 1 1 100%;
   min-width: 0;
   display: flex;
   align-items: center;
@@ -555,19 +557,8 @@ form > select {
 
 /* Phones: one row. The brand keeps only its mark, and it already goes home. */
 @media (max-width: 639px) {
-  /* The brand and account links on the first row; the trail on its own below. */
   .app-bar-inner {
     gap: 4px 8px;
-    padding-block: 8px 4px;
-  }
-
-  .app-bar h1 {
-    margin-right: auto;
-  }
-
-  .page-trail {
-    order: 1;
-    flex-basis: 100%;
   }
 
   /* Phones scroll the trail rather than squeeze it; the current page stays in view. */
@@ -1636,8 +1627,10 @@ table[aria-label='Standings'] tr.advancing td:first-child {
    match at the bottom of the first view; Up next waits below the fold. */
 @media (max-width: 767px) {
   /* Only a scorekeeper's board fills the screen; a spectator's keeps its size. */
+  /* 231px is everything above the board: the two-row app bar (113), the
+     court strip (98) and the gap (20), so Finish match ends at the bottom. */
   .now-playing:has(.flip-plus) {
-    min-height: calc(100svh - 176px);
+    min-height: calc(100svh - 231px);
   }
 
   /* The card takes the column's full width, so two digits stay large. */
@@ -2505,7 +2498,8 @@ a.slot-cell:hover {
   gap: 8px 12px;
   padding: 10px 4px;
   border-radius: 12px;
-  scroll-margin-top: 96px;
+  /* Clear of the two-row sticky app bar when jumped to. */
+  scroll-margin-top: 145px;
 }
 
 .slot-match + .slot-match {
