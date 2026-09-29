@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import ConfirmModal from './ConfirmModal'
 import { deletePlayer, deleteTeam, getTeam, listPlayers, updateTeam } from './api'
@@ -82,57 +82,82 @@ export default function TeamPage() {
   if (status === 'not-found') return <NotFound thing="Team" />
   if (status !== 'ready') return <Loading label="Loading team" />
 
-  return (
-    <>
-      {user ? (
-        <>
-          <h2>Team</h2>
-          <form onSubmit={handleSave}>
-            <label htmlFor="team-page-name">Team name</label>
-            <input
-              id="team-page-name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-            <label htmlFor="team-page-seed">Seed</label>
-            <input
-              id="team-page-seed"
-              type="number"
-              min="1"
-              value={seed}
-              onChange={(event) => setSeed(event.target.value)}
-            />
-            <button type="submit">Save</button>
-          </form>
-        </>
-      ) : (
-        <h2>{team.name}</h2>
-      )}
+  const count = `${players.length} ${players.length === 1 ? 'player' : 'players'}`
 
-      <section>
-        <h3>Roster</h3>
-        <ul>
-          {players.map((player) => (
-            <li key={player.id}>
-              {player.name}{' '}
-              {user && (
-                <button type="button" onClick={() => handleRemovePlayer(player.id)}>
-                  Remove {player.name}
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
+  return (
+    <div className="team-page">
+      <header className="court-strip">
+        <div className="court-strip-title">
+          <h2>{team.name}</h2>
+          <p className="court-strip-label">
+            {team.seed == null ? 'No seed' : `Seed ${team.seed}`} · {count}
+          </p>
+        </div>
+        <Link to={`/tournaments/${team.tournament_id}`} className="court-strip-link">
+          Back to tournament
+        </Link>
+      </header>
+
+      <div className="team-sheet">
         {user && (
-          <PlayerForm
-            teamId={teamId}
-            onCreated={(player) => setPlayers((current) => [...current, player])}
-          />
+          <section className="board-section" aria-labelledby="team-details-heading">
+            <h3 id="team-details-heading">Details</h3>
+            <form onSubmit={handleSave} className="team-panel team-details">
+              <span className="field team-name-field">
+                <label htmlFor="team-page-name">Team name</label>
+                <input
+                  id="team-page-name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </span>
+              <span className="field team-seed-field">
+                <label htmlFor="team-page-seed">Seed</label>
+                <input
+                  id="team-page-seed"
+                  type="number"
+                  min="1"
+                  value={seed}
+                  onChange={(event) => setSeed(event.target.value)}
+                />
+              </span>
+              <button type="submit">Save</button>
+            </form>
+          </section>
         )}
-      </section>
+
+        <section className="board-section" aria-labelledby="roster-heading">
+          <h3 id="roster-heading">Roster</h3>
+          <div className="team-panel">
+            {players.length === 0 && <p className="section-note">No players yet.</p>}
+            <ul className="roster-list">
+              {players.map((player) => (
+                <li key={player.id}>
+                  <span className="roster-name">{player.name}</span>
+                  {user && (
+                    <button
+                      type="button"
+                      aria-label={`Remove ${player.name}`}
+                      onClick={() => handleRemovePlayer(player.id)}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {user && (
+              <PlayerForm
+                teamId={teamId}
+                onCreated={(player) => setPlayers((current) => [...current, player])}
+              />
+            )}
+          </div>
+        </section>
+      </div>
 
       {user && (
-        <section>
+        <section className="danger-zone">
           <button type="button" onClick={() => setConfirmingDelete(true)}>
             Delete team
           </button>
@@ -148,6 +173,6 @@ export default function TeamPage() {
         onConfirm={handleDelete}
         onCancel={() => setConfirmingDelete(false)}
       />
-    </>
+    </div>
   )
 }

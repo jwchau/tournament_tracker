@@ -1070,7 +1070,8 @@ form > select {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
 }
 
-.pool-card {
+.pool-card,
+.team-panel {
   background: var(--panel);
   border-radius: 16px;
   box-shadow: var(--elevation-3);
@@ -2706,17 +2707,114 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   gap: 20px;
 }
 
-/* The pool's name outranks its three section heads, at the board-title scale. */
-.pool-page .court-strip h2 {
+/* The pool's name outranks its three section heads, at the board-title scale.
+   The team page's name does the same. */
+.pool-page .court-strip h2,
+.team-page .court-strip h2 {
   font-size: 32px;
   line-height: 36px;
 }
 
 @media (min-width: 768px) {
-  .pool-page .court-strip h2 {
+  .pool-page .court-strip h2,
+  .team-page .court-strip h2 {
     font-size: 48px;
     line-height: 48px;
   }
+}
+
+/* ---------- Team page: details and roster ---------- */
+
+.team-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.team-sheet {
+  display: grid;
+  gap: var(--section-gap);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Signed in, the details and the roster sit side by side on a laptop; a
+   spectator's roster alone keeps a readable width. */
+@media (min-width: 1024px) {
+  .team-sheet:has(> :nth-child(2)) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 32px;
+    align-items: start;
+  }
+
+  .team-sheet:not(:has(> :nth-child(2))) {
+    max-width: 640px;
+  }
+}
+
+.team-details {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.team-name-field {
+  flex: 1 1 240px;
+}
+
+.team-seed-field {
+  flex: 0 0 120px;
+  width: 120px;
+  min-width: 0;
+}
+
+.team-seed-field input {
+  width: 100%;
+}
+
+.roster-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.roster-list:empty {
+  display: none;
+}
+
+.roster-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 4px 0 14px;
+  background: var(--surface-2);
+  border-radius: 12px;
+}
+
+.roster-name {
+  min-width: 0;
+  font: 600 16px/24px var(--ui);
+  overflow-wrap: anywhere;
+}
+
+.roster-list button {
+  flex: none;
+  background: transparent;
+  color: var(--accent-text);
+}
+
+.player-form {
+  align-items: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid var(--hairline);
+}
+
+.player-form .field {
+  flex: 1 1 200px;
 }
 
 .pool-sheet {
