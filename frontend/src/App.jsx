@@ -10,9 +10,9 @@ import HealthCheck from './HealthCheck'
 import LoginPage from './LoginPage'
 import MainPage from './MainPage'
 import NavBar from './NavBar'
-import { NavigationHistoryProvider } from './NavigationHistoryContext'
 import NotFound from './NotFound'
 import { NotificationProvider } from './NotificationContext'
+import { PageTrailProvider } from './PageTrailContext'
 import PoolPage from './PoolPage'
 import TeamPage from './TeamPage'
 import TournamentPage from './TournamentPage'
@@ -23,7 +23,7 @@ function App() {
       <BrowserRouter>
         <NotificationProvider>
           <AuthProvider>
-            <NavigationHistoryProvider>
+            <PageTrailProvider>
               <header className="app-bar">
                 <div className="app-bar-inner">
                   <h1>
@@ -57,7 +57,7 @@ function App() {
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>
-            </NavigationHistoryProvider>
+            </PageTrailProvider>
           </AuthProvider>
         </NotificationProvider>
       </BrowserRouter>

@@ -166,7 +166,8 @@
     "score-step": { "selector": ".flip-plus, .flip-minus", "family": "--emphasis", "weight": 700, "size": { "plus": "24px", "minus": "18px" }, "lineHeight": 1, "numeric": "tabular-nums" }
   },
   "components": {
-    "app-bar": { "selector": ".app-bar", "fill": "--ink", "rule": "1px --band-divider", "sticky": true, "zIndex": 6, "minHeight": "64px", "health": { "idle": "--status-idle", "error": "--band-accent with 3px --error-ring" }, "phone": "one row below 640px, brand word visually hidden, Home link dropped" },
+    "app-bar": { "selector": ".app-bar", "fill": "--ink", "rule": "1px --band-divider", "sticky": true, "zIndex": 6, "minHeight": "64px", "health": { "idle": "--status-idle", "error": "--band-accent with 3px --error-ring" }, "rows": "row 1 brand, account links, health; row 2 the page trail at full width", "phone": "below 640px: brand word visually hidden; the trail scrolls with the current crumb in view and a 24px fade at its start while scrolled" },
+    "page-trail": { "selector": "nav.page-trail (Breadcrumb)", "arrows": "48px --band-ghost icon buttons, Up to X / Down to Y, disabled when there is nothing that way", "crumb": "DM Sans 500 16/24, 48px tall, padding 12px 8px, radius 12px, max 18ch with ellipsis", "earlier": "links in --band-muted; hover --band-ghost and --band-text", "current": "--band-text 600, aria-current=page", "ahead": "opacity 0.6", "separator": "14px chevron in --band-muted", "shrink": "crumbs between Home and the current page first" },
     "board-head": { "selector": ".board-head", "fill": "--ember-glow over --ink", "text": "--band-text", "link": "--band-accent", "bleed": "full, rounded 0 0 16px 16px from 1200px" },
     "stage-chip": { "selector": ".stage-chip", "radius": "12px", "fill": "--band-ghost", "font": "label", "dot": "8px --band-accent" },
     "pool-card": { "selector": ".pool-grid > .pool-card", "grid": "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", "gap": "16px", "fill": "--panel", "radius": "16px", "shadow": "--elevation-3", "padding": "20px", "usedFor": ["pools", "playoff bracket tiers (read-only tree, Open Bracket link)"] },
@@ -203,7 +204,7 @@
     "score-step": {
       "plus": { "selector": ".flip-plus", "fill": "--surface-3", "hover": "--ghost-hover", "active": "--ghost-active", "minHeight": "72px (88px below 768px)", "width": "column", "icon": "22px SVG" },
       "minus": { "selector": ".flip-minus", "fill": "transparent", "outline": "inset 1px --hairline", "color": "--muted", "minHeight": "48px", "width": "column", "icon": "18px SVG", "disabledAt": 0 },
-      "phone": "scorekeeper board fills the first view: min-height calc(100svh - 176px), cards stretch"
+      "phone": "scorekeeper board fills the first view: min-height calc(100svh - 231px), cards stretch"
     },
     "save-status": { "selector": ".save-status", "role": "status", "font": "court-label", "color": "--muted", "minHeight": "24px", "states": { "idle": "empty", "dirty/saving": "Saving…", "saved": "Saved", "error": "--accent-text + Try again", "conflict": "--accent-text + Refetch latest" }, "debounce": "600ms" },
     "finish-match": { "selector": ".btn-primary.finish-match", "alsoFor": "Record game N on a series board", "width": "100%, max 640px", "minHeight": "56px", "enabled": "--ember", "disabled": "--ghost fill, --muted text, inset 1px --hairline, opacity 1", "note": ".finish-note for a tie", "confirm": "modal before finishing" },
@@ -240,7 +241,7 @@
         "gap": "12px",
         "slot": { "selector": ".slot", "fill": "--panel", "radius": "16px", "shadow": "--elevation-3", "padding": "14px 14px 16px", "gap": "10px", "head": "slot-head" },
         "now": { "selector": ".slot[data-now]", "ring": "inset 1px --accent-text over --elevation-3", "chip": { "selector": ".now-chip", "text": "Now", "type": "now-chip", "edge": "inset 1px --accent-text", "radius": "12px", "padding": "2px 10px", "fill": "none" } },
-        "row": { "selector": ".slot-match", "layout": "below 768px: court tag + teams, then ref, score, link or Correct each on a full-width line (.slot-pairing display: contents); from 768px: court tag, teams with the ref beneath, score, link or Correct at the row end", "padding": "10px 4px", "divider": "1px --hairline between rows", "scrollMarginTop": "96px" },
+        "row": { "selector": ".slot-match", "layout": "below 768px: court tag + teams, then ref, score, link or Correct each on a full-width line (.slot-pairing display: contents); from 768px: court tag, teams with the ref beneath, score, link or Correct at the row end", "padding": "10px 4px", "divider": "1px --hairline between rows", "scrollMarginTop": "145px" },
         "courtTag": { "selector": ".court-tag", "fill": "--ink", "text": "--band-text", "type": "court-tag", "radius": "8px", "padding": "5px 9px" },
         "teams": { "selector": ".slot-teams", "type": "slot-teams", "link": "back to the pairing's grid cell", "hover": "--accent-text, underlined" },
         "scoreChip": { "selector": ".score-chip", "fill": "--band-ghost top half over --ink", "seam": "1px --flip-seam at 0.7", "ring": "1px --hairline", "radius": "8px", "minWidth": "44px", "padding": "0 8px", "type": "schedule-score-chip", "winner": "--amber", "running": "--band-muted (.slot-score[data-live])" },

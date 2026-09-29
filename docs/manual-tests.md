@@ -67,7 +67,7 @@ change, untick the boxes it touches.
   - Setup: a playoff court with a best-of-3 match under way.
   - Expect: a "Best of 3 · Games 1–0" line, and the chips show the game in play.
 
-- [ ] **Refs on the courts list**
+- [x] **Refs on the courts list**
   - Setup: pool play with refs (section 5).
   - Expect: each busy court's tile reads "Ref: …" under its teams, matching the pool schedule; a free court shows no ref.
 
@@ -115,7 +115,7 @@ change, untick the boxes it touches.
   - Setup: a court with nothing left to play.
   - Expect: "Nothing left to play on this court right now." and no Swap sides button.
 
-- [ ] **Refs on the court view**
+- [x] **Refs on the court view**
   - Do: open a court during pool play; then change that match's ref on the pool page from another device.
   - Expect: the ink strip reads "Ref: …" under the pool name, and each Up next row shows its ref at the right. The changed ref appears within a few seconds. On a playoff court, matches still in the queue show no ref until they get a court.
 
@@ -164,7 +164,7 @@ change, untick the boxes it touches.
 - [ ] **Results grid by slot**
   - Expect: slots across, the pool's teams down, no letters or hatched diagonal. A team's cell reads "Ct 1 · vs Setters" when it plays, then adds dark score chips from that team's side (winner's in amber; muted while it's played); "Ref · Ct 2" over the two teams, outlined with no fill, when it refs; "Rest" otherwise. The current slot's whole column is outlined.
 
-- [ ] **Jump between grid and schedule**
+- [x] **Jump between grid and schedule**
   - Do: tap a playing or ref cell in the grid.
   - Expect: the page scrolls to that match in the schedule, and the row is filled and outlined; scroll back up and that match's cells (both teams' and the ref's) are outlined. Tapping the team names in a schedule row jumps back to the grid.
 
@@ -182,7 +182,7 @@ change, untick the boxes it touches.
   - Setup: a pool with 5+ teams.
   - Expect: on a phone the grid scrolls sideways inside its panel with the team names pinned; nothing else on the page scrolls sideways (8 teams included). A Resting line appears under slots where teams sit out and aren't reffing.
 
-- [ ] **Refs**
+- [x] **Refs**
   - Setup: a pool with 5+ teams and a schedule, signed in.
   - Expect: every match shows a ref (or N/A when no team is free), reffing is spread evenly, and Resting lists only idle teams not reffing. Pick a ref by hand: another court in that slot moves off that team if it had it, and a reload (or another device) shows the same refs. Set it back to Automatic and the rules' pick returns. Signed out, rows read "Ref: …" with no dropdown.
 
@@ -223,7 +223,7 @@ change, untick the boxes it touches.
   - Do: signed in, open an unfinished match with both teams; set its court and time and save; then Hold it, then Release it; then open a finished match and Correct it.
   - Expect: the card shows the new court and time right away; Hold explains what it does, the card says "On hold", Release brings it back; a match that has a score can't be held; Correct works as on the pool page. A bye or a match still waiting for a team has no tools.
 
-- [ ] **Bracket refs**
+- [x] **Bracket refs**
   - Do: play a few bracket matches on their courts; signed in, open an unfinished match on a court and pick a ref by hand, then set it back to Automatic.
   - Expect: once a match has a court its card reads "Court N · Ref: …", with a team that isn't playing: the team due next on that court, else the latest team knocked out. When a ref's own match goes on a court, the match they were reffing gets a new ref (unless it was picked by hand). The panel's Ref dropdown lists only teams not on a court; a hand-picked ref stays put; Automatic returns to the rules.
 
@@ -246,6 +246,10 @@ change, untick the boxes it touches.
   - Expect: the small brackets on the tournament page are unchanged (read-only tree), and "Open Bracket N" leads to this page.
 
 ## 7. Across the app
+
+- [ ] **Page trail and arrows**
+  - Do: go Home → a tournament → Pool A → a court; then ← ←, → →. Repeat through a bracket, the courts list and a team. Then open a court from its link on another page, and try it on a phone.
+  - Expect: the bar reads Home › tournament › Pool A › Court N, the current page in white and not a link. ← goes up (it's named "Up to …"); the pages you came up from stay on the trail, dimmed, and → goes back down them. A different link drops them. A court opened directly shows the pool or bracket using it. On a phone the trail has its own row, with the current page in view. The browser's back button still goes back through history.
 
 - [x] **Reduced motion**
   - Do: turn on reduced motion in the OS.

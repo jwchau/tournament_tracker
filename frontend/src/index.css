@@ -333,14 +333,15 @@ form > select {
   border-bottom: 1px solid var(--band-divider);
 }
 
+/* Two rows: the brand and account links on top, the page trail below. */
 .app-bar-inner {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 8px var(--gutter);
+  padding: 8px var(--gutter) 4px;
   min-height: 64px;
   display: flex;
   align-items: center;
-  gap: 12px 20px;
+  gap: 4px 20px;
   flex-wrap: wrap;
 }
 
@@ -411,6 +412,100 @@ form > select {
   background: var(--band-ghost-hover);
 }
 
+/* The page trail: an arrow up, Home › Tournament › Pool A › Court 2, an arrow
+   back down, on the bar's second row at full width. When it doesn't fit,
+   the crumbs between Home and the current page give way first. */
+.page-trail {
+  order: 1;
+  flex: 1 1 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font: 500 16px/24px var(--nav);
+}
+
+.page-trail .icon-button {
+  flex: none;
+  color: var(--band-text);
+  background: var(--band-ghost);
+}
+
+.page-trail .icon-button:hover:not(:disabled) {
+  background: var(--band-ghost-hover);
+}
+
+.trail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.trail-list::-webkit-scrollbar {
+  display: none;
+}
+
+.trail-list[data-scrolled='true'] {
+  mask-image: linear-gradient(to right, transparent, #000 24px);
+}
+
+.trail-list li {
+  display: flex;
+  align-items: center;
+  min-width: 3ch;
+  flex: 0 1 auto;
+}
+
+/* Home and the current page keep their names; the ones between shrink. */
+.trail-list li:first-child,
+.trail-list li:has(> .trail-current) {
+  flex-shrink: 0;
+}
+
+.trail-list a,
+.trail-current {
+  display: block;
+  max-width: 18ch;
+  padding: 12px 8px;
+  border-radius: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trail-list a {
+  color: var(--band-muted);
+  text-decoration: none;
+  transition: background 200ms ease-in-out, color 200ms ease-in-out;
+}
+
+.trail-list a:hover {
+  background: var(--band-ghost);
+  color: var(--band-text);
+}
+
+.trail-current {
+  color: var(--band-text);
+  font-weight: 600;
+}
+
+/* Pages the reader came up from: the way back down. */
+.trail-ahead {
+  opacity: 0.6;
+}
+
+.trail-sep {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--band-muted);
+}
+
 .icon-button {
   width: 48px;
   padding: 0;
@@ -463,9 +558,12 @@ form > select {
 /* Phones: one row. The brand keeps only its mark, and it already goes home. */
 @media (max-width: 639px) {
   .app-bar-inner {
-    flex-wrap: nowrap;
-    gap: 8px;
-    padding-block: 8px;
+    gap: 4px 8px;
+  }
+
+  /* Phones scroll the trail rather than squeeze it; the current page stays in view. */
+  .trail-list li {
+    flex-shrink: 0;
   }
 
   .brand {
@@ -475,10 +573,6 @@ form > select {
 
   .nav-bar {
     gap: 4px;
-  }
-
-  .nav-bar .nav-home {
-    display: none;
   }
 
   .nav-bar a,
@@ -1533,8 +1627,10 @@ table[aria-label='Standings'] tr.advancing td:first-child {
    match at the bottom of the first view; Up next waits below the fold. */
 @media (max-width: 767px) {
   /* Only a scorekeeper's board fills the screen; a spectator's keeps its size. */
+  /* 231px is everything above the board: the two-row app bar (113), the
+     court strip (98) and the gap (20), so Finish match ends at the bottom. */
   .now-playing:has(.flip-plus) {
-    min-height: calc(100svh - 176px);
+    min-height: calc(100svh - 231px);
   }
 
   /* The card takes the column's full width, so two digits stay large. */
@@ -2402,7 +2498,8 @@ a.slot-cell:hover {
   gap: 8px 12px;
   padding: 10px 4px;
   border-radius: 12px;
-  scroll-margin-top: 96px;
+  /* Clear of the two-row sticky app bar when jumped to. */
+  scroll-margin-top: 145px;
 }
 
 .slot-match + .slot-match {
