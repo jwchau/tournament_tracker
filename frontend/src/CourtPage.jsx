@@ -111,7 +111,6 @@ export default function CourtPage() {
           ) : current.best_of > 1 ? (
             <SeriesForm
               key={current.id}
-              board
               match={current}
               bestOf={current.best_of}
               team1Name={current.team1_name}

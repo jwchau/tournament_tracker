@@ -1,8 +1,13 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { afterEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
 import SeriesForm from './SeriesForm'
+
+beforeEach(() => {
+  // A point tapped on the board is saved as the game's running score.
+  vi.spyOn(api, 'saveGameInPlay').mockResolvedValue(series)
+})
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -24,6 +29,10 @@ function renderForm(props = {}) {
   )
 }
 
+// A recorded game's line: "Game 1: 21–15", its scores in their own spans.
+const gameLine = (text) =>
+  screen.findByText((_, element) => element?.className === 'game-line' && element.textContent === text)
+
 test('lists the games so far and records the next one', async () => {
   vi.spyOn(api, 'listGames')
     .mockResolvedValueOnce([{ number: 1, team1_score: 21, team2_score: 15 }])
@@ -39,7 +48,7 @@ test('lists the games so far and records the next one', async () => {
   renderForm({ onScored })
 
   expect(await screen.findByText('Aces vs Blockers · best of 3 · 1–0')).toBeInTheDocument()
-  expect(screen.getByText('Game 1: 21–15')).toBeInTheDocument()
+  await gameLine('Game 1: 21–15')
   fireEvent.change(screen.getByLabelText('Game 2 Aces score'), { target: { value: '18' } })
   fireEvent.change(screen.getByLabelText('Game 2 Blockers score'), { target: { value: '21' } })
   fireEvent.click(screen.getByRole('button', { name: 'Record game 2' }))
@@ -47,7 +56,7 @@ test('lists the games so far and records the next one', async () => {
   await waitFor(() =>
     expect(addGame).toHaveBeenCalledWith(7, { team1Score: 18, team2Score: 21, version: 4 }),
   )
-  expect(await screen.findByText('Game 2: 18–21')).toBeInTheDocument()
+  await gameLine('Game 2: 18–21')
   expect(onScored).toHaveBeenCalledWith(updated)
 })
 
@@ -82,7 +91,7 @@ test('a recorded game can be fixed while the series is unfinished', async () => 
 
   renderForm()
 
-  const game = await screen.findByText('Game 1: 21–15')
+  const game = await gameLine('Game 1: 21–15')
   fireEvent.click(within(game.closest('li')).getByRole('button', { name: 'Fix game 1' }))
   fireEvent.change(screen.getByLabelText('Game 1 Aces score'), { target: { value: '21' } })
   fireEvent.change(screen.getByLabelText('Game 1 Blockers score'), { target: { value: '19' } })
@@ -103,6 +112,20 @@ test('a version conflict offers to refetch instead of overwriting', async () => 
   fireEvent.change(screen.getByLabelText('Game 1 Blockers score'), { target: { value: '10' } })
   fireEvent.click(screen.getByRole('button', { name: 'Record game 1' }))
 
-  expect(await screen.findByText(/updated elsewhere/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /refetch latest/i })).toBeInTheDocument()
+  const alert = await screen.findByRole('alert')
+  expect(alert).toHaveTextContent(/updated elsewhere/i)
+  expect(within(alert).getByRole('button', { name: /refetch latest/i })).toBeInTheDocument()
+})
+
+test('a game that cannot be saved says so', async () => {
+  vi.spyOn(api, 'listGames').mockResolvedValue([])
+  vi.spyOn(api, 'addGame').mockRejectedValue({ status: 400 })
+
+  renderForm({ match: { ...series, team1_score: 0 } })
+
+  fireEvent.change(await screen.findByLabelText('Game 1 Aces score'), { target: { value: '21' } })
+  fireEvent.change(screen.getByLabelText('Game 1 Blockers score'), { target: { value: '10' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Record game 1' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't save that game/i)
 })

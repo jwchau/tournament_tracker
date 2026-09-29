@@ -756,7 +756,7 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
   - On phones a scorekeeper's board fills the first view (`min-height: calc(100svh - 231px)`, everything above the board: the two-row app bar, the court strip and the gap) and the cards stretch, so +1 sits in the thumb zone and Finish match at the bottom.
 - **Save status line** (`.save-status`, `SaveStatus.jsx`, `role="status"`): centered Inter 500 at 14.7/21 in `--muted`, at least 24px tall so the board does not jump. It reads "Saving…" (points are sent 600ms after the last tap, as one running score), then "Saved"; nothing before the first change. A failed save ("Couldn’t save the score…") and a version conflict ("Someone else updated this match.") switch to `--accent-text` with a Try again or Refetch latest ghost button.
 - **Finish match** (`.btn-primary.finish-match`, also "Record game N" on a series board): full width of the 640px column, at least 56px tall. It is ember only when it can be pressed. Disabled (tied, saving, finishing or in conflict) it is a ghost outline: `--ghost` fill, `--muted` text, a 1px inset `--hairline` edge, full opacity. A tie shows "A match can’t finish tied." as a `.finish-note` (Inter 14/20, `--muted`) above it. Finishing asks for confirmation in the modal first.
-- **Series on the board** (`.series-board`, `SeriesForm` with `board`):
+- **Series on the board** (`.series-board`, `SeriesForm`):
   - The tally (`.series-tally`) on top: "A vs B · best of N · x–y", Inter 600 16/24 in `--muted`, centered, tabular.
   - Then the game in play on the flip scoreboard, its save status and Record game N.
   - Then the games so far (`.series-games`), each a `--surface-2` row with 12px radius, padding 8px 8px 8px 16px: "Game N: a–b" in Inter 500 16/24, with the winning side's score (`.game-won`) in `--amber-text` at 700, and a Fix game N button. Empty lists are hidden.
@@ -870,13 +870,4 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
 10. **A result and a match to come must read apart.** In the slot grid, a match with a score carries ink flip-card score chips; one still to come is only its court and opponent on the quiet `--surface-2` cell, with no chips. A ref cell is an outline with no fill, and resting is a muted word. None borrows another's fill.
 11. **A match on a court is marked live.** A bracket match card with both teams, on a court and not finished carries the 2px inset `--accent-text` ring and a court link; nothing else gets that ring on the bracket page. The main page reuses the same ring for a tournament being played (Today's full-width row, with its Courts link), and for nothing else.
 12. **Tabs and page names say rounds the same way.** One name per round, from `roundsOf`: Quarters, Semis, Final (earlier rounds "Round N"); in double elimination Winners Quarters… Winners final, Losers N, Losers final, Grand final and Reset. The same name labels the tab, the page, the tree's column head and the "Next:" link, and a match is named from it: "Semis · match 2", or just the round's name when the round has one match. Status reads in words: Finished, Waiting for both teams, Court N · time, Waiting for a court · #N (Waiting (any court) · #N in an overflow bracket), On hold, Not on a court yet.
-13. **The tournament page keeps the read-only tree.** Its bracket cards show the SVG diagram and the champion banner, with nothing to open; running a bracket happens on the bracket page.
-
-### Not yet overhauled
-
-Every page the app links to has had a Kiln pass. Two components have not, because nothing renders them:
-
-- `ScoreEntryForm`: superseded by the court scoreboard and used only by its own test.
-- `SeriesForm` outside its court-board mode: the court page always passes `board`, so its plain form (score fields, conflict and error lines) is never shown.
-
-Treat them as a gap to close if they are ever used again, not as a pattern to copy.
+13. **The tournament page draws brackets as the bracket page does, read-only.** Its bracket cards show the same match cards (the card tree from 900px, round pages below) and the champion banner, capped at 420px tall; a card leads to the bracket page, where running a bracket happens.
