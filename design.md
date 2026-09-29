@@ -709,8 +709,8 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
   - The grid is `repeat(auto-fit, minmax(min(100%, 340px), 1fr))` with a 16px gap: side by side on a laptop, stacked on a phone.
   - Each card has a `--panel` fill, 16px radius, `--elevation-3`, 20px padding and a 12px internal gap.
   - The head row pairs the Unbounded name with a DM Sans link that is at least 48px tall.
-  - The playoffs panel uses the same card for each bracket tier, with an "Open Bracket X" link to the bracket page. Inside it the bracket is drawn as on the bracket page (see "Read-only bracket" below); on a laptop the tree scrolls sideways inside the card (`.bracket-scroll`).
-  - **Standings pools** (`.pool-card-flat`, the tournament page's Standings section): the same head and courts line, but no panel. There is no fill, shadow or side padding, only a `--hairline` above and 16px of padding; the name is Unbounded 700 28/32 and the table sits on `--surface`. It reads as the pool page's Standings section does.
+  - The playoffs panel uses the same card for each bracket tier, with an "Open Bracket X" link to the bracket page. Inside it the bracket is drawn as on the bracket page (see "Read-only bracket" below); on a laptop the tree is a window onto the bracket, capped at 420px tall and scrolling in place, sideways too if it must (`.pool-card .bracket-scroll`).
+  - The tournament page's Standings section uses the same card for each pool, with its table on `--panel-flat`. The Teams list sits in a matching panel (`.team-list`: `--panel`, 16px radius, `--elevation-3`, 20px padding, chips on `--surface-3`). Both section headings stay outside their panels, as Playoffs' does.
 - **Standings** (`table[aria-label='Standings']`):
   - Full width with `--hairline` row rules. Numbers are right-aligned, the team name is left-aligned at weight 600, and the rank is in `--muted`.
   - Advancing rows (`tr.advancing`) get a full-row `--amber-tint` background, and their rank switches to `--amber-text` at 700. They have no side stripe or border accent.

@@ -1116,24 +1116,6 @@ form > select {
   --standings-head: var(--panel-flat);
 }
 
-/* A pool's standings on the tournament page sit on the page like the pool
-   page's do: no raised panel, just the name over the table, pools divided by
-   a hairline. */
-.pool-card-flat {
-  background: none;
-  box-shadow: none;
-  padding: 16px 0 0;
-  border-top: 1px solid var(--hairline);
-}
-
-.pool-card-flat .standings-scroll {
-  --standings-head: var(--surface);
-}
-
-.pool-card-flat .pool-card-head h4 {
-  font: 700 28px/32px var(--display);
-}
-
 .standings-scroll:focus-visible {
   outline: none;
   box-shadow: var(--focus);
@@ -1291,16 +1273,20 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   gap: 4px;
 }
 
+/* The teams sit in a panel, like the pool and bracket cards above them. */
 .team-list {
   list-style: none;
-  padding: 0;
+  padding: 20px;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  background: var(--panel);
+  border-radius: 16px;
+  box-shadow: var(--elevation-3);
 }
 
 .team-list > li {
-  background: var(--surface-2);
+  background: var(--surface-3);
   border-radius: 12px;
   padding: 10px 14px;
   font: 400 16px/24px var(--ui);
@@ -1589,6 +1575,17 @@ table[aria-label='Standings'] tr.advancing td:first-child {
 .bracket-scroll {
   overflow-x: auto;
   padding-bottom: 4px;
+}
+
+/* On the tournament page a tier's tree is a window onto the bracket, not its
+   full size: it scrolls in place past 420px. */
+.pool-card .bracket-scroll {
+  max-height: 420px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  border-radius: 12px;
 }
 
 .bracket-line {
