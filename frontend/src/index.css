@@ -1551,6 +1551,123 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   margin-top: 8px;
 }
 
+/* The seeding dialog: each bracket's teams in seed order, moved with buttons.
+   The brackets scroll between the fixed head and actions when they're long. */
+.seeding-modal {
+  max-width: 560px;
+  max-height: calc(100dvh - 32px);
+}
+
+/* .field's 280px flex basis is a width in a row, but a height in this column. */
+.seeding-modal .field {
+  flex: none;
+}
+
+.seeding-tiers {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.seeding-tiers h4 {
+  font: 700 18px/24px var(--display);
+  margin-bottom: 8px;
+}
+
+.seed-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.seed-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 4px 4px 14px;
+  background: var(--surface-2);
+  border-radius: 12px;
+}
+
+.seed-number {
+  min-width: 1.5em;
+  font: 700 16px/24px var(--display);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.seed-team {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.seed-name {
+  font: 600 16px/24px var(--ui);
+  overflow-wrap: anywhere;
+}
+
+.seed-finish {
+  font: 400 14px/20px var(--ui);
+  color: var(--muted);
+}
+
+.seed-move {
+  flex: none;
+  width: 48px;
+  min-height: 48px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.seed-move svg {
+  width: 20px;
+  height: 20px;
+}
+
+.seed-move:disabled {
+  opacity: 0.35;
+}
+
+/* Always there, so the row is the same size whether or not the order changed. */
+.seeding-modal .modal-actions {
+  flex-wrap: nowrap;
+}
+
+.seeding-reset {
+  margin-right: auto;
+  background: transparent;
+  color: var(--accent-text);
+}
+
+.seeding-reset:disabled {
+  opacity: 0.4;
+}
+
+/* Too narrow for three buttons in a row: Reset takes the first row, always. */
+@media (max-width: 520px) {
+  .seeding-modal .modal-actions {
+    flex-wrap: wrap;
+  }
+
+  .seeding-reset {
+    flex: 1 0 100%;
+    margin-right: 0;
+  }
+}
+
 /* ---------- Bracket diagram ---------- */
 
 /* A decided bracket names its champion above the diagram, in the

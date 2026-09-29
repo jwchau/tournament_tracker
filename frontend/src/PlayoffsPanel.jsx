@@ -5,6 +5,7 @@ import {
   advanceToPlayoffs,
   generateBracket,
   getPlayoffReadiness,
+  getPlayoffSeeding,
   listPlayoffBrackets,
   resetPlayoffBrackets,
 } from './api'
@@ -13,18 +14,22 @@ import BracketDiagram from './BracketDiagram'
 import ConfirmModal from './ConfirmModal'
 import Loading from './Loading'
 import { useNotify } from './NotificationContext'
+import SeedingDialog from './SeedingDialog'
 import { useNotifyFailure } from './useNotifyFailure'
 import { usePending } from './usePending'
 
 // A tournament with pools advances from pool play into tiered brackets; one
 // without pools generates a single bracket of every team. Either happens once,
-// and can be undone until the first playoff score.
+// and can be undone until the first playoff score. Both first open the seeding
+// dialog, where the organizer confirms or changes each bracket's seed order
+// and picks the format.
 // onChanged is told whenever brackets are created or reset, since that changes
 // which tournament settings are locked.
 export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 1, onChanged }) {
   const [brackets, setBrackets] = useState(null)
   const [blocker, setBlocker] = useState('Checking pool play…')
-  const [format, setFormat] = useState('single')
+  // The seeding dialog's data while it's open.
+  const [seeding, setSeeding] = useState(null)
   const [confirmingReset, setConfirmingReset] = useState(false)
   const notify = useNotify()
   const notifyFailure = useNotifyFailure()
@@ -40,20 +45,33 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tournamentId])
 
-  const [handleAdvance, advancing] = usePending(async () => {
+  // Reads the seed order the standings give right now; the dialog is where it
+  // can be changed.
+  const [handleReviewSeeding, reviewing] = usePending(async () => {
     try {
-      setBrackets(await advanceToPlayoffs(tournamentId, { format }))
+      const loaded = await getPlayoffSeeding(tournamentId)
+      if (loaded.ready) setSeeding(loaded)
+      else notify(loaded.reason, { type: 'error' })
+    } catch (error) {
+      notifyFailure(error, "Couldn't load the seeding")
+    }
+  })
+
+  const [handleAdvance, advancing] = usePending(async ({ format, seeding: order }) => {
+    try {
+      setBrackets(await advanceToPlayoffs(tournamentId, { format, seeding: order }))
       onChanged?.()
       notify('Advanced to playoffs')
     } catch (error) {
       const body = await error?.json?.().catch(() => null)
       notify(body?.detail ?? 'Failed to advance to playoffs', { type: 'error' })
     }
+    setSeeding(null)
   })
 
-  async function handleGenerate() {
+  const [handleGenerate, generating] = usePending(async ({ format, seeding: order }) => {
     try {
-      await generateBracket(tournamentId, { format })
+      await generateBracket(tournamentId, { format, seeding: order })
       setBrackets(await listPlayoffBrackets(tournamentId))
       onChanged?.()
       notify('Bracket generated')
@@ -61,7 +79,8 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
       const body = await error?.json?.().catch(() => null)
       notify(body?.detail ?? 'Failed to generate bracket', { type: 'error' })
     }
-  }
+    setSeeding(null)
+  })
 
   async function handleReset() {
     setConfirmingReset(false)
@@ -129,32 +148,24 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
     <>
       {hasPools && blocker && <p className="setup-note">{blocker}</p>}
       <div className="playoff-controls">
-        <span className="field">
-          <label htmlFor="playoff-format">Playoff format</label>
-          <select
-            id="playoff-format"
-            value={format}
-            onChange={(event) => setFormat(event.target.value)}
-          >
-            <option value="single">Single elimination</option>
-            <option value="double">Double elimination</option>
-          </select>
-        </span>
-        {hasPools ? (
-          <button
-            type="button"
-            className="btn-primary"
-            disabled={blocker !== null || advancing}
-            onClick={handleAdvance}
-          >
-            {advancing ? 'Advancing…' : 'Advance to playoffs'}
-          </button>
-        ) : (
-          <button type="button" className="btn-primary" onClick={handleGenerate}>
-            Generate bracket
-          </button>
-        )}
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={(hasPools && blocker !== null) || reviewing}
+          onClick={handleReviewSeeding}
+        >
+          {hasPools ? 'Advance to playoffs' : 'Generate bracket'}
+        </button>
       </div>
+      {seeding && (
+        <SeedingDialog
+          seeding={seeding}
+          confirmLabel={hasPools ? 'Confirm and advance' : 'Confirm and generate'}
+          busy={advancing || generating}
+          onConfirm={hasPools ? handleAdvance : handleGenerate}
+          onCancel={() => setSeeding(null)}
+        />
+      )}
     </>
   )
 }

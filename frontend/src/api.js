@@ -196,8 +196,11 @@ export function deletePlayer(teamId, playerId) {
   return deleteRequest(`/teams/${teamId}/players/${playerId}`)
 }
 
-export function generateBracket(tournamentId, { format } = {}) {
-  return postJson(`/tournaments/${tournamentId}/bracket/generate`, format ? { format } : {})
+export function generateBracket(tournamentId, { format, seeding } = {}) {
+  return postJson(`/tournaments/${tournamentId}/bracket/generate`, {
+    ...(format && { format }),
+    ...(seeding && { seeding }),
+  })
 }
 
 export function getMatch(matchId) {
@@ -293,8 +296,16 @@ export function getPoolStandings(poolId) {
   return getJson(`/pools/${poolId}/standings`)
 }
 
-export function advanceToPlayoffs(tournamentId, { format }) {
-  return postJson(`/tournaments/${tournamentId}/advance-to-playoffs`, { format })
+export function advanceToPlayoffs(tournamentId, { format, seeding }) {
+  return postJson(`/tournaments/${tournamentId}/advance-to-playoffs`, {
+    format,
+    ...(seeding && { seeding }),
+  })
+}
+
+// The seed order each playoff bracket would start with, to review before creating them.
+export function getPlayoffSeeding(tournamentId) {
+  return getJson(`/tournaments/${tournamentId}/playoff-seeding`)
 }
 
 export function resetPlayoffBrackets(tournamentId) {
