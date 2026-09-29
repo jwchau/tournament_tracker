@@ -24,7 +24,8 @@ import os
 CACHED_PREFIXES = ("/tournaments", "/pools", "/playoff-brackets", "/matches", "/teams")
 MAX_ENTRIES = 2000
 # Headers of a stored response that must not be replayed: they describe the request that made it.
-_SKIP_HEADERS = {b"x-db-queries", b"x-db-ms", b"x-cache", b"etag"}
+_TRACE_HEADERS = {b"x-db-queries", b"x-db-ms"}
+_SKIP_HEADERS = _TRACE_HEADERS | {b"x-cache", b"etag"}
 
 
 def enabled() -> bool:
@@ -84,8 +85,13 @@ def _matches(request_headers, etag: bytes) -> bool:
     return etag in tags or b"*" in tags
 
 
-async def _replay(send, entry: Entry, request_headers, cache_status: bytes) -> None:
-    common = [(b"etag", entry.etag), (b"cache-control", b"no-cache"), (b"x-cache", cache_status)]
+async def _replay(send, entry: Entry, request_headers, cache_status: bytes, extra=()) -> None:
+    common = [
+        (b"etag", entry.etag),
+        (b"cache-control", b"no-cache"),
+        (b"x-cache", cache_status),
+        *extra,
+    ]
     if _matches(request_headers, entry.etag):
         await send({"type": "http.response.start", "status": 304, "headers": common})
         await send({"type": "http.response.body", "body": b""})
@@ -148,6 +154,8 @@ class ReadCacheMiddleware:
                 return
             fresh = Entry(start_message["headers"], b"".join(chunks))
             self.cache.put(key, fresh, generation)
-            await _replay(send, fresh, request_headers, b"miss")
+            # What the tracer measured for this request is kept for this response only.
+            measured = [(k, v) for k, v in start_message["headers"] if k.lower() in _TRACE_HEADERS]
+            await _replay(send, fresh, request_headers, b"miss", measured)
 
         await self.app(scope, receive, capture)

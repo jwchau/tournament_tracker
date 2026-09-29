@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session, SQLModel, select
 
 from app.db import get_session
-from app.dispatch import court_lines, court_occupancy, is_overflow, queue
+from app.dispatch import Snapshot
 from app.models import Match, PlayoffBracket, Team, Tournament
 from app.pool_routes import _pools_in_order, _tournament_or_404
 from app.pools import pool_courts
@@ -108,7 +108,10 @@ def list_courts(tournament_id: int, session: Session = Depends(get_session)) -> 
     }
     if brackets:
         tiers = {bracket.id: bracket.tier for bracket in brackets}
-        lines = court_lines(session, tournament_id)
+        # One read of the playoff matches answers every question below, and puts
+        # them in the session so the session.get calls cost nothing.
+        snapshot = Snapshot(session, tournament_id)
+        lines = snapshot.lines()
 
         def lent_to(bracket: PlayoffBracket, current: Match | None) -> str | None:
             if current is None or current.playoff_bracket_id == bracket.id:
@@ -118,10 +121,10 @@ def list_courts(tournament_id: int, session: Session = Depends(get_session)) -> 
         for bracket in brackets:
             # A bracket without courts of its own (overflow) waits in line on
             # the others' courts, so its matches show up in their up next.
-            if is_overflow(session, bracket.id):
+            if snapshot.overflow(bracket.id):
                 continue
-            waiting = queue(session, bracket.id)
-            for court, match_id in court_occupancy(session, bracket.id).items():
+            waiting = snapshot.queue(bracket.id)
+            for court, match_id in snapshot.occupancy(bracket.id).items():
                 current = session.get(Match, match_id) if match_id is not None else None
                 # Matches set here by hand behind the one playing come before the queue.
                 line = lines.get(court, [])[1:] + waiting
@@ -138,20 +141,23 @@ def list_courts(tournament_id: int, session: Session = Depends(get_session)) -> 
                 )
     else:
         pools = _pools_in_order(session, tournament_id)
+        # Pool matches always have both teams, in schedule (slot) order. Any pool's
+        # match can be on a court: one moved there by hand is played there.
+        on_courts: dict[int, list[Match]] = {}
+        for match in session.exec(
+            select(Match)
+            .where(
+                Match.tournament_id == tournament_id,
+                Match.pool_id.is_not(None),
+                Match.court.is_not(None),
+                Match.status != "complete",
+            )
+            .order_by(Match.round, Match.position)
+        ).all():
+            on_courts.setdefault(match.court, []).append(match)
         for pool, pool_court_numbers in zip(pools, pool_courts(tournament.court_count, len(pools))):
             for court in pool_court_numbers:
-                # Pool matches always have both teams, in schedule (slot) order.
-                # Any pool's: a match moved here by hand is played here.
-                matches = session.exec(
-                    select(Match)
-                    .where(
-                        Match.tournament_id == tournament_id,
-                        Match.pool_id.is_not(None),
-                        Match.court == court,
-                        Match.status != "complete",
-                    )
-                    .order_by(Match.round, Match.position)
-                ).all()
+                matches = on_courts.get(court, [])
                 courts[court] = CourtSummary(
                     court=court,
                     use="pool",

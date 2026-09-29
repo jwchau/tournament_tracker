@@ -105,17 +105,20 @@ page_totals: dict[str, list[tuple[int, float]]] = {}
 
 
 def sweep(client, ids, stage):
-    """Load every page once, recording how many statements each took in all."""
+    """Load every page twice: cold (after a write) and warm (the same read again)."""
     for name, page in PAGES:
-        before = {label: len(rows) for label, rows in samples.items()}
-        started = time.perf_counter()
-        page(client, ids)
-        wall = (time.perf_counter() - started) * 1000
-        queries = sum(
-            sum(q for q, _ in rows[before.get(label, 0):]) for label, rows in samples.items()
-        )
-        page_totals.setdefault(f"{name}", []).append((queries, wall))
-        print(f"  {stage:<22} {name:<30} {queries:>4} statements  {wall:>7.1f} ms")
+        cells = []
+        for temperature in ("cold", "warm"):
+            before = {label: len(rows) for label, rows in samples.items()}
+            started = time.perf_counter()
+            page(client, ids)
+            wall = (time.perf_counter() - started) * 1000
+            queries = sum(
+                sum(q for q, _ in rows[before.get(label, 0):]) for label, rows in samples.items()
+            )
+            page_totals.setdefault(f"{name} ({temperature})", []).append((queries, wall))
+            cells.append(f"{queries:>4} stmts {wall:>6.1f} ms")
+        print(f"  {stage:<22} {name:<30} cold {cells[0]}   warm {cells[1]}")
 
 
 def build(client):

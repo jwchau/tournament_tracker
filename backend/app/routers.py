@@ -29,6 +29,7 @@ from app.results import champion_id
 from app.series import best_of, replace_games, series_result
 from app.tournament_settings import (
     changed_settings,
+    play_progress,
     refuse_locked,
     setting_effects,
     setting_locks,
@@ -126,10 +127,11 @@ def _pool_play_started(session: Session, tournament_id: int) -> bool:
 
 
 def _detail(session: Session, tournament: Tournament) -> TournamentDetail:
+    progress = play_progress(session, tournament.id)
     return TournamentDetail(
         **_view(tournament),
-        setting_locks=setting_locks(session, tournament),
-        pool_play_started=_pool_play_started(session, tournament.id),
+        setting_locks=setting_locks(session, tournament, progress),
+        pool_play_started=progress.pool_scored,
     )
 
 
