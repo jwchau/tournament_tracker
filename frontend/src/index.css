@@ -1706,6 +1706,9 @@ table[aria-label='Standings'] tr.advancing td:first-child {
 .series-next {
   display: flex;
   flex-direction: column;
+  /* Not the global form's flex-end, which shrinks the Saved line to its text
+     and pushes it to the right edge. */
+  align-items: stretch;
   gap: 12px;
 }
 
