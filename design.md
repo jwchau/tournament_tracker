@@ -600,7 +600,7 @@ Stacking context is managed carefully to prevent unexpected layering conflicts. 
 
 ## As shipped in Tournament Tracker
 
-Recorded from the built code (`frontend/src/index.css` and the components listed in the sidecar), not from the plan. The sections above are the Kiln reference. Where this build differs from them, this section describes what actually shipped. Scope: the app shell on every page, the tournament page (`/tournaments/:id`), the pool page (`/pools/:id`), the bracket page (`/brackets/:id`), the courts list (`/tournaments/:id/courts`) and the court view (`/tournaments/:id/courts/:court`). Machine-readable copy: `frontend/.impeccable/design.json`.
+Recorded from the built code (`frontend/src/index.css` and the components listed in the sidecar), not from the plan. The sections above are the Kiln reference. Where this build differs from them, this section describes what actually shipped. Scope: the app shell on every page, the main page (`/`) with the create-tournament form, the tournament page (`/tournaments/:id`), the pool page (`/pools/:id`), the bracket page (`/brackets/:id`), the courts list (`/tournaments/:id/courts`) and the court view (`/tournaments/:id/courts/:court`). Machine-readable copy: `frontend/.impeccable/design.json`.
 
 ### Tokens (`:root` in `frontend/src/index.css`)
 
@@ -610,7 +610,7 @@ Dark is the default. When the device is in light mode (`prefers-color-scheme: li
 |---|---|---|---|
 | `--ground` | `linear-gradient(180deg, #1c1c1c, #161616)` | `linear-gradient(180deg, #ffffff, #f6f4f1)` | Page body (fixed) |
 | `--ink` | `linear-gradient(180deg, #151515, #0e0e0e)` | none, stays dark | App bar, board-head band, court strip, flip cards, score chips (the schedule's and the slot grid's) and court tags |
-| `--panel` | `linear-gradient(180deg, #262626, #1f1f1f)` | `linear-gradient(180deg, #ffffff, #f6f4f1)` | Cards: pool, bracket, result, setup note, scoreboard columns, court tiles, the results-grid panel and schedule slots; on the bracket page the match cards, the tree's panel, the placings list and the score card in the match panel |
+| `--panel` | `linear-gradient(180deg, #262626, #1f1f1f)` | `linear-gradient(180deg, #ffffff, #f6f4f1)` | Cards: pool, bracket, result, setup note, scoreboard columns, court tiles, the results-grid panel and schedule slots; on the bracket page the match cards, the tree's panel, the placings list and the score card in the match panel; on the main page the create panel, the Today panels and the dated-row list |
 | `--surface` | `#1a1a1a` | `#ffffff` | Drawer, modal, match panel, root background; also the label of the current round tab |
 | `--surface-2` | `#232323` | `#f6f4f1` | Team chips, code, loading bars, series game rows, Up next rows, the slot grid's playing cells |
 | `--panel-flat` | `#232323` | `#fbfaf8` | `--panel` as one flat colour, for the slot grid's pinned team names that the slots scroll under (a gradient would restart in every cell) |
@@ -618,14 +618,14 @@ Dark is the default. When the device is in light mode (`prefers-color-scheme: li
 | `--text` | `#eeece9` | `#111111` | Body and headings; the fill of the current round tab and the outline of the match open in the panel |
 | `--muted` | `#a3a3a3` | `#333333` | Labels, table heads, notes, the slot grid's heads, Rest and a ref cell's teams, the score separator, a match card's meta line and losing row, the tree's round heads, placing numbers |
 | `--subtle` | `#999999` | `#333333` | Placeholders |
-| `--accent-text` | `#ea9557` | `#9e5019` | Links, disclosure summaries, focused field edge, save errors, court tile hover ring, the Now chip and current-slot rings, the selected pairing, the live ring on a bracket match card, the Next round link |
+| `--accent-text` | `#ea9557` | `#9e5019` | Links, disclosure summaries, focused field edge, save errors, court tile hover ring, the Now chip and current-slot rings, the selected pairing, the live ring on a bracket match card and on the main page's row for a tournament being played, the Today panel hover ring, the lit dot of a main-page stage chip, the Next round link |
 | `--border` | `#4d4d4d` | `#e0e0e0` | Bracket connectors (the read-only tree and the card tree's elbows), scrollbar |
-| `--hairline` | `rgba(255,255,255,.1)` | `rgba(0,0,0,.1)` | Table rules, drawer edges, box strokes, outlines on −1, disabled Finish match and free courts, rules between schedule rows, placings rows and the match panel's tool sections |
+| `--hairline` | `rgba(255,255,255,.1)` | `rgba(0,0,0,.1)` | Table rules, drawer edges, box strokes, outlines on −1, disabled Finish match and free courts, rules between schedule rows, placings rows and the match panel's tool sections, rules between the main page's dated rows |
 | `--field-border` | `#4d4d4d` | `#4d4d4d` | Input and select edges. Kept heavy in light mode so they survive glare |
-| `--ghost`, `--ghost-hover`, `--ghost-active` | white at .10, .15, .20 | black at .10, .15, .20 | Default (secondary) button fills; `--ghost` also fills the selected schedule row and a hovered bracket match card, `--ghost-hover` a hovered slot-grid cell |
+| `--ghost`, `--ghost-hover`, `--ghost-active` | white at .10, .15, .20 | black at .10, .15, .20 | Default (secondary) button fills; `--ghost` also fills the selected schedule row, a hovered bracket match card and a main-page stage chip, `--ghost-hover` a hovered slot-grid cell and a hovered dated row on the main page |
 | `--amber` | `#dfae4e` | same | Amber as a mark, and amber on ink: the winner's score in a score chip (schedule, slot grid) or a bracket match card |
-| `--amber-tint` | `rgba(223,174,78,.1)` | `rgba(223,174,78,.2)` | Background of advancing rows and of the champion banner |
-| `--amber-text` | `#dfae4e` | `#9e5019` | Amber as text on light grounds: advancing places, winning scores, the champion label, the champion's row in placings. In light mode it becomes the copper-brown `#9e5019`, because `#dfae4e` is not legible on white |
+| `--amber-tint` | `rgba(223,174,78,.1)` | `rgba(223,174,78,.2)` | Background of advancing rows, of the champion banner and of the main page's champion line |
+| `--amber-text` | `#dfae4e` | `#9e5019` | Amber as text on light grounds: advancing places, winning scores, the champion label, the champion's row in placings, the champion's name in a main-page dated row. In light mode it becomes the copper-brown `#9e5019`, because `#dfae4e` is not legible on white |
 | `--ember`, `--ember-hover`, `--ember-active` | 135deg `#ee9148`→`#d8742c`, `#f29a52`→`#e0803a`, `#d57a33`→`#c66a25` | same | The primary action only |
 | `--on-ember` | `#231306` | same | Label on ember |
 | `--ember-solid` | `#e68435` | same | Caret and `accent-color`; the caret in a flip card being typed into |
@@ -645,7 +645,7 @@ Dark is the default. When the device is in light mode (`prefers-color-scheme: li
 | `--flip-seam` | `rgba(0,0,0,.7)` | same | The dark hinge seam across a flip card and a score chip |
 | `--gutter` | 16px | 24px from 768px, 40px from 1024px | Horizontal page padding |
 | `--section-gap` | 32px | 48px from 768px, 56px from 1024px | Space between page sections |
-| `--ease` | `cubic-bezier(0.22, 1, 0.36, 1)` | same | Drawer, toast, disclosure, new-match, target-row and match-panel motion |
+| `--ease` | `cubic-bezier(0.22, 1, 0.36, 1)` | same | Drawer, toast, disclosure, new-match, target-row, match-panel and create-panel motion |
 
 Content max-width is 1200px. The court view's scoreboard, Finish match and Up next share a 640px centered column. No literal colors remain in the stylesheet outside `:root`.
 
@@ -654,10 +654,11 @@ Content max-width is 1200px. The court view's scoreboard, Finish match and Up ne
 Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, DM Sans 500.
 
 - **Unbounded 700 (`--display`)** is used for names, section heads and scoreboard numerals:
-  - Tournament name (`h2.board-title`): 32/36, and 48/48 from 768px, tracking -0.02em. The pool name on the pool page's strip (`.pool-page .court-strip h2`) and the tier on the bracket page's strip (`.bracket-page .court-strip h2`, "Bracket A") take the same 32/36 and 48/48, so they outrank the page's section heads.
-  - Section heads (`h3`: Standings, Playoffs, Results, Schedule, Up next, Placings): 24/28, and 28/32 from 768px, tracking -0.01em.
+  - Tournament name (`h2.board-title`): 32/36, and 48/48 from 768px, tracking -0.02em. The pool name on the pool page's strip (`.pool-page .court-strip h2`) and the tier on the bracket page's strip (`.bracket-page .court-strip h2`, "Bracket A") take the same 32/36 and 48/48, so they outrank the page's section heads, and so does "Tournaments" on the main page's band (`.home-band h2`).
+  - Section heads (`h3`: Standings, Playoffs, Results, Schedule, Up next, Placings; on the main page Today, This week, Earlier): 24/28, and 28/32 from 768px, tracking -0.01em.
   - Card heads (`.pool-card-head h4`): pool and bracket names at 22/26.4.
-  - Also at 22/26.4: the champion's name on a result card, the champion banner's sentence, the Manage drawer title, modal titles and the match panel title (`.match-panel-head h3`).
+  - Also at 22/26.4: the champion's name on a result card, the champion banner's sentence, the Manage drawer title, modal titles, the match panel title (`.match-panel-head h3`), the create panel's title (`.home-create h3`) and a secondary Today panel's name (`.today-name`, 18/24 below 640px, tracking -0.01em).
+  - Main page: the name of a tournament being played (`.today-card[data-live] .today-name`) 28/32, 24/28 below 640px, tracking -0.02em; the champion line (`.today-champion`) 16/24.
   - Court names: 28/32 on the court strip (`.court-strip h2`, also "Courts"), 24/28 on a courts-list tile.
   - Schedule slot heads (`.slot h4`, "Slot N"): 18/24. Placing numbers (`.placing-place`, "1st"): 18/22 in `--muted`.
   - Round heads over the card tree (`.card-tree-head`): 16/24 in `--muted`.
@@ -676,8 +677,9 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
   - Series tally: 600 at 16/24 in `--muted`. Series game lines and Up next rows: 500 at 16/24.
   - Pool page: slot-grid team names 600 at 15/20 (14px on phones); court tags 600 at 13/18; the Now chip 600 at 13/20; schedule team pairings (`.slot-teams`) 600 at 16/22.
   - Bracket page: team rows on a match card (`.card-team`) 600 at 17/22, the losing row 500 in `--muted`; the card's meta line (`.round-card-meta`) 500 at 14/20 in `--muted`; placings rows 500 at 16/22, the champion's row 700.
-  - Numbers use `tabular-nums` in tables, number inputs, the bracket, the series tally and game lines, the slot grid and schedule scores.
-- **DM Sans 500 (`--nav`)**: buttons, nav links, the board meta line, disclosure summaries, the Manage toggle, the court strip's links, the Score on Court / Watch Court links and the Next round link, all at 16/24. Round tabs (`.round-tabs button`) are 15/20.
+  - Main page: dated rows (`.dated-row`) 500 at 14/20 in `--muted`, their name (`.dated-name`) 600 at 16/24 in `--text`; the Today meta line (`.home-meta`) 500 at 16/24 in `--muted`; the stage chip on a panel (`.home-stage`) 600 at 14.7/21.
+  - Numbers use `tabular-nums` in tables, number inputs, the bracket, the series tally and game lines, the slot grid and schedule scores, and the main page's dated rows.
+- **DM Sans 500 (`--nav`)**: buttons, nav links, the board meta line, disclosure summaries, the Manage toggle, the court strip's links, the Score on Court / Watch Court links, the Next round link and the Courts link on a live Today row, all at 16/24. Round tabs (`.round-tabs button`) are 15/20.
 - **Manrope 700 (`--emphasis`)** sets the court's hands-on text:
   - The primary action (`.btn-primary`, `button[type=submit]`), at 16/24.
   - Team names over each scoreboard column (`.flip-team`): 18/24, centered.
@@ -702,6 +704,7 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
 - **Stage chip** (`.stage-chip`):
   - 12px radius, `--band-ghost` fill, `--band-text`, Inter 600 at 14.7/21, padding 4px 12px.
   - Leads with an 8px `--band-accent` dot.
+  - On the main page's panels it takes theme tokens instead (`.home-stage`, below).
 - **Pool and bracket cards** (`.pool-grid` and `.pool-card`):
   - The grid is `repeat(auto-fit, minmax(min(100%, 340px), 1fr))` with a 16px gap: side by side on a laptop, stacked on a phone.
   - Each card has a `--panel` fill, 16px radius, `--elevation-3`, 20px padding and a 12px internal gap.
@@ -798,6 +801,26 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
     - Signed in, the tools follow, each section above a `--hairline` rule with 14px above it: Court and time (the schedule form, while the match is playable); Ref (a Ref dropdown, the pool schedule's `RefSelect`, once both teams are known and still after the match: "Automatic (Aces)", the teams not on a court, then N/A; a refused change shows its reason as a finish note); hold or release with a sentence explaining it ("Holding keeps this match off the courts, for example while a team is missing." / "On hold: kept off the courts until it’s released."), for a match nobody has started or one on hold; and Correct (the correction form) for a finished match.
     - Escape, the close button and a tap on the scrim close it.
   - **States**: loading placeholders; connection lost (a retrying note); an overflow bracket (a note that its matches take any free court); waiting for teams; in line for a court; on a court (live, running score); on hold; finished; champion decided (the banner); tournament complete (placings); signed out (no tools, Watch Court links).
+- **Main page** (`.home-page`, `MainPage.jsx`, `TournamentForm.jsx`, `homeModel.js`), the fixtures board at `/`:
+  - **Structure**: one column, `--section-gap` apart: the band, the create panel while it is open, then the groups (Today, This week, Earlier), each an Unbounded section head (`h3`) over its list, 16px below.
+  - **Band** (`.court-strip.home-band`): the court strip's plain ink band, no ember glow, padding 28px `--gutter` 24px (20px below 640px), content aligned to its bottom edge. It holds "Tournaments" at board-title scale (32/36, 48/48 from 768px, tracking -0.02em) and, signed in, the ember New tournament button on the right, hidden while the create panel is open. Below 640px the button wraps under the title.
+  - **Create panel** (`.home-create`, `aria-labelledby` its title): under the band, a `--panel` card, 16px radius, `--elevation-3`, padding 20px 24px 24px, 16px gap. Its title is an `h3` "New tournament" in Unbounded 22/26.4, then the app's shared form layout: the "Tournament name" label, the field (focused when the panel opens), an ember Create that stays disabled until the name is non-blank ("Creating…" while it saves) and a ghost Cancel. It enters with `home-create-in` (280ms on `--ease`, from opacity 0 and 8px higher; off under reduced motion). A created tournament lands under Today and the panel closes.
+  - **Grouping** (`groupTournaments`): Today, This week (the six days before today) and Earlier, by the date a tournament was created, never the date it is played. Known risk: a tournament set up the night before shows under This week on the day it is played. A tournament with no date counts as Today, and empty groups are left out. Within a group: in play (pool play and playoffs), then drafts, then complete, newest first.
+  - **Today** (`.today-list`): a grid of `repeat(auto-fill, minmax(min(100%, 300px), 1fr))`, 16px gap, top-aligned so no panel stretches half empty. Each panel (`.today-card`) is `--panel`, 16px radius, `--elevation-3`, and the whole panel links to its tournament through a stretched name link (`.today-name::after`). Hover adds a 1px inset `--accent-text` ring (200ms); keyboard focus puts `--focus` around the panel.
+    - **Live** (`[data-live]`, pool play or playoffs): a full-width row (`grid-column: 1 / -1`), padding 24px (18px below 640px), wearing the bracket page's 2px inset `--accent-text` live ring, kept on hover. The name is Unbounded 28/32 (24/28 below 640px), tracking -0.02em, with the stage chip and team count below it (Inter 500 16/24 `--muted`), and Courts at the row's end: a DM Sans 500 16/24 `--accent-text` link at least 48px tall, raised above the stretched link so it opens the courts list.
+    - **Secondary** (drafts and complete): smaller panels, padding 18px 20px (14px 16px below 640px), 12px gap (10px on phones), the name Unbounded 22/26.4 (18/24 below 640px), tracking -0.01em.
+    - **Champion line** (`.today-champion`, a tournament completed today): "Aces win the tournament", the champion banner's voice set a step down: Unbounded 700 16/24 `--text` on `--amber-tint`, padding 10px 14px, stretched to the panel's width. It is deliberately quieter than a live name, so a finished event never outweighs one being played. Its 12px radius sits concentric inside the panel's 16px.
+  - **Dated rows** (This week, Earlier; `.dated-list`): one `--panel` list, 16px radius, `--elevation-3`, padding 4px 12px (4px 8px on phones).
+    - Each row (`.dated-row`) is at least 56px tall, padding 8px 12px, 12px radius, Inter 500 14/20 `--muted` with tabular numerals. Desktop columns: name (Inter 600 16/24 `--text`) | stage chip | teams | date | champion (`minmax(0, 2fr) 8.5rem 6rem 6.5rem minmax(0, 1.5fr)`, 16px gap).
+    - The whole row is a stretched name link; hover fills it `--ghost-hover` (200ms), keyboard focus puts `--focus` around it.
+    - The rule between rows is a `::before` 1px `--hairline` inset 12px from each side, so the rounded hover fill doesn't bend it.
+    - Below 640px the name and date share line one (the date pushed right) and the chip, teams and champion wrap under them, 6px 12px gaps, padding 10px 8px; the empty placeholder cells are hidden.
+    - Dates are short ("Sep 26"), with the year only when it isn't this year ("Sep 26, 2025").
+    - **Champion** (`.home-champion`, a complete tournament): "Champion" in `--muted`, then the name in `--amber-text` at 700. The server sends it as `champion_name`, the tier-1 bracket's winner once the tournament is complete.
+  - **Stage chip on a panel** (`.home-stage`): the stage chip's metrics (Inter 600 14.7/21, padding 4px 12px, 12px radius, 8px dot) in theme tokens rather than band tokens: `--ghost` fill, `--text`. The dot is lit `--accent-text` while the tournament is in play and otherwise a hollow 1.5px inset `--muted` ring. Labels: Draft, Pool play, Playoffs, Complete.
+  - **Empty state**: the setup-note card, "No tournaments yet." plus, for an organizer (with the panel closed), "Start one with New tournament."
+  - A blank tournament name shows as "Untitled tournament".
+  - **States**: loading placeholders (4 rows); empty; signed out (no New tournament); create panel open; in play (live row); draft; complete (champion line on Today, champion cell in dated rows).
 - **Buttons and fields**:
   - The default button is a ghost fill with 12px radius, at least 48px tall, padding 12px 20px, in DM Sans 500.
   - Disabled buttons drop to opacity .5 with a `not-allowed` cursor (Finish match overrides this, above).
@@ -807,25 +830,25 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
   - 4 for focus rings and code
   - 8 for the brand tile, loading bars, score chips and court tags
   - 10 for slot-grid cells and the ends of the Now column
-  - 12 for buttons (including round tabs), chips (including the Now chip), toasts, flip cards, series game rows, Up next rows, the selected schedule row, the read-only tree's match boxes, a match card's open button and the match panel's score card
+  - 12 for buttons (including round tabs), chips (including the Now chip), toasts, flip cards, series game rows, Up next rows, the selected schedule row, the read-only tree's match boxes, a match card's open button and the match panel's score card; on the main page the stage chip, the champion line and dated rows
   - 14 for icon buttons
-  - 16 for cards (including bracket match cards, the card tree's panel and placings), scoreboard columns, court tiles, the grid panel, schedule slots, the champion banner, the modal, the match panel's leading corners and the band and strip corners
+  - 16 for cards (including bracket match cards, the card tree's panel and placings), scoreboard columns, court tiles, the grid panel, schedule slots, the champion banner, the modal, the match panel's leading corners and the band and strip corners; on the main page the create panel, Today panels, the dated list and the setup note
 
   The reference's 48px and 104px radii do not appear in this build.
 
 ### Named rules
 
-1. **Amber means advancing or winning, and nothing else.** It marks advancing standings rows (tint plus amber rank), the advance key, winning bracket scores (in the read-only tree and on match cards), the champion label, the champion banner's tint, the champion's row in placings, the winning side's score in each finished game of a series, and the winner's score in pool results (grid chips and schedule chips). It is never used for decoration, status or emphasis; the live scoreboard itself carries no amber, and neither does a running score on the pool or bracket page.
-2. **The ember gradient is for the one primary action on a view.** Only `.btn-primary` and submit buttons use it; the brand tile carries it as the product mark. On the court view that action is Finish match, or Record game on a series board, and it wears ember only once it can be pressed. Secondary actions stay ghost, and +1 is a plain surface fill, not ember.
-3. **The ember glow is for the board-head band only.** No other surface uses `--ember-glow`; the court strip is plain ink.
+1. **Amber means advancing or winning, and nothing else.** It marks advancing standings rows (tint plus amber rank), the advance key, winning bracket scores (in the read-only tree and on match cards), the champion label, the champion banner's tint, the champion's row in placings, the winning side's score in each finished game of a series, the winner's score in pool results (grid chips and schedule chips), and on the main page the champion's name (`--amber-text` in a dated row, the `--amber-tint` champion line on Today). It is never used for decoration, status or emphasis; the live scoreboard itself carries no amber, and neither does a running score on the pool or bracket page.
+2. **The ember gradient is for the one primary action on a view.** Only `.btn-primary` and submit buttons use it; the brand tile carries it as the product mark. On the court view that action is Finish match, or Record game on a series board, and it wears ember only once it can be pressed. On the main page it is New tournament, or Create while the create panel is open (New tournament hides then). Secondary actions stay ghost, and +1 is a plain surface fill, not ember.
+3. **The ember glow is for the board-head band only.** No other surface uses `--ember-glow`; the court strip is plain ink, including the main page's band.
 4. **Ink is for bands and boards.** `--ink` fills the app bar, board head, court strip, flip cards, score chips, grid result chips and court tags in both themes. Text and accents on it use the `--band-*` tokens, not the theme tokens.
 5. **Standings are the page.** Organizer tools live in the Manage drawer, behind disclosures or in the bracket's match panel, and never sit at equal weight with the board.
-6. **Targets work at arm's length.** Every interactive element is at least 48px tall, except the standings refresh button (40px). On the court view the targets grow: +1 is 72px (88px on phones) and Finish match 56px. Results-grid cells are 52px tall. On the bracket page the round tabs, Next and the court links are at least 48px, and the whole top of a match card is its button.
+6. **Targets work at arm's length.** Every interactive element is at least 48px tall, except the standings refresh button (40px). On the court view the targets grow: +1 is 72px (88px on phones) and Finish match 56px. Results-grid cells are 52px tall. On the bracket page the round tabs, Next and the court links are at least 48px, and the whole top of a match card is its button. On the main page the Courts link is at least 48px and dated rows 56px, and each whole Today panel and dated row is its link.
 7. **The score comes first on a court.** The two columns and their numerals own the first view on a phone; the save status, Finish match and Up next follow in that order, and nothing sits above the board but the court strip.
 8. **Scoring happens on the court scoreboard.** Neither the pool page nor the bracket page takes points: an unfinished match on a court links to it ("Score on Court N", or "Watch Court N" signed out), and only a finished match can be corrected in place (Correct in the schedule row, or in the match panel).
 9. **Amber on ink uses `--amber`; on light grounds, `--amber-text`.** `--amber` holds on ink in both themes; `--amber-text` follows the theme so it stays legible on panels and tints.
 10. **A result chip and an appointment must read apart.** A completed match is an ink flip-card chip with numerals; an unplayed one is a quiet `--surface-2` cell with small muted slot and court text. Neither borrows the other's fill or type.
-11. **A match on a court is marked live.** A bracket match card with both teams, on a court and not finished carries the 2px inset `--accent-text` ring and a court link; nothing else gets that ring on the bracket page.
+11. **A match on a court is marked live.** A bracket match card with both teams, on a court and not finished carries the 2px inset `--accent-text` ring and a court link; nothing else gets that ring on the bracket page. The main page reuses the same ring for a tournament being played (Today's full-width row, with its Courts link), and for nothing else.
 12. **Tabs and page names say rounds the same way.** One name per round, from `roundsOf`: Quarters, Semis, Final (earlier rounds "Round N"); in double elimination Winners Quarters… Winners final, Losers N, Losers final, Grand final and Reset. The same name labels the tab, the page, the tree's column head and the "Next:" link, and a match is named from it: "Semis · match 2", or just the round's name when the round has one match. Status reads in words: Finished, Waiting for both teams, Court N · time, Waiting for a court · #N (Waiting (any court) · #N in an overflow bracket), On hold, Not on a court yet.
 13. **The tournament page keeps the read-only tree.** Its bracket cards show the SVG diagram and the champion banner, with nothing to open; running a bracket happens on the bracket page.
 
@@ -833,6 +856,6 @@ Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, 
 
 These pages still use the default `.app-main > section` spacing and have not had a Kiln pass:
 
-- The team page, main page, account and login pages, the tournament create form, and the score and correction forms (including Correct on the pool page's finished matches and in the bracket's match panel). `SeriesForm` has had a pass only in its court-board mode; its plain form (fix-game fields, conflict and error lines) has not.
+- The team page, account and login pages, and the score and correction forms (including Correct on the pool page's finished matches and in the bracket's match panel). `SeriesForm` has had a pass only in its court-board mode; its plain form (fix-game fields, conflict and error lines) has not.
 
 Treat how those pages look today as a gap to close, not as a pattern to copy.

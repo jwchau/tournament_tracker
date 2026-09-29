@@ -19,6 +19,22 @@ change, untick the boxes it touches.
 
 ---
 
+## 0. Main page
+
+- [ ] **Today leads** (**phone**)
+  - Setup: a tournament in pool play or playoffs created today, a draft, and one or two older tournaments (one of them complete).
+  - Expect: an ink band reading "Tournaments"; under "Today", the tournament being played as a full-width panel with an orange ring, its stage chip lit and a Courts link that opens its courts list; drafts and finished ones today as smaller panels below it. Older tournaments sit under "This week" or "Earlier" as rows with stage, teams and date. Tapping anywhere on a panel or row opens that tournament.
+
+- [ ] **Champions**
+  - Setup: a complete tournament (its top bracket decided).
+  - Expect: finished today, its panel reads "{Team} win the tournament" on a pale amber block, quieter than a live tournament's name; finished earlier, its row ends "Champion {Team}" with the name in amber.
+
+- [ ] **New tournament**
+  - Do: signed in, tap New tournament; type a name and Create. Then open it again and Cancel.
+  - Expect: a panel opens under the band with the name field focused; Create stays disabled until there's a name; the new tournament appears under Today as a draft and the panel closes. Cancel closes it without creating anything. Signed out, there's no New tournament button.
+
+---
+
 ## 1. Tournament page
 
 - [x] **Stage and courts at a glance**

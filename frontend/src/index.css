@@ -616,6 +616,350 @@ form > select {
   flex-direction: row;
 }
 
+/* ---------- Main page: the fixtures board ---------- */
+
+.home-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-gap);
+}
+
+/* The court strip's plain ink band, with the page title at board-title scale.
+   Doubled class: the court strip's own rules come later in this file. */
+.court-strip.home-band {
+  padding-block: 28px 24px;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.court-strip.home-band h2 {
+  font: 700 32px/36px var(--display);
+  letter-spacing: -0.02em;
+}
+
+@media (min-width: 768px) {
+  .court-strip.home-band h2 {
+    font-size: 48px;
+    line-height: 48px;
+  }
+}
+
+.home-create {
+  background: var(--panel);
+  border-radius: 16px;
+  box-shadow: var(--elevation-3);
+  padding: 20px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: home-create-in 280ms var(--ease);
+}
+
+@keyframes home-create-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.home-create h3 {
+  font: 700 22px/26.4px var(--display);
+}
+
+.home-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* A tournament's stage: a chip on the panel, its dot lit while it's played. */
+.home-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  background: var(--ghost);
+  color: var(--text);
+  font: 600 14.7px/21px var(--ui);
+  white-space: nowrap;
+}
+
+.home-stage::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--muted);
+}
+
+.home-stage[data-live]::before {
+  background: var(--accent-text);
+  box-shadow: none;
+}
+
+/* Amber means winning: only the champion's name. */
+.home-champion {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.home-champion strong {
+  color: var(--amber-text);
+  font-weight: 700;
+}
+
+/* Today: panels whose whole face opens the tournament. One being played is
+   a full-width row wearing the bracket page's live ring; drafts and finished
+   ones follow as smaller panels, top-aligned so none stretches half empty. */
+.today-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  align-items: start;
+}
+
+.today-card {
+  position: relative;
+  background: var(--panel);
+  border-radius: 16px;
+  box-shadow: var(--elevation-3);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  transition: box-shadow 200ms ease-in-out;
+}
+
+.today-card:hover {
+  box-shadow: inset 0 0 0 1px var(--accent-text), var(--elevation-3);
+}
+
+.today-card[data-live] {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 24px;
+}
+
+.today-card[data-live],
+.today-card[data-live]:hover {
+  box-shadow: inset 0 0 0 2px var(--accent-text), var(--elevation-3);
+}
+
+.today-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.today-card:has(.today-name:focus-visible) {
+  box-shadow: var(--focus), var(--elevation-3);
+}
+
+.today-name {
+  font: 700 22px/26.4px var(--display);
+  letter-spacing: -0.01em;
+  color: var(--text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.today-card[data-live] .today-name {
+  font-size: 28px;
+  line-height: 32px;
+  letter-spacing: -0.02em;
+}
+
+/* A tournament finished today names its champion in the champion banner's
+   voice (Unbounded on --amber-tint), set a step quieter than a live row's
+   name so a finished event never outweighs one being played. Its 12px radius
+   sits inside the panel's 16px so the corners stay concentric. */
+.today-champion {
+  align-self: stretch;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--amber-tint);
+  font: 700 16px/24px var(--display);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.today-name:focus-visible {
+  outline: none;
+}
+
+.today-name::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+}
+
+.home-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  font: 500 16px/24px var(--ui);
+  color: var(--muted);
+}
+
+/* Above the panel's link, so it opens the courts rather than the tournament. */
+.today-courts {
+  position: relative;
+  z-index: 1;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  font: 500 16px/24px var(--nav);
+  color: var(--accent-text);
+}
+
+/* Earlier days: one panel of dated rows. */
+.dated-list {
+  list-style: none;
+  padding: 4px 12px;
+  background: var(--panel);
+  border-radius: 16px;
+  box-shadow: var(--elevation-3);
+}
+
+.dated-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) 8.5rem 6rem 6.5rem minmax(0, 1.5fr);
+  align-items: center;
+  gap: 16px;
+  min-height: 56px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font: 500 14px/20px var(--ui);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  transition: background 200ms ease-in-out;
+}
+
+.dated-row + .dated-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: var(--hairline);
+}
+
+.dated-row:hover {
+  background: var(--ghost-hover);
+}
+
+.dated-row:has(.dated-name:focus-visible) {
+  box-shadow: var(--focus);
+}
+
+.dated-name {
+  font: 600 16px/24px var(--ui);
+  color: var(--text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.dated-name:focus-visible {
+  outline: none;
+}
+
+.dated-name::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.dated-row .home-stage {
+  justify-self: start;
+}
+
+/* Phones: the name and date on the first line, stage, teams and champion under them. */
+@media (max-width: 639px) {
+  .court-strip.home-band {
+    padding-block: 20px;
+  }
+
+  .today-card[data-live] {
+    padding: 18px;
+  }
+
+  /* Drafts and finished events a clear step below the live row. */
+  .today-card {
+    padding: 14px 16px;
+    gap: 10px;
+  }
+
+  .today-name {
+    font-size: 18px;
+    line-height: 24px;
+  }
+
+  .today-card[data-live] .today-name {
+    font-size: 24px;
+    line-height: 28px;
+  }
+
+  .dated-list {
+    padding: 4px 8px;
+  }
+
+  .dated-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    padding: 10px 8px;
+  }
+
+  /* The empty cells that keep the desktop columns aligned take no space here. */
+  .dated-row > span:empty {
+    display: none;
+  }
+
+  .dated-name {
+    order: 1;
+    flex: 1 1 60%;
+  }
+
+  .dated-date {
+    order: 2;
+    margin-left: auto;
+  }
+
+  .dated-row .home-stage {
+    order: 3;
+  }
+
+  .dated-teams {
+    order: 4;
+  }
+
+  .home-champion {
+    order: 5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-create {
+    animation: none;
+  }
+}
+
 /* ---------- Tournament page: the scoreboard ---------- */
 
 .board-head {
