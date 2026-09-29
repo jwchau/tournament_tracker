@@ -104,15 +104,16 @@ def test_correction_cascades_through_every_played_round_to_the_final(client, ses
     semifinal = _get(client, ids[(2, 1)])
     other_finalist = _get(client, ids[(2, 2)])["winner_id"]
 
-    correction = correct_score(
-        session,
-        quarterfinal["id"],
-        team1_score=10,
-        team2_score=21,
-        expected_version=quarterfinal["version"],
+    # Through the API, like the app: the read cache only learns of changes made there.
+    response = client.patch(
+        f"/matches/{quarterfinal['id']}/correct",
+        json={"team1_score": 10, "team2_score": 21, "version": quarterfinal["version"]},
     )
 
-    assert sorted(correction.log.reset_match_ids) == sorted([ids[(2, 1)], ids[(3, 1)]])
+    assert response.status_code == 200
+    assert sorted(match["id"] for match in response.json()["reset_matches"]) == sorted(
+        [ids[(2, 1)], ids[(3, 1)]]
+    )
 
     reset_semifinal = _get(client, ids[(2, 1)])
     semi_slot = "team1_id" if quarterfinal["winner_next_slot"] == 1 else "team2_id"
