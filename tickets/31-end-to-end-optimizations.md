@@ -72,3 +72,46 @@ schedule 28 per pool) are left alone: they happen a few times a day.
   would show up (one test that changed the database behind the API's back now goes
   through the API).
 - Bracket polling: every pace, and a hidden tab.
+
+## The click-through
+
+A fresh agent with no knowledge of the project ran a tournament end to end in the
+browser as a first-time organizer (create, settings, 8 teams, pools, schedules, pool play,
+playoffs, a correction it cancelled at the confirm, the court views), against a separate
+copy of the app with `DB_TRACE=1`. It signed in as an organizer throughout, so it did not
+see the signed-out view.
+
+What the server saw: 380 requests, 311 of them reads. 205 of those were answered with an
+empty 304, and 140 never reached the database layer, with one person clicking and a write
+every few seconds. Many phones polling the same pages will hit far more often. Writes
+averaged 9 statements and 19 ms.
+
+**Fixed:**
+
+- **A finish that raced an autosave.** Typing both scores quickly and confirming Finish
+  could send the autosave and the finish with the same version; one was rejected and the
+  scorekeeper was told someone else had updated the match, when the only other writer was
+  their own autosave. Finish now drops a waiting autosave, and on a rejection retries once
+  if the server holds the very score on screen (or the match is already finished). A
+  different score on the server is still a conflict.
+- **Schedules one pool at a time.** After auto-assign, each pool had to be opened to
+  generate its schedule. "Generate all schedules" in Edit pools does every pool in
+  order, stopping at the first that can't (fewer than 2 teams, no court) and naming it.
+
+**Not done, for a decision (each changes how the app looks or behaves):**
+
+- Faster score entry on the court: Tab goes from the left score to its +1 button, not to
+  the right score, and the Finish confirmation is not answered by Enter (about 7 actions a
+  match). Reordering focus would make +1/-1 harder for keyboard users.
+- Adding players needs a page hop per team; an inline add-player box or a pasted roster
+  would cut that.
+- Playoff matches move between courts (a bracket 2 semifinal on court 1 while court 2 sat
+  free): correct by the dispatch rules, but scorekeepers must check All courts. A "next
+  match" link on every court would help.
+- The Save button is at the bottom of a long settings panel, and the panel opens over the
+  page for any tournament with no teams.
+- The correction confirmation says "Round 2 match 1", not the teams or that a champion
+  would change.
+- The stage stays "Pool play" once every pool match is finished; a "12 of 12 pool
+  matches done" line or a checklist of what to do next would tell an organizer where they
+  are.

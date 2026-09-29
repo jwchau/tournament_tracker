@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import { autoAssignPools, createPool, listPools, updateTeam } from './api'
+import { autoAssignPools, createPool, generatePoolSchedule, listPools, updateTeam } from './api'
 import { useAuth } from './auth'
 import Loading from './Loading'
+import { useNotify } from './NotificationContext'
 import { useNotifyFailure } from './useNotifyFailure'
+import { usePending } from './usePending'
 
 function courtsLabel(courts) {
   if (courts.length === 0) return 'No court yet (add courts in the settings)'
@@ -19,12 +21,14 @@ export default function PoolsPanel({
   teams,
   onTeamsChanged,
   onPoolsChanged,
+  onSchedulesChanged,
   renderPool,
 }) {
   // null until the first load, so "no pools yet" never shows while loading.
   const [pools, setPoolsState] = useState(null)
   const [newPoolName, setNewPoolName] = useState('')
   const notifyFailure = useNotifyFailure()
+  const notify = useNotify()
   const { user } = useAuth()
 
   function setPools(next) {
@@ -59,6 +63,25 @@ export default function PoolsPanel({
     onTeamsChanged?.(await autoAssignPools(tournamentId))
     setPools(await listPools(tournamentId))
   }
+
+  // One pool after another, stopping at the first that can't: a pool with fewer
+  // than 2 teams, or with no court, says so and the rest are left as they were.
+  const [generateAll, generating] = usePending(async () => {
+    let done = 0
+    try {
+      for (const pool of pools) {
+        await generatePoolSchedule(pool.id)
+        done += 1
+      }
+      notify(`Schedules generated for ${done} ${done === 1 ? 'pool' : 'pools'}`)
+    } catch (error) {
+      const body = await error?.json?.().catch(() => null)
+      notify(body?.detail ? `${pools[done].name}: ${body.detail}` : "Couldn't generate the schedules", {
+        type: 'error',
+      })
+    }
+    if (done > 0) onSchedulesChanged?.()
+  })
 
   async function handleMoveTeam(team, value) {
     const updated = await updateTeam(team.id, { poolId: value === '' ? null : Number(value) })
@@ -97,6 +120,11 @@ export default function PoolsPanel({
             <button type="button" className="btn-primary" onClick={handleAutoAssign}>
               Auto-assign teams (snake seeding)
             </button>
+            {pools.length > 0 && (
+              <button type="button" disabled={generating} onClick={generateAll}>
+                {generating ? 'Generating…' : 'Generate all schedules'}
+              </button>
+            )}
             <form onSubmit={handleAddPool}>
               <label htmlFor="new-pool-name">New pool name</label>
               <input

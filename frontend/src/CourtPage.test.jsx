@@ -527,3 +527,81 @@ test('a ref changed elsewhere shows after the next poll', async () => {
 
   expect(screen.getByText('Ref: Blocks')).toBeInTheDocument()
 })
+
+test('finishing still works when an autosave lands just ahead of it', async () => {
+  const listCourts = vi.spyOn(api, 'listCourts').mockResolvedValue(playing)
+  const submitScore = vi
+    .spyOn(api, 'submitScore')
+    // The autosave got in first, so the finish carries an out-of-date version.
+    .mockRejectedValueOnce({ status: 409 })
+    .mockImplementation(async () => {
+      listCourts.mockResolvedValue(movedOn)
+      return { ...first, team1_score: 21, team2_score: 15, status: 'complete', version: 3 }
+    })
+  vi.spyOn(api, 'getMatch').mockResolvedValue({
+    ...first,
+    team1_score: 21,
+    team2_score: 15,
+    status: 'in_progress',
+    version: 2,
+  })
+
+  renderAt('/tournaments/3/courts/2')
+
+  fireEvent.change(await screen.findByLabelText('Spikers score'), { target: { value: '21' } })
+  fireEvent.change(screen.getByLabelText('Diggers score'), { target: { value: '15' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Finish match' }))
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Finish match' })).getByRole('button', { name: 'Finish' }))
+
+  expect(await screen.findByLabelText('Blockers score')).toHaveValue(0)
+  expect(submitScore).toHaveBeenCalledTimes(2)
+  expect(submitScore).toHaveBeenLastCalledWith(1, {
+    team1Score: 21,
+    team2Score: 15,
+    version: 2,
+    complete: true,
+  })
+  expect(screen.queryByText(/someone else updated/i)).not.toBeInTheDocument()
+})
+
+test('a match already finished by its own autosave race is not finished twice', async () => {
+  const listCourts = vi.spyOn(api, 'listCourts').mockResolvedValue(playing)
+  const submitScore = vi.spyOn(api, 'submitScore').mockRejectedValueOnce({ status: 409 })
+  vi.spyOn(api, 'getMatch').mockImplementation(async () => {
+    listCourts.mockResolvedValue(movedOn)
+    return { ...first, team1_score: 21, team2_score: 15, status: 'complete', version: 3 }
+  })
+
+  renderAt('/tournaments/3/courts/2')
+
+  fireEvent.change(await screen.findByLabelText('Spikers score'), { target: { value: '21' } })
+  fireEvent.change(screen.getByLabelText('Diggers score'), { target: { value: '15' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Finish match' }))
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Finish match' })).getByRole('button', { name: 'Finish' }))
+
+  expect(await screen.findByLabelText('Blockers score')).toHaveValue(0)
+  expect(submitScore).toHaveBeenCalledTimes(1)
+})
+
+test('a different score on the server when finishing is still a conflict, not overwritten', async () => {
+  vi.spyOn(api, 'listCourts').mockResolvedValue(playing)
+  const submitScore = vi.spyOn(api, 'submitScore').mockRejectedValue({ status: 409 })
+  // Another scorekeeper changed the score.
+  vi.spyOn(api, 'getMatch').mockResolvedValue({
+    ...first,
+    team1_score: 18,
+    team2_score: 20,
+    status: 'in_progress',
+    version: 5,
+  })
+
+  renderAt('/tournaments/3/courts/2')
+
+  fireEvent.change(await screen.findByLabelText('Spikers score'), { target: { value: '21' } })
+  fireEvent.change(screen.getByLabelText('Diggers score'), { target: { value: '15' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Finish match' }))
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Finish match' })).getByRole('button', { name: 'Finish' }))
+
+  expect(await screen.findByText(/someone else updated this match/i)).toBeInTheDocument()
+  expect(submitScore).toHaveBeenCalledTimes(1)
+})

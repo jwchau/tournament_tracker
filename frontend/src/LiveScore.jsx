@@ -4,7 +4,7 @@ import { getMatch, submitScore } from './api'
 import ConfirmModal from './ConfirmModal'
 import FlipBoard from './FlipBoard'
 import SaveStatus from './SaveStatus'
-import { useRunningScore } from './useRunningScore'
+import { sameScores, useRunningScore } from './useRunningScore'
 
 function scoresOf(match) {
   return { team1: match.team1_score ?? 0, team2: match.team2_score ?? 0 }
@@ -50,13 +50,29 @@ export default function LiveScore({ match, team1Name, team2Name, onScored }) {
     setConfirming(false)
     setFinishing(true)
     setFinishError(null)
-    try {
-      const updated = await submitScore(match.id, {
+    // Finishing records the score itself, so an autosave still waiting to go out is dropped.
+    running.adopt(scores)
+    const record = (sentVersion) =>
+      submitScore(match.id, {
         team1Score: scores.team1,
         team2Score: scores.team2,
-        version,
+        version: sentVersion,
         complete: true,
       })
+    try {
+      let updated
+      try {
+        updated = await record(version)
+      } catch (error) {
+        if (error?.status !== 409) throw error
+        // An autosave already on its way can land just ahead of this and leave the
+        // version behind. If the server holds the very score on screen, the only other
+        // writer was this screen, so finish on what it has now. A different score is a
+        // real second scorekeeper, and stays a conflict.
+        const current = await getMatch(match.id)
+        if (!sameScores(scoresOf(current), scores)) throw error
+        updated = current.status === 'complete' ? current : await record(current.version)
+      }
       onScored?.(updated)
     } catch (error) {
       if (error?.status === 409) {

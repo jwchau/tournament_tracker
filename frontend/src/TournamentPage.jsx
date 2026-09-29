@@ -184,6 +184,7 @@ export default function TournamentPage() {
         teams={teams}
         onTeamsChanged={setTeams}
         onPoolsChanged={(pools) => setPoolCount(pools.length)}
+        onSchedulesChanged={() => getTournament(tournamentId).then(setTournament)}
         renderPool={(pool) => (
           <PoolStandings
             poolId={pool.id}
