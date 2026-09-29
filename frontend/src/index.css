@@ -1071,7 +1071,8 @@ form > select {
 }
 
 .pool-card,
-.team-panel {
+.team-panel,
+.form-panel {
   background: var(--panel);
   border-radius: 16px;
   box-shadow: var(--elevation-3);
@@ -1714,22 +1715,79 @@ table[aria-label='Standings'] tr.advancing td:first-child {
 
 /* One game's two scores: each label stays beside its input, and the pair wraps as a unit. */
 .game-scores {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-  margin: 2px 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  flex: 1 1 260px;
 }
 
+/* Each team's score: its label over the box, so a long name wraps instead of
+   pushing the pair wide. */
 .score-field {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
 .score-field input {
-  width: 5em;
+  width: 100%;
+}
+
+/* A series' conflict or save error, in the same amber as the save status. */
+.series-alert {
+  font: 500 14.7px/21px var(--ui);
+  color: var(--accent-text);
+  text-align: center;
+}
+
+.series-alert button {
+  min-height: 48px;
+  padding: 12px 16px;
+  font-size: 14.7px;
+  line-height: 21px;
+}
+
+/* The correction dialog: the two teams' scores (a row per game in a series),
+   then Close and Review. */
+.correction-modal {
+  max-width: 520px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+
+.correction-form {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 16px;
+}
+
+/* The 260px flex basis is a width in a row (the series' fix-game form), but a
+   height in this column. */
+.correction-form .game-scores {
+  flex: none;
+}
+
+.correction-games {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.correction-games-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.correction-games-actions:empty {
+  display: none;
+}
+
+.correction-form [role='alert'] {
+  font: 500 14.7px/21px var(--ui);
+  color: var(--accent-text);
 }
 
 /* ---------- Court pages: a phone at the court ---------- */
@@ -2721,6 +2779,48 @@ table[aria-label='Standings'] tr.advancing td:first-child {
     font-size: 48px;
     line-height: 48px;
   }
+}
+
+/* ---------- Sign in and account: one narrow column under the strip ---------- */
+
+.form-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Everything under the strip lines up with the strip's inset content. */
+.form-page > :not(.court-strip) {
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
+}
+
+/* The strip reaches one gutter past the column on each side, so its content
+   needs that gutter added to line up with the panel below. */
+.form-page .court-strip-narrow {
+  padding-inline: max(var(--gutter), calc(var(--gutter) + (100% - 640px) / 2));
+}
+
+/* Not the global form's flex-end, which shrinks the fields to their content
+   and pushes them to the right edge. */
+.form-panel {
+  align-items: stretch;
+  gap: 16px;
+}
+
+.form-panel .field {
+  flex: none;
+}
+
+.form-panel [role='alert'] {
+  font: 500 14.7px/21px var(--ui);
+  color: var(--accent-text);
+}
+
+.form-panel button[type='submit'] {
+  align-self: stretch;
+  min-height: 56px;
 }
 
 /* ---------- Team page: details and roster ---------- */

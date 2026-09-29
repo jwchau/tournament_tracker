@@ -154,3 +154,20 @@ test('shows a conflict message when the match changed before the correction was 
 
   expect(await screen.findByText(/updated elsewhere/i)).toBeInTheDocument()
 })
+
+test('the dialog opens in the page body, out of any list that would clip it', () => {
+  const { container } = render(
+    <ul style={{ overflow: 'hidden' }}>
+      <li>
+        <CorrectionForm match={match} team1Name="Spikers" team2Name="Diggers" />
+      </li>
+    </ul>,
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: /correct/i }))
+
+  const dialog = screen.getByRole('dialog', { name: 'Correct Spikers vs Diggers' })
+  expect(container).not.toContainElement(dialog)
+  expect(dialog.closest('.modal-overlay').parentElement).toBe(document.body)
+  expect(within(dialog).getByRole('heading', { name: 'Correct Spikers vs Diggers' })).toBeInTheDocument()
+})

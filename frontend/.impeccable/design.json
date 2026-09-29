@@ -707,9 +707,9 @@
           "rule": "A bracket match on a court (both teams, not finished) is marked live: a 2px inset --accent-text ring and a court link. Nothing else on the bracket page wears that ring. The main page reuses the same ring for a tournament being played (the full-width Today row) and nothing else."
         },
         {"id": "rounds-named-once", "rule": "Tabs, pages, card-tree heads and Next links say rounds the same way (roundsOf); match names derive from them (Semis · match 2, or the round name alone); status reads in words (matchStatus)."},
-        {"id": "tournament-page-read-only-tree", "rule": "The tournament page keeps the read-only SVG tree and champion banner; matches open only on the bracket page."}
+        {"id": "tournament-page-read-only-tree", "rule": "The tournament page draws each bracket as the bracket page does (the card tree from 900px, round pages below), read-only and capped at 420px tall; a card leads to the bracket page, where matches open."}
       ],
-      "notOverhauled": ["TeamPage, AccountPage, LoginPage, ScoreEntryForm, CorrectionForm (including Correct on the pool page and in the bracket match panel)", "SeriesForm outside board mode (plain game fields, fix-game form, conflict and error lines)"],
+      "notOverhauled": [],
       "notCanonized": []
     }
   },

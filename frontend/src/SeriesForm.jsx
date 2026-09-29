@@ -47,8 +47,6 @@ export function GameScoreInputs({
   )
 }
 
-const EMPTY = { team1: '', team2: '' }
-
 function gameInPlay(match) {
   return { team1: match.game_team1_score ?? 0, team2: match.game_team2_score ?? 0 }
 }
@@ -107,12 +105,11 @@ function GameBoard({ match, number, team1Name, team2Name, recording, onSaved, on
 }
 
 /**
- * Scoring for a best-of playoff series: one game at a time. The series
- * completes (and its winner advances) once a team wins a majority; until then
- * any recorded game can be fixed. A decided series changes only through a
+ * Scoring for a best-of playoff series on the court's scoreboard: one game at
+ * a time, kept point by point and recorded when it ends. The series completes
+ * (and its winner advances) once a team wins a majority; until then any
+ * recorded game can be fixed. A decided series changes only through a
  * correction.
- * With board, the next game is kept on the court's scoreboard, point by point,
- * and recorded when it ends.
  */
 export default function SeriesForm({
   match,
@@ -120,12 +117,10 @@ export default function SeriesForm({
   team1Name = 'Team 1',
   team2Name = 'Team 2',
   onScored,
-  board = false,
 }) {
   const [currentMatch, setCurrentMatch] = useState(match)
   const [seenVersion, setSeenVersion] = useState(match.version)
   const [games, setGames] = useState([])
-  const [next, setNext] = useState(EMPTY)
 
   // A save of the game in play returns the match with its new version.
   function takeMatch(updated) {
@@ -168,18 +163,6 @@ export default function SeriesForm({
     }
   })
 
-  async function handleRecord(event) {
-    event.preventDefault()
-    const saved = await save(() =>
-      addGame(currentMatch.id, {
-        team1Score: Number(next.team1),
-        team2Score: Number(next.team2),
-        version: currentMatch.version,
-      }),
-    )
-    if (saved) setNext(EMPTY)
-  }
-
   function recordFromBoard(scores) {
     return save(() =>
       addGame(currentMatch.id, {
@@ -212,43 +195,27 @@ export default function SeriesForm({
 
   const nextNumber = games.length + 1
 
-  const nextGame =
-    nextNumber <= bestOf &&
-    (board ? (
-      <GameBoard
-        key={nextNumber}
-        match={currentMatch}
-        number={nextNumber}
-        team1Name={team1Name}
-        team2Name={team2Name}
-        recording={saving}
-        onSaved={takeMatch}
-        onRecord={recordFromBoard}
-        onRefetch={handleRefetch}
-      />
-    ) : (
-      <form onSubmit={handleRecord}>
-        <GameScoreInputs
-          idPrefix={`series-${currentMatch.id}`}
-          number={nextNumber}
-          team1Name={team1Name}
-          team2Name={team2Name}
-          scores={next}
-          onChange={setNext}
-        />
-        <button type="submit" disabled={saving}>
-          {saving ? 'Saving…' : `Record game ${nextNumber}`}
-        </button>
-      </form>
-    ))
+  const nextGame = nextNumber <= bestOf && (
+    <GameBoard
+      key={nextNumber}
+      match={currentMatch}
+      number={nextNumber}
+      team1Name={team1Name}
+      team2Name={team2Name}
+      recording={saving}
+      onSaved={takeMatch}
+      onRecord={recordFromBoard}
+      onRefetch={handleRefetch}
+    />
+  )
 
   return (
-    <section className={board ? 'series series-board' : 'series'}>
+    <section className="series series-board">
       <p className="series-tally">
         {team1Name} vs {team2Name} · best of {bestOf} · {currentMatch.team1_score ?? 0}–
         {currentMatch.team2_score ?? 0}
       </p>
-      {board && nextGame}
+      {nextGame}
       <ol className="series-games">
         {games.map((game) =>
           fixing?.number === game.number ? (
@@ -272,22 +239,16 @@ export default function SeriesForm({
             </li>
           ) : (
             <li key={game.number}>
-              {board ? (
-                <span className="game-line">
-                  Game {game.number}:{' '}
-                  <span className={game.team1_score > game.team2_score ? 'game-won' : undefined}>
-                    {game.team1_score}
-                  </span>
-                  –
-                  <span className={game.team2_score > game.team1_score ? 'game-won' : undefined}>
-                    {game.team2_score}
-                  </span>
+              <span className="game-line">
+                Game {game.number}:{' '}
+                <span className={game.team1_score > game.team2_score ? 'game-won' : undefined}>
+                  {game.team1_score}
                 </span>
-              ) : (
-                <>
-                  Game {game.number}: {game.team1_score}–{game.team2_score}
-                </>
-              )}{' '}
+                –
+                <span className={game.team2_score > game.team1_score ? 'game-won' : undefined}>
+                  {game.team2_score}
+                </span>
+              </span>{' '}
               <button
                 type="button"
                 onClick={() =>
@@ -304,16 +265,19 @@ export default function SeriesForm({
           ),
         )}
       </ol>
-      {!board && nextGame}
       {conflict && (
-        <p>
+        <p role="alert" className="series-alert">
           Version conflict: this series was updated elsewhere.{' '}
           <button type="button" onClick={handleRefetch}>
             Refetch latest
           </button>
         </p>
       )}
-      {submitError && <p>Couldn't save that game. Check the scores (no ties) and try again.</p>}
+      {submitError && (
+        <p role="alert" className="series-alert">
+          Couldn't save that game. Check the scores (no ties) and try again.
+        </p>
+      )}
     </section>
   )
 }

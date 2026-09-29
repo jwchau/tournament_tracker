@@ -17,9 +17,16 @@ export default function AccountPage() {
 
   if (!user) {
     return (
-      <p>
-        <Link to={loginPath('/account')}>Sign in</Link> to manage your account.
-      </p>
+      <div className="form-page">
+        <header className="court-strip court-strip-narrow">
+          <div className="court-strip-title">
+            <h2>Account</h2>
+          </div>
+        </header>
+        <p className="setup-note">
+          <Link to={loginPath('/account')}>Sign in</Link> to manage your account.
+        </p>
+      </div>
     )
   }
 
@@ -49,28 +56,35 @@ export default function AccountPage() {
   ]
 
   return (
-    <>
-      <h2>Account</h2>
-      <p>Signed in as {user.username}.</p>
-      <form onSubmit={handleSubmit}>
-        {fields.map(([label, id, value, setValue, autoComplete]) => (
-          <span key={id}>
-            <label htmlFor={id}>{label}</label>
-            <input
-              id={id}
-              type="password"
-              autoComplete={autoComplete}
-              required
-              minLength={id === 'current-password' ? undefined : MIN_PASSWORD_LENGTH}
-              value={value}
-              onChange={(event) => setValue(event.target.value)}
-            />
-          </span>
-        ))}
-        <button type="submit">Change password</button>
-        {error && <p role="alert">{error}</p>}
-      </form>
-      <p>Changing your password signs you out on every other device.</p>
-    </>
+    <div className="form-page">
+      <header className="court-strip court-strip-narrow">
+        <div className="court-strip-title">
+          <h2>Account</h2>
+          <p className="court-strip-label">Signed in as {user.username}.</p>
+        </div>
+      </header>
+      <section className="board-section" aria-labelledby="password-heading">
+        <h3 id="password-heading">Change password</h3>
+        <form onSubmit={handleSubmit} className="form-panel">
+          {fields.map(([label, id, value, setValue, autoComplete]) => (
+            <span key={id} className="field">
+              <label htmlFor={id}>{label}</label>
+              <input
+                id={id}
+                type="password"
+                autoComplete={autoComplete}
+                required
+                minLength={id === 'current-password' ? undefined : MIN_PASSWORD_LENGTH}
+                value={value}
+                onChange={(event) => setValue(event.target.value)}
+              />
+            </span>
+          ))}
+          {error && <p role="alert">{error}</p>}
+          <button type="submit">Change password</button>
+        </form>
+        <p className="section-note">Changing your password signs you out on every other device.</p>
+      </section>
+    </div>
   )
 }
