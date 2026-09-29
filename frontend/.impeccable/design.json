@@ -336,7 +336,7 @@
         "tree": {
           "selector": ".card-tree",
           "component": "CardTree",
-          "geometry": "layoutBracket with matchWidth 248, roundGap 56, rowUnit 164; card height 132; heads 36px",
+          "geometry": "layoutBracket with matchWidth 248, roundGap 56, rowUnit = tallest measured card + 32 (132 + 32 before measuring); cards centred in their slots; heads 36px",
           "cardWidth": "248px",
           "connector": ".bracket-line elbow from the card's right middle, across half the gap, to the next match; --border 1.5px",
           "heads": "card-tree-head per round column; double elimination labels sections (Winners bracket, Losers bracket, Grand final)"
