@@ -55,7 +55,7 @@ function FlipNumeral({ value, children }) {
   )
 }
 
-function Column({ id, name, score, label, readOnly, onChange, onStep }) {
+function Column({ id, name, score, label, readOnly, maxScore, onChange, onStep }) {
   if (readOnly) {
     return (
       <div className="flip-column" role="group" aria-label={`${name}, ${score}`}>
@@ -78,6 +78,7 @@ function Column({ id, name, score, label, readOnly, onChange, onStep }) {
           type="number"
           inputMode="numeric"
           min="0"
+          max={maxScore || undefined}
           aria-label={label}
           value={score}
           onChange={(event) => onChange(event.target.value === '' ? 0 : Number(event.target.value))}
@@ -87,6 +88,7 @@ function Column({ id, name, score, label, readOnly, onChange, onStep }) {
         type="button"
         className="flip-plus"
         aria-label={`Point to ${name}`}
+        disabled={Boolean(maxScore) && score >= maxScore}
         onClick={() => onStep(1)}
       >
         <Plus />1
@@ -108,7 +110,8 @@ function Column({ id, name, score, label, readOnly, onChange, onStep }) {
  * The court's scoreboard: each team's score as a large flip-card numeral,
  * with +1 and −1 under it. A score can also be typed. Read-only for
  * spectators. scores is { team1, team2 }; labelPrefix names a series game
- * ("Game 2 ").
+ * ("Game 2 "). maxScore is the point cap (0 or left out is none): a score
+ * stops there, so one above it is never sent.
  */
 export default function FlipBoard({
   idPrefix,
@@ -117,10 +120,12 @@ export default function FlipBoard({
   scores,
   onChange,
   labelPrefix = '',
+  maxScore = 0,
   readOnly = false,
 }) {
   function set(side, value) {
-    onChange({ ...scores, [side]: Math.max(0, value) })
+    const capped = maxScore ? Math.min(maxScore, value) : value
+    onChange({ ...scores, [side]: Math.max(0, capped) })
   }
 
   const swapped = useContext(SwapSidesContext)
@@ -140,6 +145,7 @@ export default function FlipBoard({
           score={scores[side]}
           label={`${labelPrefix}${name} score`}
           readOnly={readOnly}
+          maxScore={maxScore}
           onChange={(value) => set(side, value)}
           onStep={(delta) => set(side, scores[side] + delta)}
         />

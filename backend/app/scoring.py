@@ -5,7 +5,7 @@ from sqlalchemy import case, or_
 from sqlmodel import Session, delete, select, update
 
 from app.dispatch import dispatch
-from app.models import CorrectionLog, Game, Match
+from app.models import CorrectionLog, Game, Match, Tournament
 from app.results import sync_playoff_stage
 
 
@@ -28,6 +28,17 @@ class VersionConflict(Exception):
     pass
 
 
+def _enforce_pool_point_cap(
+    session: Session, match: Match, team1_score: int, team2_score: int
+) -> None:
+    """Refuse a pool score above the tournament's cap (0 is no cap)."""
+    if match.pool_id is None:
+        return
+    cap = session.get(Tournament, match.tournament_id).pool_point_cap
+    if cap and max(team1_score, team2_score) > cap:
+        raise InvalidScore(f"a pool game is capped at {cap} points")
+
+
 def submit_score(
     session: Session,
     match_id: int,
@@ -45,6 +56,7 @@ def submit_score(
         )
     if match.on_hold:
         raise InvalidScore("this match is on hold; release it before scoring it")
+    _enforce_pool_point_cap(session, match, team1_score, team2_score)
 
     values = {"team1_score": team1_score, "team2_score": team2_score}
     was_in_progress = match.status == "in_progress"
@@ -187,6 +199,7 @@ def _validate_correction(
         raise InvalidScore("only completed matches can be corrected")
     if team1_score == team2_score:
         raise InvalidScore("cannot correct a match to a tied score")
+    _enforce_pool_point_cap(session, match, team1_score, team2_score)
     winner_id = match.team1_id if team1_score > team2_score else match.team2_id
     return match, winner_id
 

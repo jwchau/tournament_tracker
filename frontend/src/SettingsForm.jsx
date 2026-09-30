@@ -27,6 +27,15 @@ const GROUPS = [
         min: '1',
         note: 'Times each pair of teams plays in pool play.',
       },
+      {
+        key: 'pool_point_cap',
+        label: 'Pool point cap',
+        type: 'number',
+        min: '1',
+        optional: true,
+        placeholder: 'No cap',
+        note: 'The most points a team can score in a pool game. Blank is no cap. Games already scored are kept as they are.',
+      },
     ],
   },
   {
@@ -82,6 +91,7 @@ function toForm(tournament) {
     playoff_bracket_count: String(tournament.playoff_bracket_count ?? 1),
     advance_per_pool: tournament.advance_per_pool == null ? '' : String(tournament.advance_per_pool),
     playoff_best_of: String(tournament.playoff_best_of ?? 1),
+    pool_point_cap: tournament.pool_point_cap ? String(tournament.pool_point_cap) : '',
     court_count: String(tournament.court_count ?? 1),
   }
 }

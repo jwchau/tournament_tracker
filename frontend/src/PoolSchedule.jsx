@@ -172,7 +172,13 @@ function ResultsGrid({ poolTeams, rounds, nowRound, selectedId, onSelect, nameOf
  * each court's scoreboard, so an unfinished match links there; a finished
  * one can be corrected here.
  */
-export default function PoolSchedule({ pool, teams, gamesPerPairing = 1, onMatchesChange }) {
+export default function PoolSchedule({
+  pool,
+  teams,
+  gamesPerPairing = 1,
+  pointCap = 0,
+  onMatchesChange,
+}) {
   // null until the first load, so the generate form doesn't flash for pools
   // that already have a schedule.
   const [matches, setMatches] = useState(null)
@@ -376,6 +382,7 @@ export default function PoolSchedule({ pool, teams, gamesPerPairing = 1, onMatch
                             <CorrectionForm
                               key={`${match.id}-${match.version}`}
                               match={match}
+                              pointCap={pointCap}
                               team1Name={team1}
                               team2Name={team2}
                               onCorrected={({ match: corrected }) => handleScored(corrected)}

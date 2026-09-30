@@ -296,3 +296,7 @@ change, untick the boxes it touches.
 - [x] **Production after an upgrade**
   - Do: after the next production deploy, open a court on https://tournament.johnchau.org and score a point.
   - Expect: it saves, and the backups folder still gets a copy every 15 minutes.
+
+- [ ] **Pool point cap**
+  - Do: in Settings, set Pool point cap to 21. Open a pool court and tap +1 for one team up to 21; type 30 into a score box; on the pool page correct a finished match to 25–10.
+  - Expect: +1 is disabled at 21 and the typed 30 becomes 21; the correction is refused with "A pool game is capped at 21 points." Clearing the box (no cap) lifts all three. A match finished before the cap was set keeps its score. Playoff matches are never capped by it.

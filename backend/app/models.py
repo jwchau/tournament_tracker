@@ -52,6 +52,8 @@ class Tournament(SQLModel, table=True):
     games_per_pairing: int = Field(default=1, sa_column_kwargs={"server_default": "1"})
     target_pool_size: int = Field(default=4, sa_column_kwargs={"server_default": "4"})
     playoff_best_of: int = Field(default=1, sa_column_kwargs={"server_default": "1"})
+    # The most points a team can score in a pool game; 0 means no cap.
+    pool_point_cap: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
     date: Date | None = None
     venue: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -72,6 +74,7 @@ class TournamentUpdate(SQLModel):
     games_per_pairing: int | None = Field(default=None, ge=1)
     target_pool_size: int | None = Field(default=None, ge=2)
     playoff_best_of: Literal[1, 3, 5, 7] | None = None
+    pool_point_cap: int | None = Field(default=None, ge=0)
 
 
 class TournamentDetail(SQLModel):
@@ -87,6 +90,7 @@ class TournamentDetail(SQLModel):
     games_per_pairing: int
     target_pool_size: int
     playoff_best_of: int
+    pool_point_cap: int
     created_at: datetime
     # Settings that can't change right now, each with the reason.
     setting_locks: dict[str, str]
