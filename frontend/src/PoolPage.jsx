@@ -23,7 +23,7 @@ function matchesSignature(matches) {
 
 /**
  * A pool as its round-robin sheet: standings, then the results grid, then
- * the schedule slot by slot.
+ * the schedule round by round.
  */
 export default function PoolPage() {
   const { poolId } = useParams()
@@ -31,6 +31,7 @@ export default function PoolPage() {
   const [teams, setTeams] = useState([])
   const [advancing, setAdvancing] = useState(0)
   const [bracketCount, setBracketCount] = useState(1)
+  const [gamesPerPairing, setGamesPerPairing] = useState(1)
   const [matchesKey, setMatchesKey] = useState(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const navigate = useNavigate()
@@ -55,6 +56,7 @@ export default function PoolPage() {
         // No tournament (it failed to load) marks nothing; an automatic setting is null.
         setAdvancing(tournament ? tournament.advance_per_pool : 0)
         setBracketCount(tournament?.playoff_bracket_count ?? 1)
+        setGamesPerPairing(tournament?.games_per_pairing ?? 1)
       },
       failureMessage: "Couldn't load the pool",
     },
@@ -106,6 +108,7 @@ export default function PoolPage() {
         <PoolSchedule
           pool={pool}
           teams={teams}
+          gamesPerPairing={gamesPerPairing}
           onMatchesChange={(matches) => setMatchesKey(matchesSignature(matches))}
         />
       </div>

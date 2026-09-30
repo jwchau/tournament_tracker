@@ -193,40 +193,40 @@ change, untick the boxes it touches.
 
 - [ ] **Long pools scroll in their boxes**
   - Setup: a pool with 9+ teams (standings), 5+ teams (results) and a schedule.
-  - Expect: the standings show eight teams and scroll for the rest under a pinned header (on the pool page and in the tournament page's pool card); the results grid, beside the standings on a laptop, ends level with them (their footer included), and on a phone shows four teams, scrolling under pinned slot heads; the schedule shows one slot when three matches are played at once, two slots with two, three with one, opening on the Now slot. A capped list fades at the bottom until scrolled to its end, and the page itself never scrolls sideways.
+  - Expect: the standings show eight teams and scroll for the rest under a pinned header (on the pool page and in the tournament page's pool card); the results grid, beside the standings on a laptop, ends level with them (their footer included), and on a phone shows four teams, scrolling under pinned round heads; the schedule shows one round when three matches are played at once, two rounds with two, three with one, opening on the Now round. A capped list fades at the bottom until scrolled to its end, and the page itself never scrolls sideways.
 
-- [ ] **Results grid by slot**
-  - Expect: slots across, the pool's teams down, no letters or hatched diagonal. A team's cell reads "Ct 1 · vs Setters" when it plays, then adds dark score chips from that team's side (winner's in amber; muted while it's played); "Ref · Ct 2" over the two teams, outlined with no fill, when it refs; "Rest" otherwise. The current slot's whole column is outlined.
+- [ ] **Results grid by round**
+  - Expect: rounds across, the pool's teams down, no letters or hatched diagonal. A team's cell reads "Ct 1 · vs Setters" when it plays, then adds dark score chips from that team's side (winner's in amber; muted while it's played); "Ref · Ct 2" over the two teams, outlined with no fill, when it refs; "Rest" otherwise. The current round's whole column is outlined.
 
 - [x] **Jump between grid and schedule**
   - Do: tap a playing or ref cell in the grid.
   - Expect: the page scrolls to that match in the schedule, and the row is filled and outlined; scroll back up and that match's cells (both teams' and the ref's) are outlined. Tapping the team names in a schedule row jumps back to the grid.
 
-- [x] **Current-slot selection**
-  - Do: tap an appointment cell in the current slot.
+- [x] **Current-round selection**
+  - Do: tap an appointment cell in the current round.
   - Expect: it shows both its thin Now outline and the thicker selection outline.
 
 - [x] **Scoring links**
   - Expect: unfinished matches show "Score on Court N" signed in, "Watch Court N" signed out, and the link opens that court's scoreboard. Finished matches show Correct (signed in only). There are no score forms on the pool page.
 
-- [x] **Now slot**
-  - Expect: the first slot with unfinished matches is outlined and marked "Now".
+- [x] **Now round**
+  - Expect: the first round with unfinished matches is outlined and marked "Now".
 
 - [x] **Five or more teams**
   - Setup: a pool with 5+ teams.
-  - Expect: on a phone the grid scrolls sideways inside its panel with the team names pinned; nothing else on the page scrolls sideways (8 teams included). A Resting line appears under slots where teams sit out and aren't reffing.
+  - Expect: on a phone the grid scrolls sideways inside its panel with the team names pinned; nothing else on the page scrolls sideways (8 teams included). A Resting line appears under rounds where teams sit out and aren't reffing.
 
 - [x] **Refs**
   - Setup: a pool with 5+ teams and a schedule, signed in.
-  - Expect: every match shows a ref (or N/A when no team is free), reffing is spread evenly, and Resting lists only idle teams not reffing. Pick a ref by hand: another court in that slot moves off that team if it had it, and a reload (or another device) shows the same refs. Set it back to Automatic and the rules' pick returns. Signed out, rows read "Ref: …" with no dropdown.
+  - Expect: every match shows a ref (or N/A when no team is free), reffing is spread evenly, and Resting lists only idle teams not reffing. Pick a ref by hand: another court in that round moves off that team if it had it, and a reload (or another device) shows the same refs. Set it back to Automatic and the rules' pick returns. Signed out, rows read "Ref: …" with no dropdown.
 
 - [x] **More than one game per pairing**
   - Setup: a tournament set to 2 games per pairing.
-  - Expect: each pairing fills that many slots in a row, each cell linking to its own match.
+  - Expect: a round holds each pairing once, its games listed together under it ("Game 1", "Game 2" beside the teams, a dotted rule between a pairing's games). The grid has one column per round, and a playing cell shows a score pair for each game and links to the pairing's first game.
 
 - [x] **No schedule yet**
   - Setup: a pool with teams and no schedule.
-  - Expect: signed in, "No schedule yet…" with Generate schedule; signed out, "The schedule hasn't been made yet." Generating shows the grid and slots.
+  - Expect: signed in, "No schedule yet…" with Generate schedule; signed out, "The schedule hasn't been made yet." Generating shows the grid and rounds.
 
 - [x] **Correct a result**
   - Do: correct a finished match from the schedule.

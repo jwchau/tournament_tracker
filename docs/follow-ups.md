@@ -7,8 +7,10 @@ choice or a tidy-up waiting for its turn.
 
 - [ ] **Point cap settings**: one for pool play and one for bracket play (a maximum score a
   team can reach). Items 3 and 4 below are how each is set and enforced.
-- [ ] **Rename pool play "slot" to "round", and group a pairing's games together.** With
-  games per pairing = 2, A vs B game 1 and A vs B game 2 are listed one straight after the other.
+- [x] **Rename pool play "slot" to "round", and group a pairing's games together.** Done in
+  the UI only: a round holds each pairing once with its games listed together. Storage is
+  unchanged (`Match.round` still counts games in play order); the page derives the round and
+  game from it and the tournament's games per pairing (`groupByRound`).
 - [ ] **Pool play point cap** (tournament setting, in the pool play group). Enforced by both
   the frontend and the backend: a score above the cap is rejected and not saved.
 - [ ] **Playoff point cap** (tournament setting, in the playoffs group). One integer box per

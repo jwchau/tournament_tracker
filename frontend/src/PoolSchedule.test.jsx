@@ -53,24 +53,24 @@ const schedule = [
   poolMatch(3, 3, 11, 12),
 ]
 
-// The slot list's row for a pairing.
+// The round list's row for a pairing.
 function matchRow(teamsText) {
   return screen.getByText(teamsText).closest('li')
 }
 
-test('lists each slot with its court, teams, score, and ref', async () => {
+test('lists each round with its court, teams, score, and ref', async () => {
   vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
 
   render(inRouter(<PoolSchedule pool={pool} teams={teams} />), { user: null })
 
-  const firstSlot = (await screen.findByRole('heading', { name: /^Slot 1/ })).closest('li')
-  const played = within(firstSlot).getByText('Spikers vs Diggers').closest('li')
+  const firstRound = (await screen.findByRole('heading', { name: /^Round 1/ })).closest('li')
+  const played = within(firstRound).getByText('Spikers vs Diggers').closest('li')
   expect(played).toHaveTextContent('Court 1')
   expect(played).toHaveTextContent('21–15')
   expect(within(played).getByText('Ref: Blockers')).toBeInTheDocument()
   expect(within(matchRow('Diggers vs Blockers')).getByText('Ref: N/A')).toBeInTheDocument()
   // Blockers is reffing, so no one rests; no one is ever "observing".
-  expect(within(firstSlot).queryByText(/Resting/)).not.toBeInTheDocument()
+  expect(within(firstRound).queryByText(/Resting/)).not.toBeInTheDocument()
   expect(screen.queryByText(/Observing/)).not.toBeInTheDocument()
   expect(screen.queryByText(/Elsewhere/)).not.toBeInTheDocument()
 })
@@ -80,7 +80,7 @@ test('scoring happens on the court: unfinished matches link to its scoreboard', 
 
   render(inRouter(<PoolSchedule pool={pool} teams={teams} />))
 
-  await screen.findByRole('heading', { name: /^Slot 1/ })
+  await screen.findByRole('heading', { name: /^Round 1/ })
   expect(
     within(matchRow('Spikers vs Blockers')).getByRole('link', { name: 'Score on Court 1' }),
   ).toHaveAttribute('href', '/tournaments/3/courts/1')
@@ -90,28 +90,28 @@ test('scoring happens on the court: unfinished matches link to its scoreboard', 
   expect(screen.queryByRole('button', { name: /submit score/i })).not.toBeInTheDocument()
 })
 
-test('the slot being played now is marked', async () => {
+test('the round being played now is marked', async () => {
   vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
 
   render(inRouter(<PoolSchedule pool={pool} teams={teams} />))
 
-  expect(await screen.findByRole('heading', { name: 'Slot 2 Now' })).toBeInTheDocument()
-  expect(screen.getByRole('heading', { name: 'Slot 1' })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Round 2 Now' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Round 1' })).toBeInTheDocument()
 })
 
 // A team's cell in a slot's column of the grid (column 0 is the team names).
-function gridCell(grid, team, slot) {
-  return within(grid).getByRole('rowheader', { name: team }).closest('tr').cells[slot]
+function gridCell(grid, team, round) {
+  return within(grid).getByRole('rowheader', { name: team }).closest('tr').cells[round]
 }
 
-test('the grid has a column per slot, in order, and a row per pool team', async () => {
+test('the grid has a column per round, in order, and a row per pool team', async () => {
   vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
 
   render(inRouter(<PoolSchedule pool={pool} teams={teams} />))
 
   const grid = await screen.findByRole('table', { name: 'Results grid' })
   const heads = within(grid).getAllByRole('columnheader').slice(1)
-  expect(heads.map((head) => head.textContent)).toEqual(['Slot 1', 'Slot 2 (now)', 'Slot 3'])
+  expect(heads.map((head) => head.textContent)).toEqual(['Round 1', 'Round 2 (now)', 'Round 3'])
   expect(within(grid).getAllByRole('rowheader').map((head) => head.textContent)).toEqual([
     'Spikers',
     'Diggers',
@@ -148,7 +148,7 @@ test('a match being played shows its running score, muted', async () => {
   render(inRouter(<PoolSchedule pool={pool} teams={teams} />))
 
   const grid = await screen.findByRole('table', { name: 'Results grid' })
-  const score = gridCell(grid, 'Diggers', 1).querySelector('.slot-score')
+  const score = gridCell(grid, 'Diggers', 1).querySelector('.round-score')
   expect(score).toHaveTextContent('7–9')
   expect(score).toHaveAttribute('data-live')
   expect(within(score).queryByText('9')).not.toHaveClass('score-won')
@@ -163,12 +163,12 @@ test('a ref cell shows the court and both teams, a free team rests, and an N/A m
   const reffing = gridCell(grid, 'Blockers', 1)
   expect(reffing).toHaveTextContent('Ref · Ct 1Spikers v Diggers')
   expect(within(reffing).getByRole('link')).toHaveAttribute('data-kind', 'ref')
-  // Slot 3's match has no ref, so Spikers just rests.
+  // Round 3's match has no ref, so Spikers just rests.
   expect(gridCell(grid, 'Spikers', 3)).toHaveTextContent(/^Rest$/)
   expect(within(grid).getAllByText(/^Ref · /)).toHaveLength(2)
 })
 
-test('the current slot’s column is marked', async () => {
+test('the current round’s column is marked', async () => {
   vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
 
   render(inRouter(<PoolSchedule pool={pool} teams={teams} />))
@@ -220,7 +220,7 @@ test('idle teams not reffing are listed as resting', async () => {
   expect(screen.queryByText(/Observing/)).not.toBeInTheDocument()
 })
 
-test('signed in, the Ref dropdown offers Automatic, the teams free that slot, and N/A', async () => {
+test('signed in, the Ref dropdown offers Automatic, the teams free that game, and N/A', async () => {
   vi.spyOn(api, 'getPoolMatches').mockResolvedValue([
     poolMatch(1, 1, 10, 11, { ref_team_id: 12 }),
     poolMatch(2, 1, 12, 13, {
@@ -309,7 +309,7 @@ test('generates the schedule using the tournament setting for games per pairing'
   fireEvent.click(await screen.findByRole('button', { name: /generate schedule/i }))
 
   await waitFor(() => expect(generate).toHaveBeenCalledWith(1))
-  expect(await screen.findByRole('heading', { name: /^Slot 3/ })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: /^Round 3/ })).toBeInTheDocument()
   expect(screen.queryByLabelText(/games per pairing/i)).not.toBeInTheDocument()
 })
 
@@ -330,7 +330,7 @@ test('does not offer to generate a schedule once the pool has one', async () => 
 
   render(inRouter(<PoolSchedule pool={pool} teams={teams} />))
 
-  await screen.findByRole('heading', { name: /^Slot 1/ })
+  await screen.findByRole('heading', { name: /^Round 1/ })
   expect(screen.queryByRole('button', { name: /generate schedule/i })).not.toBeInTheDocument()
   expect(screen.queryByLabelText(/games per pairing/i)).not.toBeInTheDocument()
 })
