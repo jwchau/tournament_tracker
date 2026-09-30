@@ -33,6 +33,7 @@ from sqlmodel import Session, select, update
 
 from app.models import Match, PlayoffBracket, Tournament
 from app.pools import pool_courts
+from app.rows import match_rows
 
 UNFINISHED = ("ready", "in_progress")
 
@@ -73,17 +74,18 @@ class Snapshot:
     question, so a loop that fills courts one after another stays consistent.
     """
 
-    def __init__(self, session: Session, tournament_id: int) -> None:
+    def __init__(self, session: Session, tournament_id: int, rows: bool = False) -> None:
         session.flush()
         self.tournament_id = tournament_id
         self.courts = _courts_by_bracket(session, tournament_id)
-        self.matches: list[Match] = list(
-            session.exec(
-                select(Match)
-                .where(Match.tournament_id == tournament_id, Match.playoff_bracket_id.is_not(None))
-                .execution_options(populate_existing=True)
-            ).all()
-        )
+        where = (Match.tournament_id == tournament_id, Match.playoff_bracket_id.is_not(None))
+        if rows:
+            # A read that only looks: plain rows, no ORM objects. (Assigning a court needs the objects.)
+            self.matches = list(match_rows(session, *where))
+        else:
+            self.matches: list[Match] = list(
+                session.exec(select(Match).where(*where).execution_options(populate_existing=True)).all()
+            )
         self.by_id = {match.id: match for match in self.matches}
 
     def waiting(self) -> list[Match]:

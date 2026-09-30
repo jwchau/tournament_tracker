@@ -149,3 +149,47 @@ The viewers table is sequential, so it cannot show sharing; in real use those sh
 also count as answered without computing, and the true rate is a little higher than the table.
 Left out on purpose: serving spectators data a few seconds old (it would lift the small-crowd
 numbers, at the cost of slower scores) and clearing only one tournament's cache.
+
+## Latency: where a request's time goes
+
+`uv run python -m tests.bench_latency` times single requests over real HTTP (no profiler, no
+test client) on a 24-team tournament in its playoffs. A profile of the same requests
+(yappi, all threads) showed SQLAlchemy's own Python code at about 30% of a cold read and
+52% of a playoff score, SQLModel's per-object setup and FastAPI's response validation
+next, and thread hops at only 0.12 ms.
+
+| Request (median ms) | Before | After | Above the floor, before / after |
+| ------------------- | ------ | ----- | ------------------------------- |
+| Do-nothing endpoint (the floor) | 1.68 | 1.52 | |
+| Cached read | 0.73 | 0.69 | |
+| Tournament, cold | 3.71 | 3.34 | 2.03 / 1.82 |
+| Courts, cold | 5.13 | 4.56 | 3.45 / 3.04 |
+| Bracket matches, cold | 3.36 | 3.01 | 1.68 / 1.49 |
+| Bracket dispatch, cold | 4.37 | 3.53 | 2.69 / 2.01 |
+| Pool matches, cold | 3.92 | 2.91 | 2.24 / 1.39 |
+| Pool standings, cold | 4.08 | 3.20 | 2.40 / 1.68 |
+| Save a running score (every point) | 12.50 | 9.24 | 10.8 / 7.7 |
+| Finish a playoff match | 22.13 | 15.11 | 20.4 / 13.6 |
+
+Statements: finishing a playoff match went from up to 45 to 24, advancing from 118 to 86.
+
+**What was done**
+
+1. A running score on a match already under way no longer redoes the court and ref work
+   (only a match starting or finishing can change who is on a court).
+2. Choosing refs reads the bracket, the teams and the ref counts once per sync and keeps the
+   counts current as refs are taken, instead of reloading them for each match that needed a ref.
+3. Pool matches, bracket matches, standings, the tournament detail, the courts list and the
+   dispatch read select plain rows and write JSON directly (`app/rows.py`), skipping ORM objects
+   and response validation. A test checks each response against its declared model, so
+   they cannot drift.
+
+**What is left, and why it is not the ORM**
+
+- **Half of a running-score save is the commit's fsync.** With `PRAGMA synchronous=NORMAL` (safe
+  against a crash of the app; a power cut could lose the last moments of scoring, though the
+  file stays intact) a running score took 5.1 ms instead of 10.4, and finishing a match 17.7
+  instead of 23. Not changed: it trades durability, so it is the organizer's call.
+- A cold read is now 1.4 to 3.0 ms above a do-nothing endpoint, mostly the per-request
+  dependencies and session, and each statement's construction. Prebuilt statements would
+  take a little more of it (ticket note above).

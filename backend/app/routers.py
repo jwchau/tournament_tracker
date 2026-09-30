@@ -26,6 +26,7 @@ from app.models import (
 from app.bracket_refs import sync_bracket_refs
 from app.refs import eligible_ref_team_ids, reassign_pool_refs
 from app.results import champion_id
+from app.rows import json_response
 from app.series import best_of, replace_games, series_result
 from app.tournament_settings import (
     changed_settings,
@@ -143,10 +144,16 @@ def _tournament_or_404(session: Session, tournament_id: int) -> Tournament:
 
 
 @router.get("/tournaments/{tournament_id}", response_model=TournamentDetail)
-def get_tournament(
-    tournament_id: int, session: Session = Depends(get_session)
-) -> TournamentDetail:
-    return _detail(session, _tournament_or_404(session, tournament_id))
+def get_tournament(tournament_id: int, session: Session = Depends(get_session)):
+    tournament = _tournament_or_404(session, tournament_id)
+    progress = play_progress(session, tournament.id)
+    return json_response(
+        {
+            **_view(tournament),
+            "setting_locks": setting_locks(session, tournament, progress),
+            "pool_play_started": progress.pool_scored,
+        }
+    )
 
 
 @router.patch("/tournaments/{tournament_id}", response_model=TournamentDetail)

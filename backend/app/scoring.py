@@ -47,6 +47,7 @@ def submit_score(
         raise InvalidScore("this match is on hold; release it before scoring it")
 
     values = {"team1_score": team1_score, "team2_score": team2_score}
+    was_in_progress = match.status == "in_progress"
 
     winner_id = None
     if complete:
@@ -79,7 +80,11 @@ def submit_score(
     if match.playoff_bracket_id is not None:
         if complete:
             sync_playoff_stage(session, match.tournament_id)
-        dispatch(session, match.tournament_id)
+        # Only a match starting or finishing can change who is on which court. A score
+        # moving on a match already under way (every point on a court) can't, so it
+        # skips the court and ref work.
+        if complete or not was_in_progress:
+            dispatch(session, match.tournament_id)
 
     session.commit()
     session.refresh(match)

@@ -18,6 +18,7 @@ from app.pool_routes import _pool_matches, _pools_in_order, _tournament_or_404, 
 from app.playoffs import playoff_tiers
 from app.pools import pool_standings
 from app.results import placings
+from app.rows import json_response, match_dicts
 
 router = APIRouter()
 
@@ -396,33 +397,29 @@ class DispatchStatus(SQLModel):
 
 
 @router.get("/playoff-brackets/{bracket_id}/dispatch", response_model=DispatchStatus)
-def get_bracket_dispatch(
-    bracket_id: int, session: Session = Depends(get_session)
-) -> DispatchStatus:
+def get_bracket_dispatch(bracket_id: int, session: Session = Depends(get_session)):
     """The bracket's courts with the match on each, and the matches waiting for one."""
     bracket = session.get(PlayoffBracket, bracket_id)
     if bracket is None:
         raise HTTPException(status_code=404, detail="Playoff bracket not found")
-    snapshot = Snapshot(session, bracket.tournament_id)
-    return DispatchStatus(
-        courts=[
-            CourtOccupancy(court=court, match_id=match_id)
-            for court, match_id in snapshot.occupancy(bracket_id).items()
-        ],
-        queue=snapshot.queue(bracket_id),
-        overflow=snapshot.overflow(bracket_id),
+    snapshot = Snapshot(session, bracket.tournament_id, rows=True)
+    return json_response(
+        {
+            "courts": [
+                {"court": court, "match_id": match_id}
+                for court, match_id in snapshot.occupancy(bracket_id).items()
+            ],
+            "queue": snapshot.queue(bracket_id),
+            "overflow": snapshot.overflow(bracket_id),
+        }
     )
 
 
 @router.get("/playoff-brackets/{bracket_id}/matches", response_model=list[Match])
-def list_playoff_bracket_matches(
-    bracket_id: int, session: Session = Depends(get_session)
-) -> list[Match]:
+def list_playoff_bracket_matches(bracket_id: int, session: Session = Depends(get_session)):
     if session.get(PlayoffBracket, bracket_id) is None:
         raise HTTPException(status_code=404, detail="Playoff bracket not found")
-    return list(
-        session.exec(select(Match).where(Match.playoff_bracket_id == bracket_id)).all()
-    )
+    return json_response(match_dicts(session, Match.playoff_bracket_id == bracket_id))
 
 
 class PlacedTeam(SQLModel):

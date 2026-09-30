@@ -88,7 +88,8 @@ logged, with any statement it repeated), or run `uv run python -m tests.bench_ap
 which plays a 24-team day through the API and reports statements and time per request.
 Public reads are cached in memory until the next write (`READ_CACHE=0` turns that off);
 that is only safe with one backend process, which is how it is run. `uv run python -m tests.bench_load`
-shows how often reads are answered from it with 1 to 100 phones polling.
+shows how often reads are answered from it with 1 to 100 phones polling, and
+`uv run python -m tests.bench_latency` times single requests over real HTTP.
 
 Inside running containers: `docker compose exec backend uv run pytest` and
 `docker compose exec frontend node ./node_modules/vitest/vitest.mjs run`.
