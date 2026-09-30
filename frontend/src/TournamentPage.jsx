@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
+import { bestOfSettings } from './bracketModel'
 import ConfirmModal from './ConfirmModal'
 import {
   deleteTournament,
@@ -203,7 +204,7 @@ export default function TournamentPage() {
         tournamentId={tournamentId}
         teams={teams}
         hasPools={hasPools}
-        bestOf={tournament.playoff_best_of ?? 1}
+        bestOf={bestOfSettings(tournament)}
         onChanged={() => getTournament(tournamentId).then(setTournament)}
       />
     </section>

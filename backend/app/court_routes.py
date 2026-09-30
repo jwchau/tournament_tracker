@@ -12,6 +12,7 @@ from app.models import Match, PlayoffBracket, Team, Tournament
 from app.pool_routes import _pools_in_order, _tournament_or_404
 from app.pools import pool_courts
 from app.rows import json_response, match_rows
+from app.series import best_of_in
 
 router = APIRouter()
 
@@ -94,7 +95,9 @@ def list_courts(tournament_id: int, session: Session = Depends(get_session)):
         data["team1_name"] = names.get(match.team1_id)
         data["team2_name"] = names.get(match.team2_id)
         data["ref_name"] = names.get(match.ref_team_id)
-        data["best_of"] = tournament.playoff_best_of if match.playoff_bracket_id is not None else 1
+        data["best_of"] = (
+            best_of_in(tournament, match.bracket) if match.playoff_bracket_id is not None else 1
+        )
         data["point_cap"] = tournament.pool_point_cap if match.pool_id is not None else 0
         return data
 

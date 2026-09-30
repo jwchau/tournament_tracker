@@ -52,6 +52,10 @@ class Tournament(SQLModel, table=True):
     games_per_pairing: int = Field(default=1, sa_column_kwargs={"server_default": "1"})
     target_pool_size: int = Field(default=4, sa_column_kwargs={"server_default": "4"})
     playoff_best_of: int = Field(default=1, sa_column_kwargs={"server_default": "1"})
+    # The losers bracket's and the grand final's best-of in double elimination;
+    # 0 means the same as playoff_best_of.
+    playoff_best_of_losers: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
+    playoff_best_of_final: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
     # The most points a team can score in a pool game; 0 means no cap.
     pool_point_cap: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
     date: Date | None = None
@@ -74,6 +78,8 @@ class TournamentUpdate(SQLModel):
     games_per_pairing: int | None = Field(default=None, ge=1)
     target_pool_size: int | None = Field(default=None, ge=2)
     playoff_best_of: Literal[1, 3, 5, 7] | None = None
+    playoff_best_of_losers: Literal[0, 1, 3, 5, 7] | None = None
+    playoff_best_of_final: Literal[0, 1, 3, 5, 7] | None = None
     pool_point_cap: int | None = Field(default=None, ge=0)
 
 
@@ -90,6 +96,8 @@ class TournamentDetail(SQLModel):
     games_per_pairing: int
     target_pool_size: int
     playoff_best_of: int
+    playoff_best_of_losers: int
+    playoff_best_of_final: int
     pool_point_cap: int
     created_at: datetime
     # Settings that can't change right now, each with the reason.
@@ -111,6 +119,8 @@ class TournamentSummary(SQLModel):
     games_per_pairing: int
     target_pool_size: int
     playoff_best_of: int
+    playoff_best_of_losers: int
+    playoff_best_of_final: int
     created_at: datetime
     team_count: int
     # The top playoff bracket's winner once the tournament is complete, else None.

@@ -62,7 +62,23 @@ const GROUPS = [
         label: 'Playoff best-of',
         type: 'select',
         options: [1, 3, 5, 7],
-        note: 'Games each playoff match is played to.',
+        note: 'Games each playoff match is played to. In double elimination, the winners bracket.',
+      },
+      {
+        key: 'playoff_best_of_losers',
+        label: 'Losers bracket best-of',
+        type: 'select',
+        options: [0, 1, 3, 5, 7],
+        zeroLabel: 'Same as winners',
+        note: 'Double elimination only.',
+      },
+      {
+        key: 'playoff_best_of_final',
+        label: 'Grand final best-of',
+        type: 'select',
+        options: [0, 1, 3, 5, 7],
+        zeroLabel: 'Same as winners',
+        note: 'Double elimination only. Includes the bracket reset match.',
       },
     ],
   },
@@ -91,6 +107,8 @@ function toForm(tournament) {
     playoff_bracket_count: String(tournament.playoff_bracket_count ?? 1),
     advance_per_pool: tournament.advance_per_pool == null ? '' : String(tournament.advance_per_pool),
     playoff_best_of: String(tournament.playoff_best_of ?? 1),
+    playoff_best_of_losers: String(tournament.playoff_best_of_losers ?? 0),
+    playoff_best_of_final: String(tournament.playoff_best_of_final ?? 0),
     pool_point_cap: tournament.pool_point_cap ? String(tournament.pool_point_cap) : '',
     court_count: String(tournament.court_count ?? 1),
   }
@@ -196,7 +214,7 @@ export default function SettingsForm({ tournamentId, tournament, onSaved }) {
                   <select {...shared}>
                     {field.options.map((option) => (
                       <option key={option} value={option}>
-                        {option}
+                        {option === 0 ? field.zeroLabel : option}
                       </option>
                     ))}
                   </select>

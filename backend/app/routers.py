@@ -173,7 +173,12 @@ def update_tournament(
 
     for field, value in changes.items():
         # An automatic advance-per-pool and no pool point cap are both stored as 0.
-        zero_for_none = field in ("advance_per_pool", "pool_point_cap")
+        zero_for_none = field in (
+            "advance_per_pool",
+            "pool_point_cap",
+            "playoff_best_of_losers",
+            "playoff_best_of_final",
+        )
         setattr(tournament, field, (value or 0) if zero_for_none else value)
 
     session.add(tournament)

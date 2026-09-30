@@ -17,9 +17,12 @@ choice or a tidy-up waiting for its turn.
   fill in for playoff matches.
 - [ ] **Playoff point cap** (tournament setting, in the playoffs group). One integer box per
   set of the best-of: best of 3 shows three boxes. Enforced in the frontend and the backend.
-- [ ] **Double elimination: a different best-of per bracket** (playoffs setting). For example
-  winners bracket best of 3 and losers bracket best of 1, or 5 and 3. Interacts with the
-  per-set caps above, since each bracket then has its own number of sets.
+- [x] **Double elimination: a different best-of per bracket** (playoffs setting). For example
+  winners bracket best of 3 and losers bracket best of 1, or 5 and 3. Done as three settings:
+  `playoff_best_of` (winners bracket and single elimination), `playoff_best_of_losers` and
+  `playoff_best_of_final`, where 0 follows the winners bracket. All lock at the first playoff
+  score. The playoff point cap can read a match's section best-of from `best_of_in`
+  (`series.py`) for its number of sets.
 
 Decided for the cap settings:
 
