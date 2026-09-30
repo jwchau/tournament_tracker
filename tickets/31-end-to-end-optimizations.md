@@ -115,3 +115,37 @@ averaged 9 statements and 19 ms.
 - The stage stays "Pool play" once every pool match is finished; a "12 of 12 pool
   matches done" line or a checklist of what to do next would tell an organizer where they
   are.
+
+## Cache hit rate under load
+
+`uv run python -m tests.bench_load` measures it two ways on a 24-team tournament in pool play.
+
+**Viewers over time** (virtual time, 2 minutes, each viewer polling a page every 10 s, an
+organizer asking for a settings preview every ~10 s). Share of reads answered from the cache:
+
+| Viewers | 0.2 writes/s | 0.5 writes/s |
+| ------- | ------------ | ------------ |
+| 1 | 0% | 0% |
+| 5 | 39% | 6% |
+| 10 | 60% | 22% |
+| 30 | 85% | 64% |
+| 100 | 96% | 89% |
+
+Previews and sign-in no longer empty the cache: worth about 5 points at 30 viewers (79% to
+85% at 0.2 writes/s, 59% to 64% at 0.5) and less elsewhere. The rate is about
+`1 - 10 x writes/s / viewers`, so one person clicking (a write every few seconds) gets none,
+and it is over 80% from roughly 30 phones at a steady pace or 60 on a busy day.
+
+**A burst over real HTTP**: after a write, V phones ask for the tournament page's 9 reads at
+the same instant. Readers now share one computation, so only one is worked out per page:
+
+| Phones | Reads | Worked out, sharing | Worked out, before |
+| ------ | ----- | ------------------- | ------------------ |
+| 5 | 225 | 45 | 194 |
+| 20 | 900 | 45 | 735 |
+| 50 | 2250 | 45 | 1374 |
+
+The viewers table is sequential, so it cannot show sharing; in real use those shared reads
+also count as answered without computing, and the true rate is a little higher than the table.
+Left out on purpose: serving spectators data a few seconds old (it would lift the small-crowd
+numbers, at the cost of slower scores) and clearing only one tournament's cache.

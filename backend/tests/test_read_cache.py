@@ -1,4 +1,6 @@
-from app.readcache import Entry, ReadCache, ReadCacheMiddleware, cacheable
+import asyncio
+
+from app.readcache import Entry, ReadCache, ReadCacheMiddleware, cacheable, changes_data
 from tests.helpers import create_tournament
 
 
@@ -166,3 +168,136 @@ def test_the_cache_can_be_turned_off(monkeypatch):
     stack = [m.cls for m in create_app().user_middleware]
 
     assert ReadCacheMiddleware not in stack
+
+
+def test_a_preview_or_sign_in_leaves_the_cache_alone(client):
+    tournament_id = create_tournament(client)["id"]
+    client.get(f"/tournaments/{tournament_id}")
+    assert _cache_status(client.get(f"/tournaments/{tournament_id}")) == "hit"
+
+    client.post(f"/tournaments/{tournament_id}/settings/preview", json={"court_count": 3})
+    client.post("/auth/login", json={"username": "nobody", "password": "not-a-real-password"})
+
+    assert _cache_status(client.get(f"/tournaments/{tournament_id}")) == "hit"
+
+
+def test_only_writes_that_change_data_empty_the_cache():
+    def scope(method, path):
+        return {"method": method, "path": path}
+
+    assert changes_data(scope("POST", "/tournaments/1/teams"))
+    assert changes_data(scope("PATCH", "/matches/4/score"))
+    assert changes_data(scope("PUT", "/matches/4/game-in-play"))
+    assert changes_data(scope("DELETE", "/teams/2"))
+    assert changes_data(scope("POST", "/matches/4/correct/preview")) is False
+    assert changes_data(scope("POST", "/tournaments/1/settings/preview")) is False
+    assert changes_data(scope("POST", "/auth/login")) is False
+    assert changes_data(scope("POST", "/auth/logout")) is False
+    assert changes_data(scope("POST", "/auth/password")) is False
+    assert changes_data(scope("GET", "/tournaments/1")) is False
+
+
+# --- readers arriving together share one computation --------------------------------------
+
+
+def _slow_app(status=200, delay=0.05):
+    """An app that takes a moment and says how many times it has been asked."""
+    calls = {"n": 0}
+
+    async def app(scope, receive, send):
+        calls["n"] += 1
+        number = calls["n"]
+        await asyncio.sleep(delay)
+        await send(
+            {"type": "http.response.start", "status": status, "headers": [(b"content-type", b"application/json")]}
+        )
+        await send({"type": "http.response.body", "body": b'{"n": %d}' % number})
+
+    return app, calls
+
+
+async def _ask(middleware, method="GET", path="/tournaments/1"):
+    sent = []
+
+    async def receive():
+        return {"type": "http.request", "body": b""}
+
+    async def send(message):
+        sent.append(message)
+
+    scope = {"type": "http", "method": method, "path": path, "query_string": b"", "headers": []}
+    await middleware(scope, receive, send)
+    start = sent[0]
+    return start["status"], dict(start["headers"]), sent[-1]["body"]
+
+
+def test_readers_asking_together_share_one_computation():
+    async def scenario():
+        app, calls = _slow_app()
+        middleware = ReadCacheMiddleware(app)
+        results = await asyncio.gather(*[_ask(middleware) for _ in range(5)])
+        again = await _ask(middleware)
+        return calls["n"], results, again, middleware.cache.stats
+
+    computed, results, again, stats = asyncio.run(scenario())
+
+    assert computed == 1
+    assert {status for status, _, _ in results} == {200}
+    assert {body for _, _, body in results} == {b'{"n": 1}'}
+    assert sorted(headers[b"x-cache"] for _, headers, _ in results) == [b"miss"] + [b"shared"] * 4
+    assert again[1][b"x-cache"] == b"hit"
+    assert stats == {"hit": 1, "shared": 4, "miss": 1}
+
+
+def test_a_reader_after_a_write_starts_does_not_join_an_older_computation():
+    async def scenario():
+        app, calls = _slow_app(delay=0.1)
+        middleware = ReadCacheMiddleware(app)
+        before = asyncio.create_task(_ask(middleware))
+        await asyncio.sleep(0.02)
+        write = asyncio.create_task(_ask(middleware, "PATCH", "/matches/1/score"))
+        await asyncio.sleep(0.02)
+        after = await _ask(middleware)
+        await asyncio.gather(before, write)
+        return calls["n"], await before, after
+
+    computed, before, after = asyncio.run(scenario())
+
+    # The read after the write began computed for itself: three runs (read, write, read).
+    assert computed == 3
+    assert after[1][b"x-cache"] == b"miss"
+    assert before[2] == b'{"n": 1}'
+    assert after[2] == b'{"n": 3}'
+
+
+def test_readers_wait_for_a_shared_computation_only_if_it_gives_a_200():
+    async def scenario():
+        app, calls = _slow_app(status=404)
+        middleware = ReadCacheMiddleware(app)
+        results = await asyncio.gather(*[_ask(middleware) for _ in range(3)])
+        return calls["n"], results
+
+    computed, results = asyncio.run(scenario())
+
+    assert {status for status, _, _ in results} == {404}
+    assert computed == 3
+
+
+def test_a_dropped_first_request_does_not_strand_the_readers_behind_it():
+    async def scenario():
+        app, calls = _slow_app(delay=0.1)
+        middleware = ReadCacheMiddleware(app)
+        first = asyncio.create_task(_ask(middleware))
+        await asyncio.sleep(0.02)
+        waiting = [asyncio.create_task(_ask(middleware)) for _ in range(3)]
+        await asyncio.sleep(0.02)
+        first.cancel()
+        results = await asyncio.wait_for(asyncio.gather(*waiting), timeout=2)
+        return calls["n"], results
+
+    computed, results = asyncio.run(scenario())
+
+    # Nobody is left waiting on a request that will never finish. Each waiter works out its
+    # own answer (four runs with the dropped one): rare, and no worse than before sharing.
+    assert {status for status, _, _ in results} == {200}
+    assert computed == 4
