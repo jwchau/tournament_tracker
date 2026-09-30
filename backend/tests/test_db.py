@@ -144,3 +144,62 @@ def test_init_db_backfills_existing_rows_with_a_new_columns_default(tmp_path):
     row = connection.execute("SELECT bracket FROM match WHERE id = 1").fetchone()
     connection.close()
     assert row == ("winners",)
+
+
+def _legacy_tournament_with_settings_confirmed(db_path):
+    connection = sqlite3.connect(db_path)
+    connection.execute(
+        """
+        CREATE TABLE tournament (
+            id INTEGER PRIMARY KEY,
+            name VARCHAR NOT NULL,
+            format VARCHAR NOT NULL,
+            stage VARCHAR NOT NULL,
+            advance_per_pool INTEGER NOT NULL DEFAULT 0,
+            playoff_bracket_count INTEGER NOT NULL,
+            court_count INTEGER NOT NULL,
+            settings_confirmed BOOLEAN NOT NULL DEFAULT 0,
+            created_at DATETIME NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        "INSERT INTO tournament (id, name, format, stage, advance_per_pool, playoff_bracket_count, "
+        "court_count, settings_confirmed, created_at) "
+        "VALUES (7, 'Fall Open', '', 'pool_play', 2, 2, 3, 1, '2026-09-01 10:00:00')"
+    )
+    connection.commit()
+    connection.close()
+
+
+def _tournament_columns(db_path):
+    connection = sqlite3.connect(db_path)
+    columns = [row[1] for row in connection.execute("PRAGMA table_info(tournament)")]
+    connection.close()
+    return columns
+
+
+def test_init_db_drops_the_retired_settings_confirmed_column_and_keeps_the_rows(tmp_path):
+    db_path = tmp_path / "legacy.db"
+    _legacy_tournament_with_settings_confirmed(db_path)
+
+    init_db(create_engine(f"sqlite:///{db_path}"))
+
+    assert "settings_confirmed" not in _tournament_columns(db_path)
+    connection = sqlite3.connect(db_path)
+    row = connection.execute(
+        "SELECT name, stage, advance_per_pool, court_count FROM tournament WHERE id = 7"
+    ).fetchone()
+    connection.close()
+    assert row == ("Fall Open", "pool_play", 2, 3)
+
+
+def test_init_db_can_run_again_once_the_retired_column_is_gone(tmp_path):
+    db_path = tmp_path / "legacy.db"
+    _legacy_tournament_with_settings_confirmed(db_path)
+    engine = create_engine(f"sqlite:///{db_path}")
+
+    init_db(engine)
+    init_db(engine)
+
+    assert "settings_confirmed" not in _tournament_columns(db_path)

@@ -36,12 +36,12 @@ Decided for the cap settings:
 
 ## Tidy-ups
 
-- **Drop the unused `settings_confirmed` column.** The model no longer has it, but databases
-  created before the confirm step was removed still do (it has a server default of 0, so
-  inserts work). Removing it needs a real migration, since `_add_missing_columns` only adds
-  columns. Do it with the next change that needs one, and take a backup first (`scripts/backup-db`).
 - **`advance_per_pool` stays a non-null integer, with 0 meaning automatic.** Older databases
-  have the column as NOT NULL, so storing a real null would need the same migration.
+  have the column as NOT NULL, so storing a real null would mean rebuilding the `tournament`
+  table (SQLite can't loosen a NOT NULL in place). Nothing needs it.
+- **Retiring another column**: add it to `RETIRED_COLUMNS` in `backend/app/db.py`; startup drops
+  it (plain columns only, SQLite 3.35+). Take a backup first on a database that matters
+  (`scripts/backup-db`). `settings_confirmed` was dropped this way.
 
 ## Ideas, each waiting on a decision
 
