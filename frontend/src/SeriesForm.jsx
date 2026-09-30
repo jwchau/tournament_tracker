@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 
 import { addGame, editGame, getMatch, listGames, saveGameInPlay } from './api'
+import { clampScore } from './boardScores'
 import FlipBoard from './FlipBoard'
 import SaveStatus from './SaveStatus'
 import { sameScores, useRunningScore } from './useRunningScore'
 import { usePending } from './usePending'
 
 // Two score inputs for one game, labelled "Game N <team> score". max is the
-// set's point cap (0 or left out is none).
+// set's point cap: a higher score typed is held at it.
 export function GameScoreInputs({
   idPrefix,
   number,
@@ -32,7 +33,7 @@ export function GameScoreInputs({
           min="0"
           max={max || undefined}
           value={scores.team1}
-          onChange={(event) => onChange({ ...scores, team1: event.target.value })}
+          onChange={(event) => onChange({ ...scores, team1: clampScore(event.target.value, max) })}
         />
       </span>
       <span className="score-field">
@@ -46,7 +47,7 @@ export function GameScoreInputs({
           min="0"
           max={max || undefined}
           value={scores.team2}
-          onChange={(event) => onChange({ ...scores, team2: event.target.value })}
+          onChange={(event) => onChange({ ...scores, team2: clampScore(event.target.value, max) })}
         />
       </span>
     </span>
@@ -217,7 +218,7 @@ export default function SeriesForm({
       key={nextNumber}
       match={currentMatch}
       number={nextNumber}
-      maxScore={currentMatch.point_caps?.[nextNumber - 1]}
+      maxScore={match.point_caps?.[nextNumber - 1]}
       team1Name={team1Name}
       team2Name={team2Name}
       recording={saving}
@@ -242,7 +243,7 @@ export default function SeriesForm({
                 <GameScoreInputs
                   idPrefix={`series-${currentMatch.id}`}
                   number={game.number}
-                  max={currentMatch.point_caps?.[game.number - 1]}
+                  max={match.point_caps?.[game.number - 1]}
                   team1Name={team1Name}
                   team2Name={team2Name}
                   scores={fixing}

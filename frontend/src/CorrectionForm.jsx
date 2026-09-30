@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import ConfirmModal from './ConfirmModal'
 import { correctScore, listGames, previewCorrection } from './api'
 import { matchName } from './matchName'
+import { clampScore } from './boardScores'
 import { GameScoreInputs } from './SeriesForm'
 
 function previewMessage(resetMatches) {
@@ -19,9 +20,9 @@ function previewMessage(resetMatches) {
  * Re-scores a completed match. A single game takes one corrected score; a
  * best-of series takes every corrected game (loaded from what was recorded,
  * with games addable or removable). Either way the reset cascade is previewed
- * before anything is applied. A score above the cap (pointCap for a single
- * game, pointCaps for each game of a series; 0 is none) is refused here, as
- * the server would.
+ * before anything is applied. A score typed above the cap (pointCap for a
+ * single game, pointCaps for each game of a series; 0 is none) is held at it,
+ * as on the scoreboard; the server refuses one that still gets through.
  */
 export default function CorrectionForm({
   match,
@@ -139,6 +140,7 @@ export default function CorrectionForm({
                         key={index}
                         idPrefix={`correct-${match.id}`}
                         number={index + 1}
+                        max={pointCaps[index]}
                         team1Name={team1Name}
                         team2Name={team2Name}
                         scores={game}
@@ -175,7 +177,7 @@ export default function CorrectionForm({
                       type="number"
                       required
                       value={team1Score}
-                      onChange={(event) => setTeam1Score(event.target.value)}
+                      onChange={(event) => setTeam1Score(clampScore(event.target.value, pointCap))}
                     />
                   </span>
                   <span className="score-field">
@@ -185,7 +187,7 @@ export default function CorrectionForm({
                       type="number"
                       required
                       value={team2Score}
-                      onChange={(event) => setTeam2Score(event.target.value)}
+                      onChange={(event) => setTeam2Score(clampScore(event.target.value, pointCap))}
                     />
                   </span>
                 </div>

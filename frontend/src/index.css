@@ -1480,23 +1480,32 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   color: var(--muted);
 }
 
-/* The playoff point caps: a box for each set, side by side and wrapping on a phone. */
+/* The playoff point caps: a box for each set, side by side and wrapping on a phone.
+   Scoped to the form so they beat the drawer's rule that makes every span in it a
+   180px-tall column. */
 .field-label {
   font: 600 14.7px/21px var(--ui);
   color: var(--muted);
 }
 
-.cap-boxes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 16px;
+.settings-form .field-label {
+  flex: none;
 }
 
-.cap-box {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 120px;
+.settings-form .cap-boxes {
+  flex: none;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px 8px;
+}
+
+.settings-form .cap-box {
+  flex: none;
+  width: 96px;
+}
+
+.settings-form .cap-box input {
+  padding-inline: 10px;
 }
 
 /* What saving a change would do, listed in the review dialog. */

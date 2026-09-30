@@ -305,7 +305,7 @@ change, untick the boxes it touches.
   - Setup: a double-elimination tournament with Playoff best-of 3, Losers bracket best-of 1 and Grand final best-of 5, then advance to playoffs.
   - Expect: the bracket page header reads "winners best of 3 · losers best of 1 · final best of 5". A winners match is scored game by game on its court; a losers match is one game with +1/Finish; the grand final (and its reset match) is game by game. "Same as winners" makes the losers bracket and grand final follow Playoff best-of. Once any playoff match is scored, all three settings lock. Single elimination ignores the two new settings.
 
-- [ ] **Playoff point cap**
+- [x] **Playoff point cap**
   - Setup: Playoff best-of 3, Playoff point cap boxes Set 1 = 21, Set 2 = 21, Set 3 = 15; advance to playoffs.
   - Do: on a playoff court, tap +1 for one team up to 21 in game 1; record it; in game 3 try to go past 15; fix a recorded game to 22; correct a finished series from its bracket panel to a game of 22.
-  - Expect: +1 is disabled at each game's own cap and a typed higher score is held there; fixing or correcting above the cap is refused with "Game N is capped at X points." Changing best-of to 5 adds two boxes; to 1 leaves one. A single-game playoff match uses the Set 1 box. Pool games are unaffected. A match scored before the cap was set keeps its score.
+  - Expect: +1 is disabled at each game's own cap, and it stays disabled after the point has saved; a higher score typed on the scoreboard, in Fix game or in a correction is held at the cap. The Set boxes sit in one tight row. Changing best-of to 5 adds two boxes; to 1 leaves one. A single-game playoff match uses the Set 1 box. Pool games are unaffected. A match scored before the cap was set keeps its score.

@@ -1,5 +1,5 @@
 import { MemoryRouter } from 'react-router-dom'
-import { act, fireEvent, render, screen, within } from './testUtils'
+import { act, fireEvent, render, screen, waitFor, within } from './testUtils'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
@@ -455,7 +455,7 @@ test('a hidden tab is not read, and is read again the moment it is shown', async
   Object.defineProperty(document, 'hidden', { configurable: true, value: false })
 })
 
-test('a correction from the match panel is held to the playoff point cap of its set', async () => {
+test('a correction from the match panel holds a typed score at the playoff point cap of its set', async () => {
   const played = fiveTeamBracket.map((match) =>
     match.id === 16
       ? { ...match, status: 'complete', team1_score: 15, team2_score: 10, winner_id: 20 }
@@ -472,8 +472,8 @@ test('a correction from the match panel is held to the playoff point cap of its 
   )
   const dialog = screen.getByRole('dialog', { name: 'Correct Spikers vs Diggers' })
   fireEvent.change(within(dialog).getByLabelText('Spikers score'), { target: { value: '16' } })
+  expect(within(dialog).getByLabelText('Spikers score')).toHaveValue(15)
   fireEvent.click(within(dialog).getByRole('button', { name: /review correction/i }))
 
-  expect(await within(dialog).findByRole('alert')).toHaveTextContent('capped at 15 points')
-  expect(preview).not.toHaveBeenCalled()
+  await waitFor(() => expect(preview).toHaveBeenCalledWith(16, { team1Score: 15, team2Score: 10 }))
 })

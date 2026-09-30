@@ -153,3 +153,20 @@ test('a game fixed after the fact is held to its set’s cap', async () => {
   expect(screen.getByLabelText('Game 1 Aces score')).toHaveAttribute('max', '21')
   expect(screen.getByLabelText('Game 1 Blockers score')).toHaveAttribute('max', '21')
 })
+
+test('the board still stops at the cap after its running score has been saved', async () => {
+  vi.spyOn(api, 'listGames').mockResolvedValue([])
+  // The save returns the plain match, without the court page's point caps.
+  const saved = vi
+    .spyOn(api, 'saveGameInPlay')
+    .mockResolvedValue({ ...series, game_team1_score: 15, game_team2_score: 3, version: 5 })
+
+  renderForm({ match: { ...series, point_caps: [15] } })
+
+  fireEvent.change(await screen.findByLabelText('Game 1 Aces score'), { target: { value: '15' } })
+  await waitFor(() => expect(saved).toHaveBeenCalled())
+
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Point to Aces' })).toBeDisabled())
+  fireEvent.change(screen.getByLabelText('Game 1 Aces score'), { target: { value: '30' } })
+  expect(screen.getByLabelText('Game 1 Aces score')).toHaveValue(15)
+})

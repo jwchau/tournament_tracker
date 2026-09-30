@@ -172,14 +172,14 @@ test('the dialog opens in the page body, out of any list that would clip it', ()
   expect(within(dialog).getByRole('heading', { name: 'Correct Spikers vs Diggers' })).toBeInTheDocument()
 })
 
-test('a corrected score above the point cap is refused before anything is sent', async () => {
+test('a corrected score typed above the point cap is held at the cap', async () => {
   const preview = vi.spyOn(api, 'previewCorrection').mockResolvedValue({ reset_matches: [] })
 
   render(<CorrectionForm match={match} pointCap={21} team1Name="Spikers" team2Name="Diggers" />)
   enterCorrection('25', '10')
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('capped at 21 points')
-  expect(preview).not.toHaveBeenCalled()
+  expect(screen.getByLabelText('Spikers score')).toHaveValue(21)
+  await waitFor(() => expect(preview).toHaveBeenCalledWith(7, { team1Score: 21, team2Score: 10 }))
 })
 
 test('a corrected score at the point cap goes to the preview', async () => {
@@ -191,7 +191,7 @@ test('a corrected score at the point cap goes to the preview', async () => {
   await waitFor(() => expect(preview).toHaveBeenCalledWith(7, { team1Score: 21, team2Score: 10 }))
 })
 
-test('a corrected series game above its own set’s cap is refused before anything is sent', async () => {
+test('a corrected series game typed above its own set’s cap is held at that cap', async () => {
   const series = { ...match, team1_score: 2, team2_score: 0, version: 6 }
   vi.spyOn(api, 'listGames').mockResolvedValue([
     { number: 1, team1_score: 21, team2_score: 15 },
@@ -213,8 +213,17 @@ test('a corrected series game above its own set’s cap is refused before anythi
   const dialog = screen.getByRole('dialog', { name: 'Correct Spikers vs Diggers' })
   expect(await within(dialog).findByLabelText('Game 2 Spikers score')).toHaveValue(15)
   fireEvent.change(within(dialog).getByLabelText('Game 2 Spikers score'), { target: { value: '16' } })
+  expect(within(dialog).getByLabelText('Game 2 Spikers score')).toHaveValue(15)
+  fireEvent.change(within(dialog).getByLabelText('Game 1 Diggers score'), { target: { value: '30' } })
+  expect(within(dialog).getByLabelText('Game 1 Diggers score')).toHaveValue(21)
   fireEvent.click(within(dialog).getByRole('button', { name: /review correction/i }))
 
-  expect(await within(dialog).findByRole('alert')).toHaveTextContent('Game 2 is capped at 15 points')
-  expect(preview).not.toHaveBeenCalled()
+  await waitFor(() =>
+    expect(preview).toHaveBeenCalledWith(7, {
+      games: [
+        { team1Score: 21, team2Score: 21 },
+        { team1Score: 15, team2Score: 9 },
+      ],
+    }),
+  )
 })

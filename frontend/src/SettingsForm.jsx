@@ -263,9 +263,10 @@ export default function SettingsForm({ tournamentId, tournament, onSaved }) {
               <span className="cap-boxes">
                 {capBoxes.map((value, index) => (
                   <span key={index} className="cap-box">
-                    <label htmlFor={`playoff-point-cap-${index + 1}`}>Set {index + 1} point cap</label>
+                    <label htmlFor={`playoff-point-cap-${index + 1}`}>Set {index + 1}</label>
                     <input
                       id={`playoff-point-cap-${index + 1}`}
+                      aria-label={`Set ${index + 1} point cap`}
                       type="number"
                       min="1"
                       placeholder="No cap"
