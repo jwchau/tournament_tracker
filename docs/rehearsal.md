@@ -26,6 +26,9 @@ cloudflared tunnel run tournament-tracker            # in another terminal
 
 - [ ] `https://tournament.johnchau.org` loads and the header shows
       "Backend status: connected".
+- [ ] **Upgrading from the last event's database:** run `scripts/backup-db`
+      before the rebuild above. After it, the backend log shows a clean start
+      and last event's tournaments still open.
 - [ ] A user exists for the organizer and one for each scorekeeper. If not:
       `docker compose -f docker-compose.prod.yml exec backend python -m app.users create <name>`
 
@@ -44,10 +47,16 @@ On the laptop, signed in:
    | Playoff bracket count | 2 |
    | Games per pairing | 1 |
    | Playoff best-of | 3 |
+   | Losers bracket best-of | 1 |
+   | Grand final best-of | 5 |
+   | Pool point cap | 21 |
+   | Playoff point cap | Set 1 and Set 2: 21, Set 3: 15, the rest blank |
 
 - [ ] Saving with no teams or pools yet goes straight through, with no review dialog.
 - [ ] Teams and pools can be added straight away.
 - [ ] Set a date and a venue: both show under the tournament's name.
+- [ ] The playoff point cap shows five boxes (the grand final is best of 5),
+      and three after the grand final is set back to "Same as winners".
 
 ## 2. Teams
 
@@ -65,6 +74,8 @@ On the laptop, signed in:
 
 - [ ] Pool sizes are as even as 13 teams allow. Record the split: ____
 - [ ] Each pool has courts, and every match is on a court.
+- [ ] Every match shows a ref (or N/A when no team is free), and the pool's
+      results grid has a column per round.
 - [ ] Deleting a team whose pool has a schedule is refused with a clear
       message.
 - [ ] Once the first score is in (step 4), settings lock except the name,
@@ -86,6 +97,10 @@ On the laptop, signed in:
       (The API answers 409.)
 - [ ] Phone C sees scores and standings update within about 10 seconds,
       and has no score or edit controls.
+- [ ] On a court, +1 stops at 21 and stays disabled after the point has
+      saved, and a typed 30 is held at 21.
+- [ ] The court view shows the match's ref. Choose a different ref for one
+      match from the pool page; the court view follows.
 - [ ] Play every pool match to the end.
 
 ## 5. Correct a pool score
@@ -96,6 +111,7 @@ confirm.
 
 - [ ] The preview says what changes.
 - [ ] That pool's standings update to match.
+- [ ] Typing 25 in a correction is held at 21.
 
 ## 6. Advance to playoffs
 
@@ -112,8 +128,9 @@ click **Confirm and advance**.
 
 ## 7. Play the playoffs
 
-Score both brackets to the end from the phones. Each match is a best-of-3
-series, recorded game by game.
+Score both brackets to the end from the phones. Winners-bracket matches are
+best-of-3 series, recorded game by game. Losers-bracket matches are single
+games, and each grand final (with its reset match) is a best of 5.
 
 Along the way:
 
@@ -125,7 +142,10 @@ Along the way:
 3. **Grand-final reset:** in one tier, let the team from the lower bracket
    win the grand final.
 
-- [ ] Courts that free up get the next match in line on their own.
+- [ ] Courts that free up get the next match in line on their own, and each
+      match on a court has a ref.
+- [ ] A series game stops at its own set's cap (21, 21, then 15), and a
+      single losers-bracket game at 21.
 - [ ] The correction preview lists the later matches it resets. After you
       confirm, those matches are reset and the right team moves on.
 - [ ] Winning the grand final from the lower bracket creates a reset match,
@@ -198,3 +218,10 @@ by a `rehearsal-bot` user; everything else was done in the UI.
 database edits. Three bugs were fixed test-first (entries 6, 7 and 12), and
 two post-v1 fixes were made (page loads and loading placeholders). Afterwards, `rehearsal-bot`'s
 password was reset to a random value that wasn't kept.
+
+### Run 2 — (date)
+
+Played on the v1.1.0 build (refs, point caps, best-of per section, rounds).
+
+| # | Step | What happened | Bug? | Test / fix |
+| - | ---- | ------------- | ---- | ---------- |
