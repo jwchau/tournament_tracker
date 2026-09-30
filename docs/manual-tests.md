@@ -62,7 +62,7 @@ change, untick the boxes it touches.
 
 - [ ] **Locks follow play, one setting at a time**
   - Setup: score one pool match.
-  - Expect: games per pairing and target pool size are disabled with "Locked: play has started."; court count, advance per pool, bracket count, best-of, date and venue still change. After Advance to playoffs, advance per pool and the bracket count lock too. After the first playoff score, the best-of does.
+  - Expect: games per pairing and number of teams per pool are disabled with "Locked: play has started."; court count, advance per pool, bracket count, best-of, date and venue still change. After Advance to playoffs, advance per pool and the bracket count lock too. After the first playoff score, the best-of does.
 
 - [x] **Bracket-only tournament**
   - Setup: a tournament that went straight to a bracket (no pools).
