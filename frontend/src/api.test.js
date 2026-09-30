@@ -30,6 +30,23 @@ test('loading the same page data twice is a cache hit, not a second API call', a
   expect(networkHits('/tournaments/1')).toBe(1)
 })
 
+test('cached page data expires, so another phone\'s change shows up without a local write', async () => {
+  vi.useFakeTimers()
+  try {
+    await api.getTournament(1)
+    await vi.advanceTimersByTimeAsync(6000)
+    await api.getTournament(1)
+    expect(networkHits('/tournaments/1')).toBe(2)
+
+    const reloaded = await reloadPage()
+    await vi.advanceTimersByTimeAsync(6000)
+    await reloaded.getTournament(1)
+    expect(networkHits('/tournaments/1')).toBe(3)
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
 test('any write clears the cache so the next page load gets fresh data', async () => {
   await api.listTeams(1)
   await api.getTournament(1)
