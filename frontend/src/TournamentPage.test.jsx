@@ -530,6 +530,7 @@ test('the settings are grouped by what they run', async () => {
   expect(fields('Playoffs')).toEqual([
     'playoff-bracket-count',
     'advance-per-pool',
+    'playoff-point-cap-1',
     'playoff-best-of',
     'playoff-best-of-losers',
     'playoff-best-of-final',
@@ -989,4 +990,38 @@ test('the losers bracket and grand final best-of are chosen separately, defaulti
       playoff_best_of_final: 5,
     }),
   )
+})
+
+test('the playoff point caps get one box per set of the longest series, following the best-of settings', async () => {
+  mockSettingsPage({ ...settings, playoff_best_of: 3, playoff_point_caps: [21, 21] })
+  mockPreview()
+  const updateTournament = vi
+    .spyOn(api, 'updateTournament')
+    .mockImplementation(async (id, values) => ({ ...settings, playoff_best_of: 3, ...values }))
+
+  renderAt(1)
+
+  const boxes = async () =>
+    within(await screen.findByRole('group', { name: 'Playoff point caps' })).getAllByRole('spinbutton')
+  const values = async () => (await boxes()).map((box) => box.value)
+  expect((await boxes()).map((box) => box.id)).toEqual([
+    'playoff-point-cap-1',
+    'playoff-point-cap-2',
+    'playoff-point-cap-3',
+  ])
+  expect(await values()).toEqual(['21', '21', ''])
+  expect(screen.getByLabelText('Set 3 point cap')).toBeInTheDocument()
+
+  fireEvent.change(screen.getByLabelText('Set 3 point cap'), { target: { value: '15' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() =>
+    expect(updateTournament).toHaveBeenCalledWith('1', { playoff_point_caps: [21, 21, 15] }),
+  )
+
+  // A longer series in the losers bracket means more sets to cap; a shorter winners one, fewer.
+  fireEvent.change(screen.getByLabelText(/losers bracket best-of/i), { target: { value: '5' } })
+  expect(await boxes()).toHaveLength(5)
+  fireEvent.change(screen.getByLabelText(/losers bracket best-of/i), { target: { value: '0' } })
+  fireEvent.change(screen.getByLabelText(/^playoff best-of/i), { target: { value: '1' } })
+  expect(await boxes()).toHaveLength(1)
 })

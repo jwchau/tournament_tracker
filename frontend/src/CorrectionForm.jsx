@@ -19,13 +19,15 @@ function previewMessage(resetMatches) {
  * Re-scores a completed match. A single game takes one corrected score; a
  * best-of series takes every corrected game (loaded from what was recorded,
  * with games addable or removable). Either way the reset cascade is previewed
- * before anything is applied. A score above pointCap (0 is none) is refused
- * here, as the server would.
+ * before anything is applied. A score above the cap (pointCap for a single
+ * game, pointCaps for each game of a series; 0 is none) is refused here, as
+ * the server would.
  */
 export default function CorrectionForm({
   match,
   bestOf = 1,
   pointCap = 0,
+  pointCaps = [],
   team1Name = 'Team 1',
   team2Name = 'Team 2',
   onCorrected,
@@ -57,12 +59,27 @@ export default function CorrectionForm({
     }
   }
 
+  // What to tell the organizer when a corrected score is above its cap, or null.
+  function overCap() {
+    if (!isSeries) {
+      const scores = [correction.team1Score, correction.team2Score]
+      return pointCap && scores.some((score) => score > pointCap)
+        ? `Scores are capped at ${pointCap} points.`
+        : null
+    }
+    const index = correction.games.findIndex((game, i) => {
+      const cap = pointCaps[i]
+      return cap && (game.team1Score > cap || game.team2Score > cap)
+    })
+    return index === -1 ? null : `Game ${index + 1} is capped at ${pointCaps[index]} points.`
+  }
+
   async function handleReview(event) {
     event.preventDefault()
     setError(null)
-    const single = [correction.team1Score, correction.team2Score]
-    if (!isSeries && pointCap && single.some((score) => score > pointCap)) {
-      setError(`A pool game is capped at ${pointCap} points.`)
+    const tooHigh = overCap()
+    if (tooHigh) {
+      setError(tooHigh)
       return
     }
     try {

@@ -4,6 +4,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
 import BracketBoard from './BracketBoard'
+import { bestOfSettings } from './bracketModel'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -452,4 +453,27 @@ test('a hidden tab is not read, and is read again the moment it is shown', async
   await act(() => vi.advanceTimersByTimeAsync(0))
   expect(load.mock.calls.length).toBe(whileHidden + 1)
   Object.defineProperty(document, 'hidden', { configurable: true, value: false })
+})
+
+test('a correction from the match panel is held to the playoff point cap of its set', async () => {
+  const played = fiveTeamBracket.map((match) =>
+    match.id === 16
+      ? { ...match, status: 'complete', team1_score: 15, team2_score: 10, winner_id: 20 }
+      : match,
+  )
+  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(played)
+  const preview = vi.spyOn(api, 'previewCorrection').mockResolvedValue({ reset_matches: [] })
+
+  renderBoard({ bestOf: bestOfSettings({ playoff_point_caps: [15] }) })
+
+  await open('Semis · match 2: Spikers vs Diggers')
+  fireEvent.click(
+    within(panel('Semis · match 2')).getByRole('button', { name: 'Correct Spikers vs Diggers' }),
+  )
+  const dialog = screen.getByRole('dialog', { name: 'Correct Spikers vs Diggers' })
+  fireEvent.change(within(dialog).getByLabelText('Spikers score'), { target: { value: '16' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: /review correction/i }))
+
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('capped at 15 points')
+  expect(preview).not.toHaveBeenCalled()
 })

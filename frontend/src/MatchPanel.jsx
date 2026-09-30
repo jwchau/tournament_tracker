@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { getRefOptions } from './api'
-import { bestOfFor, bothTeamsKnown, slotLabel, teamName } from './bracketModel'
+import { bestOfFor, bothTeamsKnown, pointCapsFor, slotLabel, teamName } from './bracketModel'
 import CorrectionForm from './CorrectionForm'
 import { CourtLink, MatchStatus, MatchTeams } from './MatchCard'
 import { matchName } from './matchName'
@@ -155,6 +155,8 @@ export default function MatchPanel({
               key={`${match.id}-${match.version}`}
               match={match}
               bestOf={bestOfFor(bestOf, match)}
+              pointCap={bestOfFor(bestOf, match) === 1 ? (pointCapsFor(bestOf, match)[0] ?? 0) : 0}
+              pointCaps={pointCapsFor(bestOf, match)}
               team1Name={teamName(teamsById, match.team1_id)}
               team2Name={teamName(teamsById, match.team2_id)}
               onCorrected={onCorrected}

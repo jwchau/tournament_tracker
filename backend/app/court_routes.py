@@ -41,8 +41,10 @@ class CourtMatch(SQLModel):
     court: int | None
     scheduled_time: datetime | None
     best_of: int
-    # The most points a team can score in a game of this match; 0 means no cap.
+    # The most points a team can score in a single-game match; 0 means no cap.
     point_cap: int = 0
+    # A series' cap for each of its sets, in order (a missing or 0 box is no cap).
+    point_caps: list[int] = []
     ref_team_id: int | None = None
     ref_name: str | None = None
     ref_set_at: datetime | None = None
@@ -74,7 +76,7 @@ class CourtSummary(SQLModel):
 _COURT_MATCH_FIELDS = tuple(
     name
     for name in CourtMatch.model_fields
-    if name not in ("team1_name", "team2_name", "ref_name", "best_of", "point_cap")
+    if name not in ("team1_name", "team2_name", "ref_name", "best_of", "point_cap", "point_caps")
 )
 
 
@@ -95,10 +97,14 @@ def list_courts(tournament_id: int, session: Session = Depends(get_session)):
         data["team1_name"] = names.get(match.team1_id)
         data["team2_name"] = names.get(match.team2_id)
         data["ref_name"] = names.get(match.ref_team_id)
-        data["best_of"] = (
-            best_of_in(tournament, match.bracket) if match.playoff_bracket_id is not None else 1
-        )
+        games = best_of_in(tournament, match.bracket) if match.playoff_bracket_id is not None else 1
+        data["best_of"] = games
         data["point_cap"] = tournament.pool_point_cap if match.pool_id is not None else 0
+        data["point_caps"] = []
+        if match.playoff_bracket_id is not None:
+            data["point_caps"] = tournament.playoff_caps()[:games]
+            if games == 1 and data["point_caps"]:
+                data["point_cap"] = data["point_caps"][0]
         return data
 
     brackets = list(

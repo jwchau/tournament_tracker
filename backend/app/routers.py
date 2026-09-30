@@ -40,6 +40,7 @@ from app.scoring import (
     MatchNotFound,
     VersionConflict,
     correct_score,
+    enforce_point_cap,
     preview_correction,
     submit_score,
 )
@@ -106,10 +107,19 @@ def _play_has_started(session: Session, tournament_id: int) -> bool:
     )
 
 
+def _caps_text(caps: list[int] | None) -> str:
+    """Playoff point caps as stored: comma-separated, trailing "no cap" boxes dropped."""
+    caps = list(caps or [])
+    while caps and caps[-1] == 0:
+        caps.pop()
+    return ",".join(str(cap) for cap in caps)
+
+
 def _view(tournament: Tournament) -> dict:
     """The tournament as the API shows it: an automatic advance-per-pool is null, not 0."""
     view = tournament.model_dump()
     view["advance_per_pool"] = tournament.advance_per_pool or None
+    view["playoff_point_caps"] = tournament.playoff_caps()
     return view
 
 
@@ -172,6 +182,8 @@ def update_tournament(
     refuse_locked(session, tournament, changed)
 
     for field, value in changes.items():
+        if field == "playoff_point_caps":
+            value = _caps_text(value)
         # An automatic advance-per-pool and no pool point cap are both stored as 0.
         zero_for_none = field in (
             "advance_per_pool",
@@ -671,6 +683,8 @@ def _corrected_result(
                 raise InvalidScore(f"this match is best-of-{games_needed}; send its corrected games")
             scores = [(game.team1_score, game.team2_score) for game in data.games]
             wins1, wins2 = series_result(scores, games_needed)
+            for number, (team1_score, team2_score) in enumerate(scores, start=1):
+                enforce_point_cap(session, match, team1_score, team2_score, number)
             return wins1, wins2, scores
         if data.team1_score is None or data.team2_score is None:
             raise InvalidScore("send the corrected team1_score and team2_score")
@@ -683,9 +697,11 @@ def _corrected_result(
 def preview_match_correction(
     match_id: int, data: CorrectionPreviewRequest, session: Session = Depends(get_session)
 ) -> CorrectionPreview:
-    team1_score, team2_score, _ = _corrected_result(session, match_id, data)
+    team1_score, team2_score, games = _corrected_result(session, match_id, data)
     try:
-        reset_matches = preview_correction(session, match_id, team1_score, team2_score)
+        reset_matches = preview_correction(
+            session, match_id, team1_score, team2_score, check_cap=games is None
+        )
     except MatchNotFound:
         raise HTTPException(status_code=404, detail="Match not found")
     except InvalidScore as exc:
@@ -702,7 +718,9 @@ def correct_match_score(
         if games is not None:
             # Staged in the correction's transaction: a conflict discards them too.
             replace_games(session, match_id, games)
-        correction = correct_score(session, match_id, team1_score, team2_score, data.version)
+        correction = correct_score(
+            session, match_id, team1_score, team2_score, data.version, check_cap=games is None
+        )
     except MatchNotFound:
         raise HTTPException(status_code=404, detail="Match not found")
     except InvalidScore as exc:

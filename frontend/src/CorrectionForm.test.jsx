@@ -190,3 +190,31 @@ test('a corrected score at the point cap goes to the preview', async () => {
 
   await waitFor(() => expect(preview).toHaveBeenCalledWith(7, { team1Score: 21, team2Score: 10 }))
 })
+
+test('a corrected series game above its own set’s cap is refused before anything is sent', async () => {
+  const series = { ...match, team1_score: 2, team2_score: 0, version: 6 }
+  vi.spyOn(api, 'listGames').mockResolvedValue([
+    { number: 1, team1_score: 21, team2_score: 15 },
+    { number: 2, team1_score: 15, team2_score: 9 },
+  ])
+  const preview = vi.spyOn(api, 'previewCorrection').mockResolvedValue({ reset_matches: [] })
+
+  render(
+    <CorrectionForm
+      match={series}
+      bestOf={3}
+      pointCaps={[21, 15]}
+      team1Name="Spikers"
+      team2Name="Diggers"
+    />,
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: 'Correct Spikers vs Diggers' }))
+  const dialog = screen.getByRole('dialog', { name: 'Correct Spikers vs Diggers' })
+  expect(await within(dialog).findByLabelText('Game 2 Spikers score')).toHaveValue(15)
+  fireEvent.change(within(dialog).getByLabelText('Game 2 Spikers score'), { target: { value: '16' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: /review correction/i }))
+
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('Game 2 is capped at 15 points')
+  expect(preview).not.toHaveBeenCalled()
+})

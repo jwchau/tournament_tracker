@@ -29,6 +29,7 @@ LABELS = {
     "playoff_best_of": "Playoff best-of",
     "playoff_best_of_losers": "Losers bracket best-of",
     "playoff_best_of_final": "Grand final best-of",
+    "playoff_point_caps": "Playoff point caps",
 }
 
 BEST_OF_SETTINGS = ("playoff_best_of", "playoff_best_of_losers", "playoff_best_of_final")

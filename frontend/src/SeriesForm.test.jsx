@@ -129,3 +129,27 @@ test('a game that cannot be saved says so', async () => {
 
   expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't save that game/i)
 })
+
+test('each game’s board stops at the point cap of its own set', async () => {
+  vi.spyOn(api, 'listGames').mockResolvedValue([{ number: 1, team1_score: 21, team2_score: 15 }])
+
+  renderForm({ match: { ...series, point_caps: [21, 15, 11] } })
+
+  await gameLine('Game 1: 21–15')
+  fireEvent.change(screen.getByLabelText('Game 2 Aces score'), { target: { value: '30' } })
+
+  expect(screen.getByLabelText('Game 2 Aces score')).toHaveValue(15)
+  expect(screen.getByRole('button', { name: 'Point to Aces' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'Point to Blockers' })).toBeEnabled()
+})
+
+test('a game fixed after the fact is held to its set’s cap', async () => {
+  vi.spyOn(api, 'listGames').mockResolvedValue([{ number: 1, team1_score: 21, team2_score: 15 }])
+
+  renderForm({ match: { ...series, point_caps: [21, 15] } })
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Fix game 1' }))
+
+  expect(screen.getByLabelText('Game 1 Aces score')).toHaveAttribute('max', '21')
+  expect(screen.getByLabelText('Game 1 Blockers score')).toHaveAttribute('max', '21')
+})

@@ -1,6 +1,6 @@
 from datetime import date as Date
 from datetime import datetime, timezone
-from typing import Literal
+from typing import Annotated, Literal
 
 from sqlalchemy import JSON, Column, String
 from sqlmodel import Field, SQLModel
@@ -58,9 +58,16 @@ class Tournament(SQLModel, table=True):
     playoff_best_of_final: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
     # The most points a team can score in a pool game; 0 means no cap.
     pool_point_cap: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
+    # The most points a team can score in each set of a playoff match, as
+    # comma-separated numbers, the first for set 1 (0 or missing: no cap).
+    playoff_point_caps: str = Field(default="", sa_column_kwargs={"server_default": ""})
     date: Date | None = None
     venue: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    def playoff_caps(self) -> list[int]:
+        """The playoff point cap of each set, in order."""
+        return [int(part) for part in self.playoff_point_caps.split(",") if part]
 
 
 class TournamentCreate(SQLModel):
@@ -81,6 +88,9 @@ class TournamentUpdate(SQLModel):
     playoff_best_of_losers: Literal[0, 1, 3, 5, 7] | None = None
     playoff_best_of_final: Literal[0, 1, 3, 5, 7] | None = None
     pool_point_cap: int | None = Field(default=None, ge=0)
+    playoff_point_caps: list[Annotated[int, Field(ge=0)]] | None = Field(
+        default=None, max_length=7
+    )
 
 
 class TournamentDetail(SQLModel):
@@ -99,6 +109,7 @@ class TournamentDetail(SQLModel):
     playoff_best_of_losers: int
     playoff_best_of_final: int
     pool_point_cap: int
+    playoff_point_caps: list[int]
     created_at: datetime
     # Settings that can't change right now, each with the reason.
     setting_locks: dict[str, str]

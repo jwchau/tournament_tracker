@@ -1,18 +1,18 @@
 import { expect, test } from 'vitest'
 
-import { bestOfFor, bestOfLabel, bestOfSettings } from './bracketModel'
+import { bestOfFor, bestOfLabel, bestOfSettings, pointCapsFor } from './bracketModel'
 
 const tournament = { playoff_best_of: 3, playoff_best_of_losers: 0, playoff_best_of_final: 0 }
 
 test('the losers bracket and grand final follow the winners best-of until set', () => {
-  expect(bestOfSettings(tournament)).toEqual({ winners: 3, losers: 3, grand_final: 3 })
+  expect(bestOfSettings(tournament)).toMatchObject({ winners: 3, losers: 3, grand_final: 3 })
   expect(
     bestOfSettings({ ...tournament, playoff_best_of_losers: 1, playoff_best_of_final: 5 }),
-  ).toEqual({ winners: 3, losers: 1, grand_final: 5 })
+  ).toMatchObject({ winners: 3, losers: 1, grand_final: 5 })
 })
 
 test('a tournament without the settings plays single games', () => {
-  expect(bestOfSettings({})).toEqual({ winners: 1, losers: 1, grand_final: 1 })
+  expect(bestOfSettings({})).toMatchObject({ winners: 1, losers: 1, grand_final: 1 })
 })
 
 test('a match plays the best-of of its own section', () => {
@@ -36,4 +36,19 @@ test('the bracket header names the best-of of each section that differs', () => 
   expect(bestOfLabel({ winners: 3, losers: 3, grand_final: 3 }, 'double')).toBe('best of 3')
   expect(bestOfLabel(mixed, 'double')).toBe('winners best of 3 · losers best of 1 · final best of 5')
   expect(bestOfLabel(mixed, 'single')).toBe('best of 3')
+})
+
+test('the settings carry the playoff point caps, and a match gets the caps of its own sets', () => {
+  const bestOf = bestOfSettings({
+    playoff_best_of: 3,
+    playoff_best_of_losers: 1,
+    playoff_best_of_final: 0,
+    playoff_point_caps: [21, 21, 15],
+  })
+
+  expect(bestOf.pointCaps).toEqual([21, 21, 15])
+  expect(pointCapsFor(bestOf, { bracket: 'winners' })).toEqual([21, 21, 15])
+  expect(pointCapsFor(bestOf, { bracket: 'losers' })).toEqual([21])
+  expect(pointCapsFor(bestOfSettings({}), { bracket: 'winners' })).toEqual([])
+  expect(pointCapsFor(3, {})).toEqual([])
 })
