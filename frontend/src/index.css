@@ -1133,7 +1133,7 @@ form > select {
 
 /* A capped list fades out at the bottom while more waits below. */
 .standings-scroll[data-more],
-.slot-list[data-more] {
+.round-list[data-more] {
   mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
 }
 
@@ -3025,8 +3025,8 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   color: var(--amber);
 }
 
-/* The grid: slots across, the pool's teams down, each cell what that team
-   does in that slot. */
+/* The grid: rounds across, the pool's teams down, each cell what that team
+   does in that round. */
 .grid-scroll {
   overflow-x: auto;
   border-radius: 16px;
@@ -3035,14 +3035,14 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   padding: 10px;
 }
 
-/* Spaced across only, so the current slot's outline runs unbroken down its column. */
-.slot-grid {
+/* Spaced across only, so the current round's outline runs unbroken down its column. */
+.round-grid {
   border-collapse: separate;
   border-spacing: 6px 0;
   font-variant-numeric: tabular-nums;
 }
 
-.slot-grid thead th {
+.round-grid thead th {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -3054,20 +3054,20 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   padding: 6px 4px 4px;
 }
 
-/* The team names stay put while the slots scroll sideways. */
-.slot-grid tbody th,
-.slot-grid-corner {
+/* The team names stay put while the rounds scroll sideways. */
+.round-grid tbody th,
+.round-grid-corner {
   position: sticky;
   left: 0;
   z-index: 1;
   background: var(--panel-flat);
   /* Also cover the container's padding to the left (generously: the
      container clips the rest) and the cell gap to the right, so scrolled
-     slots don't peek out beside the names. */
+     rounds don't peek out beside the names. */
   box-shadow: -16px 0 0 var(--panel-flat), 6px 0 0 var(--panel-flat);
 }
 
-.slot-grid thead th.slot-grid-corner {
+.round-grid thead th.round-grid-corner {
   z-index: 3;
 }
 
@@ -3077,7 +3077,7 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   padding-top: 0;
 }
 
-.grid-scroll[style] .slot-grid thead th {
+.grid-scroll[style] .round-grid thead th {
   padding-top: 16px;
 }
 
@@ -3097,12 +3097,12 @@ table[aria-label='Standings'] tr.advancing td:first-child {
     padding-top: 0;
   }
 
-  .pool-results .slot-grid thead th {
+  .pool-results .round-grid thead th {
     padding-top: 16px;
   }
 }
 
-.slot-grid tbody th {
+.round-grid tbody th {
   font: 600 15px/20px var(--ui);
   color: var(--text);
   text-align: left;
@@ -3112,30 +3112,30 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   overflow-wrap: anywhere;
 }
 
-.slot-grid td {
+.round-grid td {
   padding: 3px 4px;
   vertical-align: middle;
 }
 
-/* The slot being played: its column outlined, like the schedule's Now slot. */
-.slot-grid [data-now] {
+/* The round being played: its column outlined, like the schedule's Now round. */
+.round-grid [data-now] {
   box-shadow: inset 1px 0 0 var(--accent-text), inset -1px 0 0 var(--accent-text);
 }
 
-.slot-grid thead th[data-now] {
+.round-grid thead th[data-now] {
   color: var(--accent-text);
   border-radius: 10px 10px 0 0;
   box-shadow: inset 1px 0 0 var(--accent-text), inset -1px 0 0 var(--accent-text),
     inset 0 1px 0 var(--accent-text);
 }
 
-.slot-grid tbody tr:last-child td[data-now] {
+.round-grid tbody tr:last-child td[data-now] {
   border-radius: 0 0 10px 10px;
   box-shadow: inset 1px 0 0 var(--accent-text), inset -1px 0 0 var(--accent-text),
     inset 0 -1px 0 var(--accent-text);
 }
 
-.slot-cell {
+.round-cell {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -3152,40 +3152,40 @@ table[aria-label='Standings'] tr.advancing td:first-child {
 }
 
 /* Playing: a filled cell with the court and opponent, then the score chips. */
-.slot-cell[data-kind='play'] {
+.round-cell[data-kind='play'] {
   background: var(--surface-2);
 }
 
-.slot-cell[data-kind='play'] .slot-cell-line {
+.round-cell[data-kind='play'] .round-cell-line {
   font-weight: 600;
 }
 
-.slot-cell[data-kind='play'] .score-chip {
+.round-cell[data-kind='play'] .score-chip {
   min-width: 36px;
   font-size: 16px;
   line-height: 26px;
 }
 
 /* Reffing: an outline with no fill, so it reads apart from a match at a glance. */
-.slot-cell[data-kind='ref'] {
+.round-cell[data-kind='ref'] {
   box-shadow: inset 0 0 0 1px var(--border);
 }
 
-.slot-cell-sub {
+.round-cell-sub {
   color: var(--muted);
 }
 
 /* Resting: a quiet word, no cell. */
-.slot-cell[data-kind='rest'] {
+.round-cell[data-kind='rest'] {
   color: var(--muted);
 }
 
-a.slot-cell:hover {
+a.round-cell:hover {
   background: var(--ghost-hover);
 }
 
 /* The chosen match, in every cell that shows it. */
-.slot-cell[aria-current] {
+.round-cell[aria-current] {
   outline: 2px solid var(--accent-text);
   outline-offset: 2px;
 }
@@ -3195,27 +3195,27 @@ a.slot-cell:hover {
     padding: 6px;
   }
 
-  .slot-grid {
+  .round-grid {
     border-spacing: 4px 0;
   }
 
-  .slot-grid tbody th,
-  .slot-grid-corner {
+  .round-grid tbody th,
+  .round-grid-corner {
     box-shadow: -16px 0 0 var(--panel-flat), 4px 0 0 var(--panel-flat);
   }
 
-  .slot-grid tbody th {
+  .round-grid tbody th {
     min-width: 84px;
     max-width: 96px;
     font-size: 14px;
     padding-right: 4px;
   }
 
-  .slot-cell {
+  .round-cell {
     min-width: 108px;
   }
 
-  .slot-cell[aria-current] {
+  .round-cell[aria-current] {
     outline-offset: 1px;
   }
 }
@@ -3224,8 +3224,8 @@ a.slot-cell:hover {
   color: var(--amber-text);
 }
 
-/* The schedule, slot by slot. */
-.slot-list {
+/* The schedule, round by round. */
+.round-list {
   list-style: none;
   padding: 0;
   display: flex;
@@ -3233,14 +3233,14 @@ a.slot-cell:hover {
   gap: 12px;
 }
 
-/* Capped (useRowLimit): room for the slots' outer ring inside the scroll box. */
-.slot-list[style] {
+/* Capped (useRowLimit): room for the rounds' outer ring inside the scroll box. */
+.round-list[style] {
   padding: 3px;
   margin: -3px;
   overflow-x: hidden;
 }
 
-.slot {
+.pool-round {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -3250,11 +3250,11 @@ a.slot-cell:hover {
   box-shadow: var(--elevation-3);
 }
 
-.slot[data-now] {
+.pool-round[data-now] {
   box-shadow: inset 0 0 0 1px var(--accent-text), var(--elevation-3);
 }
 
-.slot h4 {
+.pool-round h4 {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -3269,9 +3269,9 @@ a.slot-cell:hover {
   box-shadow: inset 0 0 0 1px var(--accent-text);
 }
 
-/* Rows inside the slot's panel, split by hairlines; a row is only filled
+/* Rows inside the round's panel, split by hairlines; a row is only filled
    while it's the chosen pairing. */
-.slot-matches {
+.round-matches {
   list-style: none;
   padding: 0;
   display: flex;
@@ -3280,7 +3280,7 @@ a.slot-cell:hover {
 
 /* Phones: the court tag and the pairing share the first line; the ref, the
    score, the court link and Correct each take a full-width line beneath. */
-.slot-match {
+.round-match {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
@@ -3291,13 +3291,23 @@ a.slot-cell:hover {
   scroll-margin-top: 145px;
 }
 
-.slot-match + .slot-match {
+.round-match + .round-match {
   border-top: 1px solid var(--hairline);
   border-radius: 0;
 }
 
-.slot-match[aria-current],
-.slot-match:target {
+/* A pairing's later games sit under its first, split from it by a dotted line. */
+.round-match[data-continues] {
+  border-top-style: dotted;
+}
+
+.game-tag {
+  font: 600 13px/18px var(--ui);
+  color: var(--muted);
+}
+
+.round-match[aria-current],
+.round-match:target {
   background: var(--ghost);
   box-shadow: inset 0 0 0 2px var(--accent-text);
   border-radius: 12px;
@@ -3311,19 +3321,19 @@ a.slot-cell:hover {
   }
 }
 
-.slot-match > :nth-child(n + 3),
-.slot-match .slot-ref {
+.round-match > :nth-child(n + 3),
+.round-match .round-ref {
   grid-column: 1 / -1;
   justify-self: start;
 }
 
 /* Wider screens: the score, then the link or Correct, at the end of the match's row. */
 @media (min-width: 768px) {
-  .slot-match {
+  .round-match {
     grid-template-columns: auto minmax(0, 1fr) auto auto;
   }
 
-  .slot-match > :nth-child(n + 3) {
+  .round-match > :nth-child(n + 3) {
     grid-column: auto;
     justify-self: end;
   }
@@ -3339,7 +3349,7 @@ a.slot-cell:hover {
 }
 
 /* The pairing's name leads back to its cell in the grid. */
-.slot-teams {
+.round-teams {
   display: inline-flex;
   align-items: center;
   min-height: 48px;
@@ -3351,13 +3361,13 @@ a.slot-cell:hover {
 
 /* The pairing, with its ref underneath. On phones its teams and ref join
    the row's grid directly, so the ref can take a full-width line. */
-.slot-pairing {
+.round-pairing {
   display: contents;
 }
 
 /* After the base rule above, so it wins on wider screens. */
 @media (min-width: 768px) {
-  .slot-pairing {
+  .round-pairing {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -3365,13 +3375,13 @@ a.slot-cell:hover {
   }
 }
 
-.slot-ref {
+.round-ref {
   max-width: 100%;
   font: 400 14px/20px var(--ui);
   color: var(--muted);
 }
 
-.slot-ref label {
+.round-ref label {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -3383,18 +3393,18 @@ a.slot-cell:hover {
 /* The dropdown is as wide as its longest team name; let it shrink to the
    pairing's column (the closed select cuts the name short) rather than
    spill over the score or the court link. */
-.slot-ref select {
+.round-ref select {
   min-width: 0;
   max-width: 100%;
   text-overflow: ellipsis;
 }
 
-.slot-teams:hover {
+.round-teams:hover {
   color: var(--accent-text);
   text-decoration: underline;
 }
 
-.slot-score {
+.round-score {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -3422,11 +3432,11 @@ a.slot-cell:hover {
 }
 
 /* A match still in play: its running score, not a result yet. */
-.slot-score[data-live] .score-chip {
+.round-score[data-live] .score-chip {
   color: var(--band-muted);
 }
 
-.slot-court-link {
+.round-court-link {
   display: inline-flex;
   align-items: center;
   min-height: 48px;
@@ -3434,7 +3444,7 @@ a.slot-cell:hover {
   color: var(--accent-text);
 }
 
-.slot-idle {
+.round-idle {
   font: 400 14px/20px var(--ui);
   color: var(--muted);
 }

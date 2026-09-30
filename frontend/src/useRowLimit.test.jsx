@@ -2,7 +2,7 @@ import { render } from '@testing-library/react'
 import { useRef } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 
-import { slotsInView } from './scheduleView'
+import { roundsInView } from './scheduleView'
 import { useRowLimit } from './useRowLimit'
 
 afterEach(() => {
@@ -60,10 +60,10 @@ test('leaves a box with the limit or fewer rows alone', () => {
   expect(list.style.maxHeight).toBe('')
 })
 
-test('the schedule shows one slot on three courts, two on two, three on one', () => {
-  expect(slotsInView(3)).toBe(1)
-  expect(slotsInView(4)).toBe(1)
-  expect(slotsInView(2)).toBe(2)
-  expect(slotsInView(1)).toBe(3)
-  expect(slotsInView(0)).toBe(3)
+test('the schedule shows one round on three courts, two on two, three on one', () => {
+  expect(roundsInView(3)).toBe(1)
+  expect(roundsInView(4)).toBe(1)
+  expect(roundsInView(2)).toBe(2)
+  expect(roundsInView(1)).toBe(3)
+  expect(roundsInView(0)).toBe(3)
 })

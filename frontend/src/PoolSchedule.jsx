@@ -10,31 +10,22 @@ import RefSelect from './RefSelect'
 import { usePolling } from './usePolling'
 import { useMediaQuery } from './useMediaQuery'
 import { useRowLimit } from './useRowLimit'
-import { slotsInView } from './scheduleView'
-
-function groupBySlot(matches) {
-  const slots = new Map()
-  for (const match of matches) {
-    if (!slots.has(match.round)) slots.set(match.round, [])
-    slots.get(match.round).push(match)
-  }
-  return [...slots.entries()].sort(([a], [b]) => a - b)
-}
+import { groupByRound, roundsInView } from './scheduleView'
 
 const matchAnchor = (match) => `pool-match-${match.id}`
 
-// A match's cell in a team's row (a playing or ref cell); the schedule jumps
-// back to the first team's.
-const gridAnchor = (match, teamId) => `grid-match-${match.id}-${teamId}`
+// A pairing's cell in a team's row (a playing or ref cell), named for the
+// pairing's first game; the schedule jumps back to the first team's.
+const gridAnchor = (pairing, teamId) => `grid-match-${pairing.games[0].id}-${teamId}`
 
 /**
  * A match's ref. Signed in, a dropdown: Automatic (naming who the rules
- * picked), the teams free to ref this slot, or N/A.
+ * picked), the teams free to ref this game, or N/A.
  */
 function MatchRef({ match, eligible, nameOf, signedIn, onChange, saving, error }) {
-  if (!signedIn) return <p className="slot-ref">Ref: {refName(match, nameOf)}</p>
+  if (!signedIn) return <p className="round-ref">Ref: {refName(match, nameOf)}</p>
   return (
-    <div className="slot-ref">
+    <div className="round-ref">
       <label>
         Ref{' '}
         <RefSelect
@@ -52,7 +43,12 @@ function MatchRef({ match, eligible, nameOf, signedIn, onChange, saving, error }
 }
 
 // A team's score and the other side's, as the schedule's flip-card chips:
-// the winner's in amber once finished, both muted while it's played.
+// the winner's in amber once finished, both muted while it's played. One
+// pair for each game of the pairing that has a score.
+function CellScores({ games, teamId }) {
+  return games.map((game) => <CellScore key={game.id} match={game} teamId={teamId} />)
+}
+
 function CellScore({ match, teamId }) {
   if (match.team1_score == null) return null
   const first = match.team1_id === teamId
@@ -61,7 +57,7 @@ function CellScore({ match, teamId }) {
   const complete = match.status === 'complete'
   const chip = (won) => (complete && won ? 'score-chip score-won' : 'score-chip')
   return (
-    <span className="slot-score" data-live={complete ? undefined : ''}>
+    <span className="round-score" data-live={complete ? undefined : ''}>
       <span className={chip(match.winner_id === teamId)}>{own}</span>
       <span className="score-sep">–</span>
       <span className={chip(match.winner_id != null && match.winner_id !== teamId)}>
@@ -72,58 +68,61 @@ function CellScore({ match, teamId }) {
 }
 
 /**
- * Each team's day: slots across, the pool's teams down, every cell what that
- * team does in that slot: plays whom on which court (with the score once
- * there is one), refs which match (an outlined cell), or rests. The slot
+ * Each team's day: rounds across, the pool's teams down, every cell what that
+ * team does in that round: plays whom on which court (with each game's score
+ * once there is one), refs which match (an outlined cell), or rests. The round
  * being played is outlined. A playing or ref cell jumps to its match in the
  * schedule below; choosing one marks the match in both.
  */
-function ResultsGrid({ poolTeams, slots, nowSlot, selectedId, onSelect, nameOf }) {
+function ResultsGrid({ poolTeams, rounds, nowRound, selectedId, onSelect, nameOf }) {
   // Beside the standings (from 1024px) the panel takes their height, set in
   // CSS; stacked on narrower screens it shows four teams. Either way the rest
-  // scroll under the pinned slot heads.
+  // scroll under the pinned round heads.
   const besideStandings = useMediaQuery('(min-width: 1024px)')
   const scrollRef = useRef(null)
   const limit = useRowLimit(scrollRef, 'tbody tr', besideStandings ? Infinity : 4, poolTeams.length)
 
-  function cell(team, slotMatches) {
-    const playing = slotMatches.find(
-      (match) => match.team1_id === team.id || match.team2_id === team.id,
+  function cell(team, round) {
+    const pairing = round.pairings.find(({ games }) =>
+      [games[0].team1_id, games[0].team2_id].includes(team.id),
     )
-    const reffing = slotMatches.find((match) => match.ref_team_id === team.id)
-    const match = playing ?? reffing
-    if (!match) {
+    const reffed = round.matches.filter((match) => match.ref_team_id === team.id)
+    const reffing = reffed[0]
+    if (!pairing && !reffing) {
       return (
-        <span className="slot-cell" data-kind="rest">
+        <span className="round-cell" data-kind="rest">
           Rest
         </span>
       )
     }
+    const target = pairing ? pairing.games : [reffing]
+    const chosen = target.find((match) => match.id === selectedId)
     const shared = {
-      href: `#${matchAnchor(match)}`,
-      'aria-current': match.id === selectedId ? 'true' : undefined,
-      onClick: () => onSelect(match.id),
+      href: `#${matchAnchor(chosen ?? target[0])}`,
+      'aria-current': chosen ? 'true' : undefined,
+      onClick: () => onSelect((chosen ?? target[0]).id),
     }
-    if (playing) {
-      const opponent = playing.team1_id === team.id ? playing.team2_id : playing.team1_id
+    if (pairing) {
+      const first = pairing.games[0]
+      const opponent = first.team1_id === team.id ? first.team2_id : first.team1_id
       return (
         <a
-          id={gridAnchor(playing, team.id)}
-          className="slot-cell"
+          id={gridAnchor(pairing, team.id)}
+          className="round-cell"
           data-kind="play"
           {...shared}
         >
-          <span className="slot-cell-line">
-            Ct {playing.court ?? '–'} · vs {nameOf(opponent)}
+          <span className="round-cell-line">
+            Ct {first.court ?? '–'} · vs {nameOf(opponent)}
           </span>
-          <CellScore match={playing} teamId={team.id} />
+          <CellScores games={pairing.games} teamId={team.id} />
         </a>
       )
     }
     return (
-      <a className="slot-cell" data-kind="ref" {...shared}>
-        <span className="slot-cell-line">Ref · Ct {reffing.court ?? '–'}</span>
-        <span className="slot-cell-sub">
+      <a className="round-cell" data-kind="ref" {...shared}>
+        <span className="round-cell-line">Ref · Ct {reffing.court ?? '–'}</span>
+        <span className="round-cell-sub">
           {nameOf(reffing.team1_id)} v {nameOf(reffing.team2_id)}
         </span>
       </a>
@@ -137,16 +136,16 @@ function ResultsGrid({ poolTeams, slots, nowSlot, selectedId, onSelect, nameOf }
       style={limit.style}
       data-more={limit.more ? '' : undefined}
     >
-      <table className="slot-grid" aria-label="Results grid">
+      <table className="round-grid" aria-label="Results grid">
         <thead>
           <tr>
-            <th scope="col" className="slot-grid-corner">
+            <th scope="col" className="round-grid-corner">
               <span className="visually-hidden">Team</span>
             </th>
-            {slots.map(([slot]) => (
-              <th key={slot} scope="col" data-now={slot === nowSlot ? '' : undefined}>
-                Slot {slot}
-                {slot === nowSlot && <span className="visually-hidden"> (now)</span>}
+            {rounds.map(({ round }) => (
+              <th key={round} scope="col" data-now={round === nowRound ? '' : undefined}>
+                Round {round}
+                {round === nowRound && <span className="visually-hidden"> (now)</span>}
               </th>
             ))}
           </tr>
@@ -155,9 +154,9 @@ function ResultsGrid({ poolTeams, slots, nowSlot, selectedId, onSelect, nameOf }
           {poolTeams.map((team) => (
             <tr key={team.id}>
               <th scope="row">{team.name}</th>
-              {slots.map(([slot, slotMatches]) => (
-                <td key={slot} data-now={slot === nowSlot ? '' : undefined}>
-                  {cell(team, slotMatches)}
+              {rounds.map((round) => (
+                <td key={round.round} data-now={round.round === nowRound ? '' : undefined}>
+                  {cell(team, round)}
                 </td>
               ))}
             </tr>
@@ -169,11 +168,11 @@ function ResultsGrid({ poolTeams, slots, nowSlot, selectedId, onSelect, nameOf }
 }
 
 /**
- * A pool's results grid and its slot-by-slot schedule. Scores are kept on
+ * A pool's results grid and its round-by-round schedule. Scores are kept on
  * each court's scoreboard, so an unfinished match links there; a finished
  * one can be corrected here.
  */
-export default function PoolSchedule({ pool, teams, onMatchesChange }) {
+export default function PoolSchedule({ pool, teams, gamesPerPairing = 1, onMatchesChange }) {
   // null until the first load, so the generate form doesn't flash for pools
   // that already have a schedule.
   const [matches, setMatches] = useState(null)
@@ -185,26 +184,24 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
   const [refError, setRefError] = useState(null)
   const { user } = useAuth()
 
-  // The schedule shows about three matches' worth of slots; the rest scroll.
-  // Courts in use are the most matches any slot plays at once.
-  const courtsInUse = Math.max(
-    1,
-    ...groupBySlot(matches ?? []).map(([, slotMatches]) => slotMatches.length),
-  )
+  // The schedule shows about three matches' worth of rounds; the rest scroll.
+  // A round plays every game of each of its pairings.
+  const rounds = groupByRound(matches ?? [], gamesPerPairing)
+  const matchesPerRound = Math.max(1, ...rounds.map((round) => round.matches.length))
   const scheduleRef = useRef(null)
   const scheduleLimit = useRowLimit(
     scheduleRef,
-    ':scope > .slot',
-    slotsInView(courtsInUse),
+    ':scope > .pool-round',
+    roundsInView(matchesPerRound),
     matches?.length,
   )
-  // Open the schedule on the slot being played, once, without moving the page.
+  // Open the schedule on the round being played, once, without moving the page.
   const openedOnNow = useRef(false)
   useEffect(() => {
     const list = scheduleRef.current
     if (openedOnNow.current || !list || !scheduleLimit.limited) return
-    const now = list.querySelector(':scope > .slot[data-now]')
-    // Measured from the list's padding edge, so the slot's top ring stays in view.
+    const now = list.querySelector(':scope > .pool-round[data-now]')
+    // Measured from the list's padding edge, so the round's top ring stays in view.
     const padding = parseFloat(getComputedStyle(list).paddingTop) || 0
     if (now) list.scrollTop = Math.max(0, now.offsetTop - list.offsetTop - padding)
     openedOnNow.current = true
@@ -265,10 +262,9 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
     )
   }
 
-  const slots = groupBySlot(matches)
-  const nowSlot = slots.find(([, slotMatches]) =>
-    slotMatches.some((match) => match.status !== 'complete'),
-  )?.[0]
+  const nowRound = rounds.find((round) =>
+    round.matches.some((match) => match.status !== 'complete'),
+  )?.round
 
   return (
     <>
@@ -276,8 +272,8 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
         <h3 id="results-grid-heading">Results</h3>
         <ResultsGrid
           poolTeams={poolTeams}
-          slots={slots}
-          nowSlot={nowSlot}
+          rounds={rounds}
+          nowRound={nowRound}
           selectedId={selectedId}
           onSelect={setSelectedId}
           nameOf={nameOf}
@@ -288,20 +284,20 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
         <h3 id="schedule-heading">Schedule</h3>
         <ol
           ref={scheduleRef}
-          className="slot-list"
+          className="round-list"
           style={scheduleLimit.style}
           data-more={scheduleLimit.more ? '' : undefined}
         >
-          {slots.map(([slot, slotMatches]) => {
-            const playing = new Set(slotMatches.flatMap((m) => [m.team1_id, m.team2_id]))
+          {rounds.map(({ round, pairings, matches: roundMatches }) => {
+            const playing = new Set(roundMatches.flatMap((m) => [m.team1_id, m.team2_id]))
             const idle = poolTeams.filter((team) => !playing.has(team.id))
-            const reffing = new Set(slotMatches.map((m) => m.ref_team_id))
+            const reffing = new Set(roundMatches.map((m) => m.ref_team_id))
             const resting = idle.filter((team) => !reffing.has(team.id))
-            const now = slot === nowSlot
+            const now = round === nowRound
             return (
-              <li key={slot} className="slot" data-now={now ? '' : undefined}>
+              <li key={round} className="pool-round" data-now={now ? '' : undefined}>
                 <h4>
-                  Slot {slot}
+                  Round {round}
                   {now && (
                     <>
                       {' '}
@@ -309,83 +305,89 @@ export default function PoolSchedule({ pool, teams, onMatchesChange }) {
                     </>
                   )}
                 </h4>
-                <ul className="slot-matches">
-                  {slotMatches.map((match) => {
-                    const team1 = nameOf(match.team1_id)
-                    const team2 = nameOf(match.team2_id)
-                    const complete = match.status === 'complete'
-                    return (
-                      <li
-                        key={match.id}
-                        id={matchAnchor(match)}
-                        className="slot-match"
-                        aria-current={match.id === selectedId ? 'true' : undefined}
-                      >
-                        <span className="court-tag">Court {match.court ?? '–'}</span>
-                        <div className="slot-pairing">
-                          <a
-                            className="slot-teams"
-                            href={`#${gridAnchor(match, match.team1_id)}`}
-                            onClick={() => setSelectedId(match.id)}
-                          >
-                            {`${team1} vs ${team2}`}
-                          </a>
-                          <MatchRef
-                            match={match}
-                            eligible={idle}
-                            nameOf={nameOf}
-                            signedIn={Boolean(user)}
-                            onChange={handleRefChange}
-                            saving={savingRefId === match.id}
-                            error={refError?.matchId === match.id ? refError.message : null}
-                          />
-                        </div>
-                        {match.team1_score != null && (
-                          <span className="slot-score" data-live={complete ? undefined : ''}>
-                            <span
-                              className={
-                                complete && match.winner_id === match.team1_id
-                                  ? 'score-chip score-won'
-                                  : 'score-chip'
-                              }
+                <ul className="round-matches">
+                  {pairings.flatMap((pairing) =>
+                    pairing.games.map((match) => {
+                      const team1 = nameOf(match.team1_id)
+                      const team2 = nameOf(match.team2_id)
+                      const complete = match.status === 'complete'
+                      return (
+                        <li
+                          key={match.id}
+                          id={matchAnchor(match)}
+                          className="round-match"
+                          data-continues={match.gameNumber > 1 ? '' : undefined}
+                          aria-current={match.id === selectedId ? 'true' : undefined}
+                        >
+                          <span className="court-tag">Court {match.court ?? '–'}</span>
+                          <div className="round-pairing">
+                            <a
+                              className="round-teams"
+                              href={`#${gridAnchor(pairing, match.team1_id)}`}
+                              onClick={() => setSelectedId(match.id)}
                             >
-                              {match.team1_score}
+                              {`${team1} vs ${team2}`}
+                            </a>
+                            {pairing.games.length > 1 && (
+                              <span className="game-tag">Game {match.gameNumber}</span>
+                            )}
+                            <MatchRef
+                              match={match}
+                              eligible={idle}
+                              nameOf={nameOf}
+                              signedIn={Boolean(user)}
+                              onChange={handleRefChange}
+                              saving={savingRefId === match.id}
+                              error={refError?.matchId === match.id ? refError.message : null}
+                            />
+                          </div>
+                          {match.team1_score != null && (
+                            <span className="round-score" data-live={complete ? undefined : ''}>
+                              <span
+                                className={
+                                  complete && match.winner_id === match.team1_id
+                                    ? 'score-chip score-won'
+                                    : 'score-chip'
+                                }
+                              >
+                                {match.team1_score}
+                              </span>
+                              <span className="score-sep">–</span>
+                              <span
+                                className={
+                                  complete && match.winner_id === match.team2_id
+                                    ? 'score-chip score-won'
+                                    : 'score-chip'
+                                }
+                              >
+                                {match.team2_score}
+                              </span>
                             </span>
-                            <span className="score-sep">–</span>
-                            <span
-                              className={
-                                complete && match.winner_id === match.team2_id
-                                  ? 'score-chip score-won'
-                                  : 'score-chip'
-                              }
+                          )}
+                          {!complete && match.court != null && (
+                            <Link
+                              className="round-court-link"
+                              to={`/tournaments/${pool.tournament_id}/courts/${match.court}`}
                             >
-                              {match.team2_score}
-                            </span>
-                          </span>
-                        )}
-                        {!complete && match.court != null && (
-                          <Link
-                            className="slot-court-link"
-                            to={`/tournaments/${pool.tournament_id}/courts/${match.court}`}
-                          >
-                            {user ? `Score on Court ${match.court}` : `Watch Court ${match.court}`}
-                          </Link>
-                        )}
-                        {user && complete && (
-                          <CorrectionForm
-                            key={`${match.id}-${match.version}`}
-                            match={match}
-                            team1Name={team1}
-                            team2Name={team2}
-                            onCorrected={({ match: corrected }) => handleScored(corrected)}
-                          />
-                        )}
-                      </li>
-                    )
-                  })}
+                              {user ? `Score on Court ${match.court}` : `Watch Court ${match.court}`}
+                            </Link>
+                          )}
+                          {user && complete && (
+                            <CorrectionForm
+                              key={`${match.id}-${match.version}`}
+                              match={match}
+                              team1Name={team1}
+                              team2Name={team2}
+                              onCorrected={({ match: corrected }) => handleScored(corrected)}
+                            />
+                          )}
+                        </li>
+                      )
+                    }),
+                  )}
                 </ul>
                 {resting.length > 0 && (
-                  <p className="slot-idle">Resting: {resting.map((team) => team.name).join(', ')}</p>
+                  <p className="round-idle">Resting: {resting.map((team) => team.name).join(', ')}</p>
                 )}
               </li>
             )

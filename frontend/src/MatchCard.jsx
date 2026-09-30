@@ -93,7 +93,7 @@ export function MatchStatus({ match, teamsById, queuePosition, overflow }) {
 export function CourtLink({ match, tournamentId, signedIn }) {
   if (match.status === 'complete' || match.court == null || !bothTeamsKnown(match)) return null
   return (
-    <Link className="slot-court-link" to={`/tournaments/${tournamentId}/courts/${match.court}`}>
+    <Link className="round-court-link" to={`/tournaments/${tournamentId}/courts/${match.court}`}>
       {signedIn ? `Score on Court ${match.court}` : `Watch Court ${match.court}`}
     </Link>
   )
