@@ -2227,6 +2227,11 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   text-align: center;
 }
 
+/* The scoreboard's note keeps its line when empty, so the board and Finish match stay put. */
+.finish-note-slot {
+  min-height: 20px;
+}
+
 /* Phones: the board owns the screen, with +1 in the thumb zone and Finish
    match at the bottom of the first view; Up next waits below the fold. */
 @media (max-width: 767px) {

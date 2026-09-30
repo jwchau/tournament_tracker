@@ -621,3 +621,19 @@ test('a pool match with a point cap cannot be scored past it from the court', as
   expect(within(now).getByRole('button', { name: 'Point to Spikers' })).toBeDisabled()
   expect(within(now).getByRole('button', { name: 'Point to Diggers' })).toBeEnabled()
 })
+
+test('the tied-score note keeps its line, so nothing on the board moves when it comes and goes', async () => {
+  vi.spyOn(api, 'listCourts').mockResolvedValue(playing)
+
+  renderAt('/tournaments/3/courts/2')
+
+  const now = await screen.findByRole('region', { name: 'Now playing' })
+  const note = within(now).getByText('A match can’t finish tied.')
+  expect(note).toHaveAttribute('role', 'status')
+
+  fireEvent.click(within(now).getByRole('button', { name: 'Point to Spikers' }))
+
+  expect(note).toBeInTheDocument()
+  expect(note).toBeEmptyDOMElement()
+  expect(within(now).getByRole('button', { name: 'Finish match' })).toBeEnabled()
+})
