@@ -15,7 +15,7 @@ const GROUPS = [
     fields: [
       {
         key: 'target_pool_size',
-        label: 'Target pool size',
+        label: 'Number of teams per pool',
         type: 'number',
         min: '2',
         note: 'Teams per pool when pools are auto-assigned.',

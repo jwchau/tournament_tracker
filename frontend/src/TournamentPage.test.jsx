@@ -388,7 +388,7 @@ test('Save waits until something has changed', async () => {
   expect(save).toBeDisabled()
 })
 
-test('games per pairing and target pool size are tournament settings', async () => {
+test('games per pairing and number of teams per pool are tournament settings', async () => {
   mockSettingsPage()
   mockPreview()
   const updateTournament = vi
@@ -398,7 +398,7 @@ test('games per pairing and target pool size are tournament settings', async () 
   renderAt(1)
 
   const games = await screen.findByLabelText(/games per pairing/i)
-  const target = screen.getByLabelText(/target pool size/i)
+  const target = screen.getByLabelText(/number of teams per pool/i)
   expect([games.value, target.value]).toEqual(['1', '4'])
   expect(games).toHaveAttribute('min', '1')
   expect(target).toHaveAttribute('min', '2')
@@ -506,7 +506,7 @@ test('a setting that has locked is disabled with the reason, and the rest stay o
   renderAt(1)
 
   await screen.findByLabelText(/tournament name/i)
-  for (const label of [/games per pairing/i, /target pool size/i]) {
+  for (const label of [/games per pairing/i, /number of teams per pool/i]) {
     expect(screen.getByLabelText(label)).toBeDisabled()
   }
   expect(screen.getAllByText('Locked: play has started.')).toHaveLength(2)

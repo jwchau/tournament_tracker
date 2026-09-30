@@ -251,6 +251,13 @@ def delete_tournament(
     session.commit()
 
 
+def _team_name(name: str) -> str:
+    name = name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Team name can't be empty")
+    return name
+
+
 @router.post(
     "/tournaments/{tournament_id}/teams", response_model=Team, status_code=201
 )
@@ -265,7 +272,8 @@ def create_team(
             status_code=400, detail="pool play has started, so teams can no longer be added"
         )
 
-    team = Team(tournament_id=tournament_id, name=data.name, seed=data.seed)
+    name = _team_name(data.name)
+    team = Team(tournament_id=tournament_id, name=name, seed=data.seed)
     session.add(team)
     session.commit()
     session.refresh(team)
@@ -313,6 +321,8 @@ def update_team(
         raise HTTPException(status_code=404, detail="Team not found")
 
     changes = data.model_dump(exclude_unset=True)
+    if "name" in changes:
+        changes["name"] = _team_name(changes["name"] or "")
     if (
         "seed" in changes
         and changes["seed"] != team.seed

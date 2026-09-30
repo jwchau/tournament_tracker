@@ -39,7 +39,7 @@ On the laptop, signed in:
    | Setting | Value |
    | ------- | ----- |
    | Court count | 4 |
-   | Target pool size | 4 |
+   | Number of teams per pool | 4 |
    | Advance per pool | (blank: automatic) |
    | Playoff bracket count | 2 |
    | Games per pairing | 1 |

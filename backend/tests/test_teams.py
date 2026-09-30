@@ -188,3 +188,38 @@ def test_no_team_can_be_deleted_once_brackets_exist(client):
 
     assert response.status_code == 400
     assert "bracket" in response.json()["detail"]
+
+
+def test_create_team_refuses_an_empty_or_blank_name(client):
+    tournament = create_tournament(client, "Spring Classic")
+
+    for name in ["", "   "]:
+        response = client.post(
+            f"/tournaments/{tournament['id']}/teams", json={"name": name}
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Team name can't be empty"
+
+    assert client.get(f"/tournaments/{tournament['id']}/teams").json() == []
+
+
+def test_create_team_trims_the_name(client):
+    tournament = create_tournament(client, "Spring Classic")
+
+    response = client.post(
+        f"/tournaments/{tournament['id']}/teams", json={"name": "  Ice Wolves "}
+    )
+
+    assert response.json()["name"] == "Ice Wolves"
+
+
+def test_rename_team_refuses_a_blank_name(client):
+    tournament = create_tournament(client, "Spring Classic")
+    team = client.post(
+        f"/tournaments/{tournament['id']}/teams", json={"name": "Ice Wolves"}
+    ).json()
+
+    response = client.patch(f"/teams/{team['id']}", json={"name": " "})
+
+    assert response.status_code == 400
+    assert client.get(f"/teams/{team['id']}").json()["name"] == "Ice Wolves"
