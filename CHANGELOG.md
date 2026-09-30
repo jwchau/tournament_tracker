@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.1.0 — unreleased
+## v1.1.0 — 2026-09-30
 
 Refs for every match, point caps, a different best-of for each part of a
 double-elimination bracket, and a full restyle in the Kiln design. Scorekeepers
