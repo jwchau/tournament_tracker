@@ -5,7 +5,7 @@
 The first release: a self-hosted tool that runs a bracket-and-pool tournament
 from team check-in to final placings. It runs on the organizer's machine
 with Docker Compose, and the venue reaches it through a Cloudflare tunnel.
-Tickets 00–19 are in [tickets/](tickets); the release was checked by a full
+The release was checked by a full
 dress rehearsal on the production stack ([docs/rehearsal.md](docs/rehearsal.md)).
 
 ### Setting up
@@ -63,8 +63,7 @@ dress rehearsal on the production stack ([docs/rehearsal.md](docs/rehearsal.md))
 ### Known limits and next up
 
 - Pages poll every 10 seconds rather than updating live.
-- Post-v1: [ticket 20](tickets/20-load-performance.md) (faster page loads
-  on phones) and [ticket 21](tickets/21-loading-states.md) (loading
-  placeholders instead of empty pages).
+- Post-v1, both since done: faster page loads on phones, and loading
+  placeholders instead of empty pages.
 - Not in v1: player stats, roles or two-factor auth, printable schedules,
-  and end-to-end browser tests. See [V1_MVP_PLAN.md](V1_MVP_PLAN.md).
+  and end-to-end browser tests.

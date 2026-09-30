@@ -8,9 +8,9 @@ writes, and cascading score correction.
 
 Scope is a personal/local tool run via Docker Compose on a local machine or LAN
 at a venue. Anyone can follow pools and brackets read-only; changing anything
-needs a username and password (no sign-up, no roles). See
-[tickets/](tickets) for the vertical slices; the code and its tests are the
-source of truth for behaviour.
+needs a username and password (no sign-up, no roles). The
+code and its tests are the source of truth for behaviour, and
+[docs/follow-ups.md](docs/follow-ups.md) lists what is still open.
 
 ## Stack
 
@@ -111,7 +111,7 @@ browser won't send the `SameSite=Lax` session cookie between two of them.
 Spectating works either way.
 The frontend can instead be deployed to Cloudflare Workers
 (`frontend/wrangler.jsonc`); see
-[tickets/10-cloudflare-workers-frontend.md](tickets/10-cloudflare-workers-frontend.md).
+[docs/cloudflare-workers.md](docs/cloudflare-workers.md).
 
 ## Running an event
 
@@ -201,6 +201,5 @@ URL points at, so demo on a scratch tournament. Point it at
 backend/    FastAPI app and tests
 frontend/   React app and tests
 scripts/    Event-day database backup and restore
-tickets/    Implementation tickets
-V1_MVP_PLAN.md  Road to the v1 release
+docs/       Event rehearsal, manual tests, Cloudflare setup, follow-ups
 ```

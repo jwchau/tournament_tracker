@@ -1,12 +1,11 @@
 # Dress rehearsal
 
-A mock event played on the production stack before a real one (ticket 18).
+A mock event played on the production stack before a real one.
 It runs every part of the app that an event day uses, in order. The run
 passes when it gets to the end with no manual database edits.
 
 Log every problem in the table at the bottom as it happens. Don't stop to
-fix it. Bugs get a failing test first, then the fix (ticket 18's branch, or
-a follow-up ticket if the fix is large).
+fix it. Bugs get a failing test first, then the fix (or a follow-up if the fix is large).
 
 ## You need
 
@@ -50,7 +49,7 @@ On the laptop, signed in:
 - [ ] Teams and pools can be added straight away.
 - [ ] Set a date and a venue: both show under the tournament's name.
 
-## 2. Teams (ticket 14)
+## 2. Teams
 
 1. Add 14 teams, each with a seed from 1 to 14.
 2. Delete one team (e.g. seed 14).
@@ -71,7 +70,7 @@ On the laptop, signed in:
 - [ ] Once the first score is in (step 4), settings lock except the name,
       and changing a seed is refused with a clear message.
 
-## 4. Pool play from two phones (tickets 16 and 19)
+## 4. Pool play from two phones
 
 1. Phone A and Phone B sign in. Each opens **Courts (scorekeeper view)**
    and picks a different court.
@@ -98,7 +97,7 @@ confirm.
 - [ ] The preview says what changes.
 - [ ] That pool's standings update to match.
 
-## 6. Advance to playoffs (ticket 09)
+## 6. Advance to playoffs
 
 On the tournament page, click **Advance to playoffs**. In the seeding dialog,
 choose **Double elimination**, move one team up a place in Bracket 1, and
@@ -154,7 +153,7 @@ Or copy the file to a second machine and use `scripts/restore-db` there.
 - [ ] Clean up: `docker compose -p tt-scratch -f docker-compose.prod.yml down -v`
       (`-v` is safe here: it only deletes the scratch volume).
 
-## 9. Results (ticket 15)
+## 9. Results
 
 - [ ] The tournament's stage reads Complete.
 - [ ] The Results section names the champion and runner-up for each tier.
@@ -180,8 +179,8 @@ by a `rehearsal-bot` user; everything else was done in the UI.
 | - | ---- | ------------- | ---- | ---------- |
 | 1 | 3 | 13 teams snaked into pools of 5 / 4 / 4 (A: seeds 1, 6, 7, 12, 14; B: 2, 5, 8, 11; C: 3, 4, 9, 10). All 22 matches on courts, all 4 courts in use. | No | — |
 | 2 | 4 | Simultaneous submit on court 4: one phone saved, the other got the conflict and refetched the saved score. | No | — |
-| 3 | 4 | Some pages took a few seconds to load on the phones. The endpoints take 8–21 ms locally and 60–96 ms through the tunnel, so the delay is probably in how the frontend fetches. | Slow, post-v1 | [Ticket 20](../tickets/20-load-performance.md) |
-| 4 | 4 | Pages show empty, then suddenly fill with data. | UX, post-v1 | [Ticket 21](../tickets/21-loading-states.md) |
+| 3 | 4 | Some pages took a few seconds to load on the phones. The endpoints take 8–21 ms locally and 60–96 ms through the tunnel, so the delay is probably in how the frontend fetches. | Slow, post-v1 | Fixed after v1: faster page loads |
+| 4 | 4 | Pages show empty, then suddenly fill with data. | UX, post-v1 | Fixed after v1: loading placeholders |
 | 5 | 4 | All 22 pool matches complete. Standings match the scores; ties rank by point difference, then points for. | No | — |
 | 6 | 5 | Pool matches have no **Correct** button; only bracket matches had one. Corrected Hitters vs Kill Shots 22–20 → 20–22 through the API instead. Kill Shots moved to 2nd in Pool B, Hitters to 3rd, with no other matches reset. | Yes | `PoolSchedule.test.jsx`: finished pool matches get **Correct** when signed in; the fix adds `CorrectionForm` to `PoolSchedule`. |
 | 7 | 6 | Seeding across pools used raw totals, which favors teams in the 5-team pool (4 matches played against 3). Servers (3–1, 9 pts, +11) got a bye ahead of Setters, who went unbeaten (3–0, 9 pts, +10). | Yes | `tests/test_playoffs.py`: seed on points, point difference, then points scored, each per match played. Stress-test model updated to match. Brackets reset and advanced again. |
@@ -197,5 +196,5 @@ by a `rehearsal-bot` user; everything else was done in the UI.
 
 **Result:** the script ran end to end on the production stack with no manual
 database edits. Three bugs were fixed test-first (entries 6, 7 and 12), and
-two post-v1 tickets were opened (20 and 21). Afterwards, `rehearsal-bot`'s
+two post-v1 fixes were made (page loads and loading placeholders). Afterwards, `rehearsal-bot`'s
 password was reset to a random value that wasn't kept.
