@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 
 import { addGame, editGame, getMatch, listGames, saveGameInPlay } from './api'
+import { clampScore } from './boardScores'
 import FlipBoard from './FlipBoard'
 import SaveStatus from './SaveStatus'
 import { sameScores, useRunningScore } from './useRunningScore'
 import { usePending } from './usePending'
 
-// Two score inputs for one game, labelled "Game N <team> score".
+// Two score inputs for one game, labelled "Game N <team> score". max is the
+// set's point cap: a higher score typed is held at it.
 export function GameScoreInputs({
   idPrefix,
   number,
@@ -14,6 +16,7 @@ export function GameScoreInputs({
   team2Name,
   scores,
   onChange,
+  max = 0,
 }) {
   const team1Id = `${idPrefix}-game-${number}-team1`
   const team2Id = `${idPrefix}-game-${number}-team2`
@@ -27,8 +30,10 @@ export function GameScoreInputs({
           id={team1Id}
           type="number"
           required
+          min="0"
+          max={max || undefined}
           value={scores.team1}
-          onChange={(event) => onChange({ ...scores, team1: event.target.value })}
+          onChange={(event) => onChange({ ...scores, team1: clampScore(event.target.value, max) })}
         />
       </span>
       <span className="score-field">
@@ -39,8 +44,10 @@ export function GameScoreInputs({
           id={team2Id}
           type="number"
           required
+          min="0"
+          max={max || undefined}
           value={scores.team2}
-          onChange={(event) => onChange({ ...scores, team2: event.target.value })}
+          onChange={(event) => onChange({ ...scores, team2: clampScore(event.target.value, max) })}
         />
       </span>
     </span>
@@ -57,7 +64,17 @@ function gameInPlay(match) {
  * A newer game score from another device replaces this one's only while
  * nothing here is waiting to be saved.
  */
-function GameBoard({ match, number, team1Name, team2Name, recording, onSaved, onRecord, onRefetch }) {
+function GameBoard({
+  match,
+  number,
+  maxScore,
+  team1Name,
+  team2Name,
+  recording,
+  onSaved,
+  onRecord,
+  onRefetch,
+}) {
   const [seenVersion, setSeenVersion] = useState(match.version)
   const running = useRunningScore({
     initial: gameInPlay(match),
@@ -85,6 +102,7 @@ function GameBoard({ match, number, team1Name, team2Name, recording, onSaved, on
         team1Name={team1Name}
         team2Name={team2Name}
         labelPrefix={`Game ${number} `}
+        maxScore={maxScore}
         scores={scores}
         onChange={running.change}
       />
@@ -200,6 +218,7 @@ export default function SeriesForm({
       key={nextNumber}
       match={currentMatch}
       number={nextNumber}
+      maxScore={match.point_caps?.[nextNumber - 1]}
       team1Name={team1Name}
       team2Name={team2Name}
       recording={saving}
@@ -224,6 +243,7 @@ export default function SeriesForm({
                 <GameScoreInputs
                   idPrefix={`series-${currentMatch.id}`}
                   number={game.number}
+                  max={match.point_caps?.[game.number - 1]}
                   team1Name={team1Name}
                   team2Name={team2Name}
                   scores={fixing}

@@ -28,15 +28,25 @@ class VersionConflict(Exception):
     pass
 
 
-def _enforce_pool_point_cap(
-    session: Session, match: Match, team1_score: int, team2_score: int
+def enforce_point_cap(
+    session: Session, match: Match, team1_score: int, team2_score: int, game_number: int = 1
 ) -> None:
-    """Refuse a pool score above the tournament's cap (0 is no cap)."""
-    if match.pool_id is None:
+    """Refuse a score above the tournament's point cap for this game (0 is no cap).
+
+    A pool game has the pool cap; a playoff match's set has the cap of its
+    number (set 1 is the first box), or none past the last box.
+    """
+    tournament = session.get(Tournament, match.tournament_id)
+    if match.pool_id is not None:
+        cap, name = tournament.pool_point_cap, "a pool game"
+    elif match.playoff_bracket_id is not None:
+        caps = tournament.playoff_caps()
+        cap = caps[game_number - 1] if game_number <= len(caps) else 0
+        name = f"set {game_number}"
+    else:
         return
-    cap = session.get(Tournament, match.tournament_id).pool_point_cap
     if cap and max(team1_score, team2_score) > cap:
-        raise InvalidScore(f"a pool game is capped at {cap} points")
+        raise InvalidScore(f"{name} is capped at {cap} points")
 
 
 def submit_score(
@@ -46,6 +56,7 @@ def submit_score(
     team2_score: int,
     expected_version: int,
     complete: bool,
+    check_cap: bool = True,
 ) -> Match:
     match = session.get(Match, match_id)
     if match is None:
@@ -56,7 +67,8 @@ def submit_score(
         )
     if match.on_hold:
         raise InvalidScore("this match is on hold; release it before scoring it")
-    _enforce_pool_point_cap(session, match, team1_score, team2_score)
+    if check_cap:
+        enforce_point_cap(session, match, team1_score, team2_score)
 
     values = {"team1_score": team1_score, "team2_score": team2_score}
     was_in_progress = match.status == "in_progress"
@@ -109,6 +121,7 @@ def correct_score(
     team1_score: int,
     team2_score: int,
     expected_version: int,
+    check_cap: bool = True,
 ) -> Correction:
     """Re-score a completed match and unplay every match that consumed its old winner.
 
@@ -116,7 +129,9 @@ def correct_score(
     against what was read, so any concurrent change rolls everything back
     with a VersionConflict instead of being silently overwritten.
     """
-    match, winner_id = _validate_correction(session, match_id, team1_score, team2_score)
+    match, winner_id = _validate_correction(
+        session, match_id, team1_score, team2_score, check_cap
+    )
     old_winner_id = match.winner_id
     log = CorrectionLog(
         match_id=match_id,
@@ -178,10 +193,12 @@ def correct_score(
 
 
 def preview_correction(
-    session: Session, match_id: int, team1_score: int, team2_score: int
+    session: Session, match_id: int, team1_score: int, team2_score: int, check_cap: bool = True
 ) -> list[Match]:
     """The matches `correct_score` would reset, without changing anything."""
-    match, winner_id = _validate_correction(session, match_id, team1_score, team2_score)
+    match, winner_id = _validate_correction(
+        session, match_id, team1_score, team2_score, check_cap
+    )
     if winner_id == match.winner_id:
         return []
     reset_matches, _ = _reset_plan(session, match, winner_id)
@@ -190,7 +207,7 @@ def preview_correction(
 
 
 def _validate_correction(
-    session: Session, match_id: int, team1_score: int, team2_score: int
+    session: Session, match_id: int, team1_score: int, team2_score: int, check_cap: bool
 ) -> tuple[Match, int]:
     match = session.get(Match, match_id)
     if match is None:
@@ -199,7 +216,8 @@ def _validate_correction(
         raise InvalidScore("only completed matches can be corrected")
     if team1_score == team2_score:
         raise InvalidScore("cannot correct a match to a tied score")
-    _enforce_pool_point_cap(session, match, team1_score, team2_score)
+    if check_cap:
+        enforce_point_cap(session, match, team1_score, team2_score)
     winner_id = match.team1_id if team1_score > team2_score else match.team2_id
     return match, winner_id
 

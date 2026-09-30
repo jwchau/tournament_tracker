@@ -5,7 +5,7 @@ choice or a tidy-up waiting for its turn.
 
 ## Planned (requested, not started)
 
-- [ ] **Point cap settings**: one for pool play and one for bracket play (a maximum score a
+- [x] **Point cap settings**: one for pool play and one for bracket play (a maximum score a
   team can reach). Items 3 and 4 below are how each is set and enforced.
 - [x] **Rename pool play "slot" to "round", and group a pairing's games together.** Done in
   the UI only: a round holds each pairing once with its games listed together. Storage is
@@ -15,8 +15,12 @@ choice or a tidy-up waiting for its turn.
   the frontend and the backend: a score above the cap is rejected and not saved. Stored as
   `pool_point_cap` (0 is none); a court's matches carry `point_cap`, which the playoff cap can
   fill in for playoff matches.
-- [ ] **Playoff point cap** (tournament setting, in the playoffs group). One integer box per
+- [x] **Playoff point cap** (tournament setting, in the playoffs group). One integer box per
   set of the best-of: best of 3 shows three boxes. Enforced in the frontend and the backend.
+  With different best-ofs per section, the boxes are as many as the longest series; a
+  shorter series uses the first ones. Every section shares the same box for the same set.
+  Stored as `playoff_point_caps` (comma-separated, set 1 first; a blank or missing box is no
+  cap); a court match carries `point_cap` (single game) or `point_caps` (a series).
 - [x] **Double elimination: a different best-of per bracket** (playoffs setting). For example
   winners bracket best of 3 and losers bracket best of 1, or 5 and 3. Done as three settings:
   `playoff_best_of` (winners bracket and single elimination), `playoff_best_of_losers` and

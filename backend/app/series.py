@@ -8,7 +8,13 @@ series result. The individual games live in the Game table.
 from sqlmodel import Session, delete, select, update
 
 from app.models import Game, Match, PlayoffBracket, Tournament
-from app.scoring import InvalidScore, MatchNotFound, VersionConflict, submit_score
+from app.scoring import (
+    InvalidScore,
+    MatchNotFound,
+    VersionConflict,
+    enforce_point_cap,
+    submit_score,
+)
 
 
 def best_of_in(tournament: Tournament, section: str) -> int:
@@ -112,6 +118,8 @@ def _save_tally(
             wins2,
             expected_version,
             complete=max(wins1, wins2) > games_needed // 2,
+            # Games won, not points: each game was checked against its own cap.
+            check_cap=False,
         )
     except InvalidScore:
         session.rollback()
@@ -138,6 +146,9 @@ def set_game_in_play(
         raise InvalidScore("this series is decided; correct it to change its games")
     if team1_score < 0 or team2_score < 0:
         raise InvalidScore("a score can't be negative")
+    enforce_point_cap(
+        session, match, team1_score, team2_score, len(games_of(session, match_id)) + 1
+    )
 
     result = session.execute(
         update(Match)
@@ -161,8 +172,9 @@ def record_game(
     session: Session, match_id: int, team1_score: int, team2_score: int, expected_version: int
 ) -> Game:
     """Add the next game of an unfinished series, ending the game in play."""
-    _, games_needed = _open_series(session, match_id, team1_score, team2_score)
+    match, games_needed = _open_series(session, match_id, team1_score, team2_score)
     games = games_of(session, match_id)
+    enforce_point_cap(session, match, team1_score, team2_score, len(games) + 1)
     game = Game(
         match_id=match_id, number=len(games) + 1, team1_score=team1_score, team2_score=team2_score
     )
@@ -186,7 +198,8 @@ def edit_game(
     expected_version: int,
 ) -> Game:
     """Fix a game of an unfinished series; nothing downstream depends on it yet."""
-    _, games_needed = _open_series(session, match_id, team1_score, team2_score)
+    match, games_needed = _open_series(session, match_id, team1_score, team2_score)
+    enforce_point_cap(session, match, team1_score, team2_score, number)
     games = games_of(session, match_id)
     game = next((g for g in games if g.number == number), None)
     if game is None:

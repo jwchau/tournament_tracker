@@ -21,15 +21,15 @@ change, untick the boxes it touches.
 
 ## 0. Main page
 
-- [ ] **Today leads** (**phone**)
+- [x] **Today leads** (**phone**)
   - Setup: a tournament in pool play or playoffs created today, a draft, and one or two older tournaments (one of them complete).
   - Expect: an ink band reading "Tournaments"; under "Today", the tournament being played as a full-width panel with an orange ring, its stage chip lit and a Courts link that opens its courts list; drafts and finished ones today as smaller panels below it. Older tournaments sit under "This week" or "Earlier" as rows with stage, teams and date. Tapping anywhere on a panel or row opens that tournament.
 
-- [ ] **Champions**
+- [x] **Champions**
   - Setup: a complete tournament (its top bracket decided).
   - Expect: finished today, its panel reads "{Team} win the tournament" on a pale amber block, quieter than a live tournament's name; finished earlier, its row ends "Champion {Team}" with the name in amber.
 
-- [ ] **New tournament**
+- [x] **New tournament**
   - Do: signed in, tap New tournament; type a name and Create. Then open it again and Cancel.
   - Expect: a panel opens under the band with the name field focused; Create stays disabled until there's a name; the new tournament appears under Today as a draft and the panel closes. Cancel closes it without creating anything. Signed out, there's no New tournament button.
 
@@ -50,17 +50,17 @@ change, untick the boxes it touches.
   - Setup: a new tournament with no teams yet.
   - Expect: the Manage drawer opens by itself on the page. Once it has teams, the drawer stays closed.
 
-- [ ] **Add a team from the Teams section**
+- [x] **Add a team from the Teams section**
   - Setup: signed in, on any tournament page.
   - Do: under the Teams heading, type a name in the box and press Add team.
   - Expect: the team joins the list below and the count in the heading goes up; the name box empties. Signed out, the form isn't there. Once any pool match has a score, the box and button are disabled with "Pool play has started, so teams can't be added." underneath.
 
-- [ ] **Settings are grouped, saved as changed, and reviewed when they matter**
+- [x] **Settings are grouped, saved as changed, and reviewed when they matter**
   - Setup: a tournament with a pool of teams, before any score.
   - Do: in Manage, change the playoff bracket count and Save.
   - Expect: Save was disabled until the change; a "Review changes" dialog says where pool play would send its teams; Keep editing closes it without saving; Save changes saves. Changing only the name or venue saves with no dialog.
 
-- [ ] **Locks follow play, one setting at a time**
+- [x] **Locks follow play, one setting at a time**
   - Setup: score one pool match.
   - Expect: games per pairing and number of teams per pool are disabled with "Locked: play has started."; court count, advance per pool, bracket count, best-of, date and venue still change. After Advance to playoffs, advance per pool and the bracket count lock too. After the first playoff score, the best-of does.
 
@@ -191,11 +191,11 @@ change, untick the boxes it touches.
   - Setup: a pool in pool play.
   - Expect: the pool name large on the ink strip, then standings (advancing places amber), then the Results grid, then the Schedule. On desktop, standings and grid side by side.
 
-- [ ] **Long pools scroll in their boxes**
+- [x] **Long pools scroll in their boxes**
   - Setup: a pool with 9+ teams (standings), 5+ teams (results) and a schedule.
   - Expect: the standings show eight teams and scroll for the rest under a pinned header (on the pool page and in the tournament page's pool card); the results grid, beside the standings on a laptop, ends level with them (their footer included), and on a phone shows four teams, scrolling under pinned round heads; the schedule shows one round when three matches are played at once, two rounds with two, three with one, opening on the Now round. A capped list fades at the bottom until scrolled to its end, and the page itself never scrolls sideways.
 
-- [ ] **Results grid by round**
+- [x] **Results grid by round**
   - Expect: rounds across, the pool's teams down, no letters or hatched diagonal. A team's cell reads "Ct 1 · vs Setters" when it plays, then adds dark score chips from that team's side (winner's in amber; muted while it's played); "Ref · Ct 2" over the two teams, outlined with no fill, when it refs; "Rest" otherwise. The current round's whole column is outlined.
 
 - [x] **Jump between grid and schedule**
@@ -281,7 +281,7 @@ change, untick the boxes it touches.
 
 ## 7. Across the app
 
-- [ ] **Page trail and arrows**
+- [x] **Page trail and arrows**
   - Do: go Home → a tournament → Pool A → a court; then ← ←, → →. Repeat through a bracket, the courts list and a team. Then open a court from its link on another page, and try it on a phone.
   - Expect: the bar reads Home › tournament › Pool A › Court N, the current page in white and not a link. ← goes up (it's named "Up to …"); the pages you came up from stay on the trail, dimmed, and → goes back down them. A different link drops them. A court opened directly shows the pool or bracket using it. On a phone the trail has its own row, with the current page in view. The browser's back button still goes back through history.
 
@@ -297,10 +297,15 @@ change, untick the boxes it touches.
   - Do: after the next production deploy, open a court on https://tournament.johnchau.org and score a point.
   - Expect: it saves, and the backups folder still gets a copy every 15 minutes.
 
-- [ ] **Pool point cap**
+- [x] **Pool point cap**
   - Do: in Settings, set Pool point cap to 21. Open a pool court and tap +1 for one team up to 21; type 30 into a score box; on the pool page correct a finished match to 25–10.
   - Expect: +1 is disabled at 21 and the typed 30 becomes 21; the correction is refused with "A pool game is capped at 21 points." Clearing the box (no cap) lifts all three. A match finished before the cap was set keeps its score. Playoff matches are never capped by it.
 
-- [ ] **Best-of per bracket**
+- [x] **Best-of per bracket**
   - Setup: a double-elimination tournament with Playoff best-of 3, Losers bracket best-of 1 and Grand final best-of 5, then advance to playoffs.
   - Expect: the bracket page header reads "winners best of 3 · losers best of 1 · final best of 5". A winners match is scored game by game on its court; a losers match is one game with +1/Finish; the grand final (and its reset match) is game by game. "Same as winners" makes the losers bracket and grand final follow Playoff best-of. Once any playoff match is scored, all three settings lock. Single elimination ignores the two new settings.
+
+- [x] **Playoff point cap**
+  - Setup: Playoff best-of 3, Playoff point cap boxes Set 1 = 21, Set 2 = 21, Set 3 = 15; advance to playoffs.
+  - Do: on a playoff court, tap +1 for one team up to 21 in game 1; record it; in game 3 try to go past 15; fix a recorded game to 22; correct a finished series from its bracket panel to a game of 22.
+  - Expect: +1 is disabled at each game's own cap, and it stays disabled after the point has saved; a higher score typed on the scoreboard, in Fix game or in a correction is held at the cap. The Set boxes sit in one tight row. Changing best-of to 5 adds two boxes; to 1 leaves one. A single-game playoff match uses the Set 1 box. Pool games are unaffected. A match scored before the cap was set keeps its score.
