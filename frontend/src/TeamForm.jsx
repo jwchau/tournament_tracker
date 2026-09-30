@@ -12,7 +12,7 @@ export default function TeamForm({ tournamentId, onCreated, disabledReason = nul
   // A double tap would add the team twice.
   const [add, adding] = usePending(async () => {
     try {
-      const team = await createTeam(tournamentId, { name })
+      const team = await createTeam(tournamentId, { name: name.trim() })
       notify(`Team "${team.name}" added`)
       setName('')
       onCreated?.(team)
@@ -26,7 +26,7 @@ export default function TeamForm({ tournamentId, onCreated, disabledReason = nul
 
   function handleSubmit(event) {
     event.preventDefault()
-    if (!disabledReason) add()
+    if (!disabledReason && name.trim()) add()
   }
 
   return (
@@ -35,11 +35,12 @@ export default function TeamForm({ tournamentId, onCreated, disabledReason = nul
       <input
         id="team-name"
         value={name}
+        required
         disabled={Boolean(disabledReason)}
         aria-describedby={disabledReason ? 'team-name-note' : undefined}
         onChange={(event) => setName(event.target.value)}
       />
-      <button type="submit" disabled={adding || Boolean(disabledReason)}>
+      <button type="submit" disabled={adding || Boolean(disabledReason) || !name.trim()}>
         {adding ? 'Adding…' : 'Add team'}
       </button>
       {disabledReason && (

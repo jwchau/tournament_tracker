@@ -48,7 +48,8 @@ test('a team being added cannot be added twice', async () => {
 
   finish({ id: 1, tournament_id: 42, name: 'Ice Wolves' })
 
-  expect(await screen.findByRole('button', { name: 'Add team' })).toBeEnabled()
+  // The name clears once added, so the button stays off until a new one is typed.
+  expect(await screen.findByRole('button', { name: 'Add team' })).toBeDisabled()
 })
 
 test('with a reason to wait, the form is off and says why', () => {
@@ -82,4 +83,17 @@ test('a team the server refuses says why and keeps what was typed', async () => 
   expect(await screen.findByRole('alert')).toHaveTextContent(/pool play has started/)
   expect(onCreated).not.toHaveBeenCalled()
   expect(input).toHaveValue('Ice Wolves')
+})
+
+test('a blank name cannot be submitted', () => {
+  const createTeam = vi.spyOn(api, 'createTeam')
+
+  render(<TeamForm tournamentId={42} />)
+
+  const input = screen.getByLabelText(/team name/i)
+  expect(screen.getByRole('button', { name: /add team/i })).toBeDisabled()
+  fireEvent.change(input, { target: { value: '   ' } })
+  expect(screen.getByRole('button', { name: /add team/i })).toBeDisabled()
+  fireEvent.submit(input.closest('form'))
+  expect(createTeam).not.toHaveBeenCalled()
 })
