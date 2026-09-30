@@ -3,6 +3,26 @@
 What is left open after the work in the git history. Nothing here is broken; each is a
 choice or a tidy-up waiting for its turn.
 
+## Planned (requested, not started)
+
+- [ ] **Point cap settings**: one for pool play and one for bracket play (a maximum score a
+  team can reach). Items 3 and 4 below are how each is set and enforced.
+- [ ] **Rename pool play "slot" to "round", and group a pairing's games together.** With
+  games per pairing = 2, A vs B game 1 and A vs B game 2 are listed one straight after the other.
+- [ ] **Pool play point cap** (tournament setting, in the pool play group). Enforced by both
+  the frontend and the backend: a score above the cap is rejected and not saved.
+- [ ] **Playoff point cap** (tournament setting, in the playoffs group). One integer box per
+  set of the best-of: best of 3 shows three boxes. Enforced in the frontend and the backend.
+- [ ] **Double elimination: a different best-of per bracket** (playoffs setting). For example
+  winners bracket best of 3 and losers bracket best of 1, or 5 and 3. Interacts with the
+  per-set caps above, since each bracket then has its own number of sets.
+
+Decided for the cap settings:
+
+- 0 or blank means no cap.
+- A set is won by reaching the cap (no win-by-two).
+- Matches already scored are kept as they are; a cap only applies to games scored after it is set.
+
 ## Tidy-ups
 
 - **Drop the unused `settings_confirmed` column.** The model no longer has it, but databases

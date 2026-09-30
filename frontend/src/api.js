@@ -49,16 +49,21 @@ async function getJson(path) {
 // between pages reuses what was already loaded instead of refetching it.
 // Every write clears it (once the server has answered), since one change can
 // show up in many cached reads, e.g. a new team changes team counts too.
+// Entries expire after a few seconds, because other phones' writes never reach
+// this cache; without that a phone would show old data until its own next write.
 // Loaded data is also kept in sessionStorage so a reload of the same tab
 // starts warm. Storage can be unavailable (private mode, blocked site data),
 // in which case this is just an in-memory cache.
 const cache = new Map()
 const STORAGE_PREFIX = 'api-cache:'
+const MAX_AGE_MS = 5000
 
 function readStored(path) {
   try {
     const stored = sessionStorage.getItem(STORAGE_PREFIX + path)
-    return stored === null ? undefined : JSON.parse(stored)
+    if (stored === null) return undefined
+    const { at, data } = JSON.parse(stored)
+    return Date.now() - at < MAX_AGE_MS ? data : undefined
   } catch {
     return undefined
   }
@@ -66,7 +71,7 @@ function readStored(path) {
 
 function writeStored(path, data) {
   try {
-    sessionStorage.setItem(STORAGE_PREFIX + path, JSON.stringify(data))
+    sessionStorage.setItem(STORAGE_PREFIX + path, JSON.stringify({ at: Date.now(), data }))
   } catch {
     // Full or unavailable storage only costs a refetch after a reload.
   }
@@ -87,11 +92,18 @@ function getCachedJson(path) {
   if (!cache.has(path)) {
     const stored = readStored(path)
     if (stored !== undefined) {
-      cache.set(path, Promise.resolve(stored))
-      return cache.get(path)
+      const entry = Promise.resolve(stored)
+      cache.set(path, entry)
+      setTimeout(() => {
+        if (cache.get(path) === entry) cache.delete(path)
+      }, MAX_AGE_MS)
+      return entry
     }
     const request = getJson(path)
     cache.set(path, request)
+    setTimeout(() => {
+      if (cache.get(path) === request) cache.delete(path)
+    }, MAX_AGE_MS)
     request.then(
       (data) => {
         if (cache.get(path) === request) writeStored(path, data)
