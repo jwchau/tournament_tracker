@@ -96,6 +96,7 @@ export default function LiveScore({ match, team1Name, team2Name, onScored }) {
         team1Name={team1Name}
         team2Name={team2Name}
         scores={scores}
+        maxScore={match.point_cap}
         onChange={running.change}
       />
       <SaveStatus state={state} onRetry={running.retry} onRefetch={handleRefetch} />

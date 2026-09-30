@@ -387,3 +387,18 @@ test('a correction shows the new score and tells the page the matches changed', 
   })
   expect(onMatchesChange).toHaveBeenLastCalledWith(expect.arrayContaining([corrected]))
 })
+
+test('a correction on the pool page is held to the pool point cap', async () => {
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue(schedule)
+  const preview = vi.spyOn(api, 'previewCorrection').mockResolvedValue({ reset_matches: [] })
+
+  render(inRouter(<PoolSchedule pool={pool} teams={teams} pointCap={21} />))
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Correct Spikers vs Diggers' }))
+  const dialog = screen.getByRole('dialog', { name: 'Correct Spikers vs Diggers' })
+  fireEvent.change(within(dialog).getByLabelText('Spikers score'), { target: { value: '25' } })
+  fireEvent.click(within(dialog).getByRole('button', { name: /review correction/i }))
+
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent('capped at 21 points')
+  expect(preview).not.toHaveBeenCalled()
+})

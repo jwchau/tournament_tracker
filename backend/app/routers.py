@@ -172,8 +172,9 @@ def update_tournament(
     refuse_locked(session, tournament, changed)
 
     for field, value in changes.items():
-        # An automatic advance-per-pool is stored as 0.
-        setattr(tournament, field, (value or 0) if field == "advance_per_pool" else value)
+        # An automatic advance-per-pool and no pool point cap are both stored as 0.
+        zero_for_none = field in ("advance_per_pool", "pool_point_cap")
+        setattr(tournament, field, (value or 0) if zero_for_none else value)
 
     session.add(tournament)
     if "court_count" in changed:

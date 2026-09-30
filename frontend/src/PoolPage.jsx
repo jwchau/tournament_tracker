@@ -32,6 +32,7 @@ export default function PoolPage() {
   const [advancing, setAdvancing] = useState(0)
   const [bracketCount, setBracketCount] = useState(1)
   const [gamesPerPairing, setGamesPerPairing] = useState(1)
+  const [pointCap, setPointCap] = useState(0)
   const [matchesKey, setMatchesKey] = useState(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const navigate = useNavigate()
@@ -57,6 +58,7 @@ export default function PoolPage() {
         setAdvancing(tournament ? tournament.advance_per_pool : 0)
         setBracketCount(tournament?.playoff_bracket_count ?? 1)
         setGamesPerPairing(tournament?.games_per_pairing ?? 1)
+        setPointCap(tournament?.pool_point_cap ?? 0)
       },
       failureMessage: "Couldn't load the pool",
     },
@@ -109,6 +111,7 @@ export default function PoolPage() {
           pool={pool}
           teams={teams}
           gamesPerPairing={gamesPerPairing}
+          pointCap={pointCap}
           onMatchesChange={(matches) => setMatchesKey(matchesSignature(matches))}
         />
       </div>

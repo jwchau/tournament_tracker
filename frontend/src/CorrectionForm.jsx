@@ -19,11 +19,13 @@ function previewMessage(resetMatches) {
  * Re-scores a completed match. A single game takes one corrected score; a
  * best-of series takes every corrected game (loaded from what was recorded,
  * with games addable or removable). Either way the reset cascade is previewed
- * before anything is applied.
+ * before anything is applied. A score above pointCap (0 is none) is refused
+ * here, as the server would.
  */
 export default function CorrectionForm({
   match,
   bestOf = 1,
+  pointCap = 0,
   team1Name = 'Team 1',
   team2Name = 'Team 2',
   onCorrected,
@@ -58,6 +60,11 @@ export default function CorrectionForm({
   async function handleReview(event) {
     event.preventDefault()
     setError(null)
+    const single = [correction.team1Score, correction.team2Score]
+    if (!isSeries && pointCap && single.some((score) => score > pointCap)) {
+      setError(`A pool game is capped at ${pointCap} points.`)
+      return
+    }
     try {
       const result = await previewCorrection(match.id, correction)
       setPreview(result.reset_matches)

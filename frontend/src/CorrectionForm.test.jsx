@@ -171,3 +171,22 @@ test('the dialog opens in the page body, out of any list that would clip it', ()
   expect(dialog.closest('.modal-overlay').parentElement).toBe(document.body)
   expect(within(dialog).getByRole('heading', { name: 'Correct Spikers vs Diggers' })).toBeInTheDocument()
 })
+
+test('a corrected score above the point cap is refused before anything is sent', async () => {
+  const preview = vi.spyOn(api, 'previewCorrection').mockResolvedValue({ reset_matches: [] })
+
+  render(<CorrectionForm match={match} pointCap={21} team1Name="Spikers" team2Name="Diggers" />)
+  enterCorrection('25', '10')
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('capped at 21 points')
+  expect(preview).not.toHaveBeenCalled()
+})
+
+test('a corrected score at the point cap goes to the preview', async () => {
+  const preview = vi.spyOn(api, 'previewCorrection').mockResolvedValue({ reset_matches: [] })
+
+  render(<CorrectionForm match={match} pointCap={21} team1Name="Spikers" team2Name="Diggers" />)
+  enterCorrection('21', '10')
+
+  await waitFor(() => expect(preview).toHaveBeenCalledWith(7, { team1Score: 21, team2Score: 10 }))
+})

@@ -605,3 +605,19 @@ test('a different score on the server when finishing is still a conflict, not ov
   expect(await screen.findByText(/someone else updated this match/i)).toBeInTheDocument()
   expect(submitScore).toHaveBeenCalledTimes(1)
 })
+
+test('a pool match with a point cap cannot be scored past it from the court', async () => {
+  const capped = courtMatch(1, 'Spikers', 'Diggers', {
+    point_cap: 21,
+    team1_score: 21,
+    team2_score: 12,
+    status: 'in_progress',
+  })
+  vi.spyOn(api, 'listCourts').mockResolvedValue(courts({ current: capped, up_next: [] }))
+
+  renderAt('/tournaments/3/courts/2')
+
+  const now = await screen.findByRole('region', { name: 'Now playing' })
+  expect(within(now).getByRole('button', { name: 'Point to Spikers' })).toBeDisabled()
+  expect(within(now).getByRole('button', { name: 'Point to Diggers' })).toBeEnabled()
+})

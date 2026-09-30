@@ -11,8 +11,10 @@ choice or a tidy-up waiting for its turn.
   the UI only: a round holds each pairing once with its games listed together. Storage is
   unchanged (`Match.round` still counts games in play order); the page derives the round and
   game from it and the tournament's games per pairing (`groupByRound`).
-- [ ] **Pool play point cap** (tournament setting, in the pool play group). Enforced by both
-  the frontend and the backend: a score above the cap is rejected and not saved.
+- [x] **Pool play point cap** (tournament setting, in the pool play group). Enforced by both
+  the frontend and the backend: a score above the cap is rejected and not saved. Stored as
+  `pool_point_cap` (0 is none); a court's matches carry `point_cap`, which the playoff cap can
+  fill in for playoff matches.
 - [ ] **Playoff point cap** (tournament setting, in the playoffs group). One integer box per
   set of the best-of: best of 3 shows three boxes. Enforced in the frontend and the backend.
 - [ ] **Double elimination: a different best-of per bracket** (playoffs setting). For example

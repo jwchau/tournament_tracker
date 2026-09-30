@@ -526,7 +526,7 @@ test('the settings are grouped by what they run', async () => {
       .getAllByRole('spinbutton')
       .concat(within(screen.getByRole('group', { name })).queryAllByRole('combobox'))
       .map((field) => field.id)
-  expect(fields('Pool play')).toEqual(['target-pool-size', 'games-per-pairing'])
+  expect(fields('Pool play')).toEqual(['target-pool-size', 'games-per-pairing', 'pool-point-cap'])
   expect(fields('Playoffs')).toEqual(['playoff-bracket-count', 'advance-per-pool', 'playoff-best-of'])
   expect(fields('Courts')).toEqual(['court-count'])
   expect(within(screen.getByRole('group', { name: 'Tournament' })).getByLabelText('Venue')).toBeInTheDocument()
@@ -928,4 +928,29 @@ test('once pool matches have started the add-a-team form is off, with the reason
   expect(within(teams).getByLabelText(/team name/i)).toBeDisabled()
   expect(within(teams).getByRole('button', { name: 'Add team' })).toBeDisabled()
   expect(within(teams).getByText("Pool play has started, so teams can't be added.")).toBeInTheDocument()
+})
+
+test('the pool point cap is set from the pool play settings, and blank means no cap', async () => {
+  mockSettingsPage({ ...settings, pool_point_cap: 0 })
+  mockPreview()
+  const updateTournament = vi
+    .spyOn(api, 'updateTournament')
+    .mockResolvedValue({ ...settings, pool_point_cap: 21 })
+
+  renderAt(1)
+
+  const cap = await screen.findByLabelText(/pool point cap/i)
+  expect(cap).toHaveValue(null)
+  expect(cap.closest('fieldset')).toHaveTextContent('Pool play')
+  fireEvent.change(cap, { target: { value: '21' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+  await waitFor(() => expect(updateTournament).toHaveBeenCalledWith('1', { pool_point_cap: 21 }))
+  await waitFor(() => expect(screen.getByLabelText(/pool point cap/i)).toHaveValue(21))
+
+  fireEvent.change(screen.getByLabelText(/pool point cap/i), { target: { value: '' } })
+  updateTournament.mockResolvedValue({ ...settings, pool_point_cap: 0 })
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+  await waitFor(() => expect(updateTournament).toHaveBeenLastCalledWith('1', { pool_point_cap: 0 }))
 })
