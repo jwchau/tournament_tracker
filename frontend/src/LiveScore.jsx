@@ -100,8 +100,10 @@ export default function LiveScore({ match, team1Name, team2Name, onScored }) {
         onChange={running.change}
       />
       <SaveStatus state={state} onRetry={running.retry} onRefetch={handleRefetch} />
-      {tied && <p className="finish-note">A match can’t finish tied.</p>}
-      {finishError && <p className="finish-note">{finishError}</p>}
+      {/* Always there, so a message comes and goes without moving the board or Finish. */}
+      <p className="finish-note finish-note-slot" role="status">
+        {finishError ?? (tied ? 'A match can’t finish tied.' : '')}
+      </p>
       <button
         type="button"
         className="btn-primary finish-match"
