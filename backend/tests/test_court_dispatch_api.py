@@ -457,3 +457,54 @@ def test_a_bracket_reopened_by_a_correction_takes_its_court_back_once_it_frees(c
     _complete(client, borrowed)
 
     assert _court(client, reset) == 1
+
+
+def _score(client, match_id, team1_score, team2_score, complete=False):
+    match = _get(client, match_id)
+    return client.patch(
+        f"/matches/{match_id}/score",
+        json={
+            "team1_score": team1_score,
+            "team2_score": team2_score,
+            "version": match["version"],
+            "complete": complete,
+        },
+    )
+
+
+def test_courts_are_only_reconsidered_when_a_match_starts_or_finishes(client, monkeypatch):
+    import app.scoring
+
+    ids = _bracket(client, 4, court_count=2)
+    first = ids[("winners", 1, 1)]
+    dispatched = []
+    real = app.scoring.dispatch
+    monkeypatch.setattr(app.scoring, "dispatch", lambda *args: (dispatched.append(1), real(*args))[1])
+
+    # The first point starts the match: courts are reconsidered.
+    assert _score(client, first, 1, 0).status_code == 200
+    assert len(dispatched) == 1
+    # Every point after that changes no court, so nothing is.
+    for points in range(2, 8):
+        assert _score(client, first, points, 3).status_code == 200
+    assert len(dispatched) == 1
+    # Finishing frees the court: reconsidered.
+    assert _score(client, first, 21, 3, complete=True).status_code == 200
+    assert len(dispatched) == 2
+
+
+def test_skipping_court_work_on_a_running_score_leaves_the_courts_as_they_were(client):
+    ids = _bracket(client, 8, court_count=2)
+    first, second = ids[("winners", 1, 1)], ids[("winners", 1, 2)]
+    third = ids[("winners", 1, 3)]
+    courts_before = {match_id: _court(client, match_id) for match_id in (first, second, third)}
+
+    for points in range(1, 6):
+        _score(client, first, points, 0)
+        _score(client, second, 0, points)
+
+    assert {match_id: _court(client, match_id) for match_id in (first, second, third)} == courts_before
+    assert _dispatch(client, first)["queue"][0] == third
+
+    _score(client, first, 21, 5, complete=True)
+    assert _court(client, third) == courts_before[first]

@@ -98,3 +98,42 @@ test('moves a team to another pool by hand', async () => {
   await waitFor(() => expect(updateTeam).toHaveBeenCalledWith(11, { poolId: 2 }))
   expect(onTeamsChanged).toHaveBeenCalledWith([teams[0], { ...teams[1], pool_id: 2 }])
 })
+
+test('generates every pool\'s schedule from one button, in order', async () => {
+  vi.spyOn(api, 'listPools').mockResolvedValue(pools)
+  const generate = vi.spyOn(api, 'generatePoolSchedule').mockResolvedValue([])
+  const onSchedulesChanged = vi.fn()
+
+  render(<PoolsPanel tournamentId={5} teams={teams} onSchedulesChanged={onSchedulesChanged} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Generate all schedules' }))
+
+  await waitFor(() => expect(onSchedulesChanged).toHaveBeenCalledTimes(1))
+  expect(generate.mock.calls.map(([poolId]) => poolId)).toEqual([1, 2])
+})
+
+test('stops at the first pool that cannot be scheduled and leaves the rest', async () => {
+  vi.spyOn(api, 'listPools').mockResolvedValue(pools)
+  const generate = vi
+    .spyOn(api, 'generatePoolSchedule')
+    .mockResolvedValueOnce([])
+    .mockRejectedValueOnce({ json: () => Promise.resolve({ detail: 'a pool needs at least 2 teams' }) })
+  const onSchedulesChanged = vi.fn()
+
+  render(<PoolsPanel tournamentId={5} teams={teams} onSchedulesChanged={onSchedulesChanged} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Generate all schedules' }))
+
+  await waitFor(() => expect(generate).toHaveBeenCalledTimes(2))
+  // Pool A was scheduled, so the page still refreshes what it shows.
+  await waitFor(() => expect(onSchedulesChanged).toHaveBeenCalledTimes(1))
+})
+
+test('there is nothing to generate before any pool exists', async () => {
+  vi.spyOn(api, 'listPools').mockResolvedValue([])
+
+  render(<PoolsPanel tournamentId={5} teams={teams} />)
+
+  await screen.findByRole('button', { name: /auto-assign/i })
+  expect(screen.queryByRole('button', { name: 'Generate all schedules' })).not.toBeInTheDocument()
+})

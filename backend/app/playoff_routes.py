@@ -12,12 +12,13 @@ from app.bracket import (
     validate_teams_for_bracket,
 )
 from app.db import get_session
-from app.dispatch import court_occupancy, dispatch, is_overflow, queue
+from app.dispatch import Snapshot, dispatch
 from app.models import CorrectionLog, Match, Player, PlayoffBracket, Team, Tournament
 from app.pool_routes import _pool_matches, _pools_in_order, _tournament_or_404, pre_playoff_stage
 from app.playoffs import playoff_tiers
 from app.pools import pool_standings
 from app.results import placings
+from app.rows import json_response, match_dicts
 
 router = APIRouter()
 
@@ -61,9 +62,20 @@ def _plan(session: Session, tournament: Tournament) -> Plan:
         raise NotReady("this tournament has already advanced to playoffs")
     standings = []
     pool_finish: dict[int, tuple[str, int]] = {}
-    for pool in _pools_in_order(session, tournament.id):
-        matches = _pool_matches(session, pool.id)
-        teams = session.exec(select(Team).where(Team.pool_id == pool.id)).all()
+    pools = _pools_in_order(session, tournament.id)
+    teams_by_pool: dict[int, list[Team]] = {}
+    matches_by_pool: dict[int, list[Match]] = {}
+    if pools:
+        pool_ids = [pool.id for pool in pools]
+        for team in session.exec(select(Team).where(Team.pool_id.in_(pool_ids)).order_by(Team.id)).all():
+            teams_by_pool.setdefault(team.pool_id, []).append(team)
+        for match in session.exec(
+            select(Match).where(Match.pool_id.in_(pool_ids)).order_by(Match.round, Match.position)
+        ).all():
+            matches_by_pool.setdefault(match.pool_id, []).append(match)
+    for pool in pools:
+        matches = matches_by_pool.get(pool.id, [])
+        teams = teams_by_pool.get(pool.id, [])
         if len(teams) >= 2 and not matches:
             raise NotReady(f"{pool.name} has no schedule yet")
         if any(match.status != "complete" for match in matches):
@@ -385,31 +397,29 @@ class DispatchStatus(SQLModel):
 
 
 @router.get("/playoff-brackets/{bracket_id}/dispatch", response_model=DispatchStatus)
-def get_bracket_dispatch(
-    bracket_id: int, session: Session = Depends(get_session)
-) -> DispatchStatus:
+def get_bracket_dispatch(bracket_id: int, session: Session = Depends(get_session)):
     """The bracket's courts with the match on each, and the matches waiting for one."""
-    if session.get(PlayoffBracket, bracket_id) is None:
+    bracket = session.get(PlayoffBracket, bracket_id)
+    if bracket is None:
         raise HTTPException(status_code=404, detail="Playoff bracket not found")
-    return DispatchStatus(
-        courts=[
-            CourtOccupancy(court=court, match_id=match_id)
-            for court, match_id in court_occupancy(session, bracket_id).items()
-        ],
-        queue=queue(session, bracket_id),
-        overflow=is_overflow(session, bracket_id),
+    snapshot = Snapshot(session, bracket.tournament_id, rows=True)
+    return json_response(
+        {
+            "courts": [
+                {"court": court, "match_id": match_id}
+                for court, match_id in snapshot.occupancy(bracket_id).items()
+            ],
+            "queue": snapshot.queue(bracket_id),
+            "overflow": snapshot.overflow(bracket_id),
+        }
     )
 
 
 @router.get("/playoff-brackets/{bracket_id}/matches", response_model=list[Match])
-def list_playoff_bracket_matches(
-    bracket_id: int, session: Session = Depends(get_session)
-) -> list[Match]:
+def list_playoff_bracket_matches(bracket_id: int, session: Session = Depends(get_session)):
     if session.get(PlayoffBracket, bracket_id) is None:
         raise HTTPException(status_code=404, detail="Playoff bracket not found")
-    return list(
-        session.exec(select(Match).where(Match.playoff_bracket_id == bracket_id)).all()
-    )
+    return json_response(match_dicts(session, Match.playoff_bracket_id == bracket_id))
 
 
 class PlacedTeam(SQLModel):

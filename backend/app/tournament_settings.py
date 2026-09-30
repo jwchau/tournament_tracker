@@ -10,6 +10,9 @@ tournament has got:
 """
 
 from fastapi import HTTPException
+from dataclasses import dataclass
+
+from sqlalchemy import case
 from sqlmodel import Session, func, select
 
 from app.models import Match, PlayoffBracket, Team, Tournament
@@ -31,30 +34,54 @@ BRACKETS_EXIST = "the playoff brackets exist; reset them first"
 PLAYOFF_SCORED = "a playoff match has been scored"
 
 
-def _any_score(session: Session, tournament_id: int, playoffs_only: bool = False) -> bool:
-    query = select(Match.id).where(
-        Match.tournament_id == tournament_id,
-        Match.team1_score.is_not(None) | Match.team2_score.is_not(None),
-    )
-    if playoffs_only:
-        query = query.where(Match.playoff_bracket_id.is_not(None))
-    return session.exec(query).first() is not None
-
-
 def _brackets(session: Session, tournament_id: int) -> int:
     return session.exec(
         select(func.count(PlayoffBracket.id)).where(PlayoffBracket.tournament_id == tournament_id)
     ).one()
 
 
-def setting_locks(session: Session, tournament: Tournament) -> dict[str, str]:
+@dataclass
+class PlayProgress:
+    """How far the tournament has got, from two queries."""
+
+    scored: bool
+    pool_scored: bool
+    playoff_scored: bool
+    brackets: int
+
+
+def play_progress(session: Session, tournament_id: int) -> PlayProgress:
+    has_score = Match.team1_score.is_not(None) | Match.team2_score.is_not(None)
+
+    def count(condition):
+        return func.coalesce(func.sum(case((condition, 1), else_=0)), 0)
+
+    scored, pool_scored, playoff_scored = session.exec(
+        select(
+            count(has_score),
+            count(has_score & Match.pool_id.is_not(None)),
+            count(has_score & Match.playoff_bracket_id.is_not(None)),
+        ).where(Match.tournament_id == tournament_id)
+    ).one()
+    return PlayProgress(
+        scored=scored > 0,
+        pool_scored=pool_scored > 0,
+        playoff_scored=playoff_scored > 0,
+        brackets=_brackets(session, tournament_id),
+    )
+
+
+def setting_locks(
+    session: Session, tournament: Tournament, progress: PlayProgress | None = None
+) -> dict[str, str]:
     """Each setting that can't change right now, with why."""
+    progress = progress or play_progress(session, tournament.id)
     locks: dict[str, str] = {}
-    if _any_score(session, tournament.id):
+    if progress.scored:
         locks["games_per_pairing"] = locks["target_pool_size"] = PLAY_STARTED
-    if _brackets(session, tournament.id):
+    if progress.brackets:
         locks["advance_per_pool"] = locks["playoff_bracket_count"] = BRACKETS_EXIST
-    if _any_score(session, tournament.id, playoffs_only=True):
+    if progress.playoff_scored:
         locks["playoff_best_of"] = PLAYOFF_SCORED
     return locks
 

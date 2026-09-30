@@ -11,6 +11,7 @@ from app.pools import (
     pool_standings,
     snake_assign,
 )
+from app.rows import json_response, match_dicts, match_rows
 
 router = APIRouter()
 
@@ -71,7 +72,17 @@ def auto_assign_pools(
     """
     tournament = _tournament_or_404(session, tournament_id)
     pools = _pools_in_order(session, tournament_id)
-    schedules =[match for pool in pools for match in _pool_matches(session, pool.id)]
+    schedules = (
+        list(
+            session.exec(
+                select(Match)
+                .where(Match.pool_id.in_([pool.id for pool in pools]))
+                .order_by(Match.round, Match.position)
+            ).all()
+        )
+        if pools
+        else []
+    )
     if _any_scored(schedules):
         raise HTTPException(
             status_code=400, detail="pool play has started; teams can't be reassigned"
@@ -102,8 +113,8 @@ def auto_assign_pools(
         session.add(team)
     _sync_pool_stage(session, tournament)
     session.commit()
-    for team in teams:
-        session.refresh(team)
+    # One read puts every expired team's row back, instead of a refresh for each.
+    session.exec(select(Team).where(Team.tournament_id == tournament_id)).all()
     return teams
 
 
@@ -200,9 +211,11 @@ def generate_pool_schedule(pool_id: int, session: Session = Depends(get_session)
 
 
 @router.get("/pools/{pool_id}/matches", response_model=list[Match])
-def list_pool_matches(pool_id: int, session: Session = Depends(get_session)) -> list[Match]:
+def list_pool_matches(pool_id: int, session: Session = Depends(get_session)):
     _pool_or_404(session, pool_id)
-    return _pool_matches(session, pool_id)
+    return json_response(
+        match_dicts(session, Match.pool_id == pool_id, order_by=(Match.round, Match.position))
+    )
 
 
 class StandingsEntry(SQLModel):
@@ -218,26 +231,27 @@ class StandingsEntry(SQLModel):
 
 
 @router.get("/pools/{pool_id}/standings", response_model=list[StandingsEntry])
-def get_pool_standings(
-    pool_id: int, session: Session = Depends(get_session)
-) -> list[StandingsEntry]:
+def get_pool_standings(pool_id: int, session: Session = Depends(get_session)):
     _pool_or_404(session, pool_id)
-    teams = session.exec(select(Team).where(Team.pool_id == pool_id)).all()
-    rows = pool_standings([(team.id, team.name) for team in teams], _pool_matches(session, pool_id))
-    return [
-        StandingsEntry(
-            team_id=row.team_id,
-            name=row.name,
-            played=row.played,
-            wins=row.wins,
-            losses=row.losses,
-            points=row.points,
-            points_for=row.points_for,
-            point_diff=row.point_diff,
-            rank=row.rank,
-        )
-        for row in rows
-    ]
+    teams = session.execute(select(Team.id, Team.name).where(Team.pool_id == pool_id)).all()
+    matches = match_rows(session, Match.pool_id == pool_id, order_by=(Match.round, Match.position))
+    rows = pool_standings([(team_id, name) for team_id, name in teams], matches)
+    return json_response(
+        [
+            {
+                "team_id": row.team_id,
+                "name": row.name,
+                "played": row.played,
+                "wins": row.wins,
+                "losses": row.losses,
+                "points": row.points,
+                "points_for": row.points_for,
+                "point_diff": row.point_diff,
+                "rank": row.rank,
+            }
+            for row in rows
+        ]
+    )
 
 
 @router.patch("/pools/{pool_id}", response_model=Pool)

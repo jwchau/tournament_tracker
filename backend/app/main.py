@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app import dbtrace, readcache
 from app.auth import require_session_for_writes
 from app.auth import router as auth_router
 from app.court_routes import router as court_router
@@ -40,6 +41,13 @@ def _allowed_origins() -> dict:
 def create_app() -> FastAPI:
     # One dependency on every route: reads are public, writes need a session.
     app = FastAPI(lifespan=lifespan, dependencies=[Depends(require_session_for_writes)])
+
+    # Innermost first: the tracer, then the cache (so a hit runs no statements), then CORS.
+    if dbtrace.enabled():
+        dbtrace.install()
+        app.add_middleware(dbtrace.DbTraceMiddleware)
+    if readcache.enabled():
+        app.add_middleware(readcache.ReadCacheMiddleware)
 
     app.add_middleware(
         CORSMiddleware,

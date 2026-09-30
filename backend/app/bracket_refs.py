@@ -27,7 +27,7 @@ from collections import Counter
 
 from sqlmodel import Session, select
 
-from app.dispatch import UNFINISHED, _courts_by_bracket, court_lines, queue
+from app.dispatch import UNFINISHED, Snapshot
 from app.models import Match, Team
 
 
@@ -74,46 +74,69 @@ def _knocked_out(matches: list[Match]) -> dict[int, int]:
     return out
 
 
-def _next_on_court(session: Session, tournament_id: int, match: Match) -> set[int]:
+def _next_on_court(snapshot: Snapshot, lines: dict[int, list[int]], match: Match) -> set[int]:
     """The teams of the match due next on this match's court, as its court page shows it.
 
     Matches set there by hand behind this one, then the front of the queue of
     the bracket that owns the court.
     """
-    line = court_lines(session, tournament_id).get(match.court, [])
+    line = lines.get(match.court, [])
     after = line[line.index(match.id) + 1 :] if match.id in line else []
     owner = next(
-        (
-            bracket_id
-            for bracket_id, courts in _courts_by_bracket(session, tournament_id).items()
-            if match.court in courts
-        ),
+        (bracket_id for bracket_id, courts in snapshot.courts.items() if match.court in courts),
         None,
     )
-    waiting = queue(session, owner) if owner is not None else []
+    waiting = snapshot.queue(owner) if owner is not None else []
     upcoming = [match_id for match_id in after + waiting if match_id != match.id]
     if not upcoming:
         return set()
-    return _teams_of(session.get(Match, upcoming[0]))
+    return _teams_of(snapshot.by_id[upcoming[0]])
+
+
+class RefContext:
+    """What choosing refs for a tournament needs, read once.
+
+    Choosing a ref used to reload the bracket, the teams and every ref count for each
+    match that needed one. The bracket and the courts do not change while refs are
+    chosen (only refs do), so they are read once; the ref counts are kept up to date
+    here as each ref is taken or given up.
+    """
+
+    def __init__(self, session: Session, tournament_id: int, snapshot: Snapshot | None = None) -> None:
+        session.flush()
+        self.snapshot = snapshot or Snapshot(session, tournament_id)
+        self.matches = self.snapshot.matches
+        self.by_bracket: dict[int, list[Match]] = {}
+        for m in self.matches:
+            self.by_bracket.setdefault(m.playoff_bracket_id, []).append(m)
+        self.in_playoffs = {team for m in self.matches for team in _teams_of(m)}
+        self.teams = list(session.exec(select(Team.id).where(Team.tournament_id == tournament_id)).all())
+        self.lines = self.snapshot.lines()
+        self.ref_counts = Counter(
+            session.exec(
+                select(Match.ref_team_id).where(
+                    Match.tournament_id == tournament_id, Match.ref_team_id.is_not(None)
+                )
+            ).all()
+        )
 
 
 def choose_ref(
-    session: Session, tournament_id: int, match: Match, unavailable: set[int]
+    session: Session,
+    tournament_id: int,
+    match: Match,
+    unavailable: set[int],
+    context: RefContext | None = None,
 ) -> int | None:
-    """The best ref for a playoff match on a court, by the order above, or None."""
-    matches = _playoff_matches(session, tournament_id)
-    by_bracket: dict[int, list[Match]] = {}
-    for m in matches:
-        by_bracket.setdefault(m.playoff_bracket_id, []).append(m)
-    in_playoffs = {team for m in matches for team in _teams_of(m)}
-    teams = session.exec(select(Team.id).where(Team.tournament_id == tournament_id)).all()
-    ref_counts = Counter(
-        session.exec(
-            select(Match.ref_team_id).where(
-                Match.tournament_id == tournament_id, Match.ref_team_id.is_not(None)
-            )
-        ).all()
-    )
+    """The best ref for a playoff match on a court, by the order above, or None.
+
+    Pass the RefContext when choosing for several matches in a row; without one it is read here.
+    """
+    context = context or RefContext(session, tournament_id)
+    by_bracket = context.by_bracket
+    in_playoffs = context.in_playoffs
+    teams = context.teams
+    ref_counts = context.ref_counts
 
     own = match.playoff_bracket_id
     own_out = _knocked_out(by_bracket.get(own, []))
@@ -122,7 +145,7 @@ def choose_ref(
     for bracket_id, bracket_matches in by_bracket.items():
         if bracket_id != own:
             other_out.update(_knocked_out(bracket_matches))
-    next_up = _next_on_court(session, tournament_id, match)
+    next_up = _next_on_court(context.snapshot, context.lines, match)
 
     def rank(team: int) -> tuple | None:
         if team in next_up:
@@ -157,7 +180,8 @@ def sync_bracket_refs(session: Session, tournament_id: int) -> None:
     one. Finished matches keep whatever ref they had. Match versions aren't
     touched, like court assignment.
     """
-    matches = sorted(_playoff_matches(session, tournament_id), key=lambda m: (m.court or 0, m.id))
+    snapshot = Snapshot(session, tournament_id)
+    matches = sorted(snapshot.matches, key=lambda m: (m.court or 0, m.id))
     for match in matches:
         if match.status != "complete" and match.court is None and match.ref_set_at is None:
             if match.ref_team_id is not None or match.ref_court is not None:
@@ -181,17 +205,22 @@ def sync_bracket_refs(session: Session, tournament_id: int) -> None:
                 reffing.add(match.ref_team_id)
         else:
             needs_ref.append(match)
+    # Read once, after the refs of matches off the courts were dropped (a match's ref
+    # is chosen from counts that leave out its own).
+    context = RefContext(session, tournament_id, snapshot) if needs_ref else None
     for match in needs_ref:
         # Clear first so the ref being replaced doesn't count toward its own total.
+        if match.ref_team_id is not None:
+            context.ref_counts[match.ref_team_id] -= 1
         match.ref_team_id = None
         session.add(match)
-        session.flush()
-        ref = choose_ref(session, tournament_id, match, playing | reffing)
+        ref = choose_ref(session, tournament_id, match, playing | reffing, context)
         match.ref_team_id = ref
         match.ref_court = match.court
         session.add(match)
         if ref is not None:
             reffing.add(ref)
+            context.ref_counts[ref] += 1
     session.flush()
 
 
