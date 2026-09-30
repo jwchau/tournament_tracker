@@ -1,13 +1,11 @@
-# 10 — Frontend on Cloudflare Workers
-
-## Goal
+# Frontend on Cloudflare Workers
 
 Optionally serve the static Vite frontend from Cloudflare Workers instead
 of the local machine. The backend can't run on Workers (stateful FastAPI
 with file-based SQLite) and stays on Docker Compose behind the Cloudflare
 Tunnel.
 
-## Scope
+## Setup
 
 - `frontend/wrangler.jsonc` configures a Workers Static Assets site.
 - Set up in the Cloudflare dashboard: Workers & Pages → Create → Import a
@@ -28,7 +26,6 @@ variable in the Cloudflare project. Without it the frontend falls back to
 same-origin requests (`API_BASE_URL = ''` in `frontend/src/api.js`), and
 every API call fails because the Worker only serves static assets.
 
-## Done / demoable
-
-The deployed Worker serves the frontend, and it reads and writes data
-through the Tunnel-exposed backend.
+`frontend/public/_headers` gives the built files in `/assets` a year-long cache header (they
+have a content hash in their names), while `index.html` stays revalidated so a new deploy is
+picked up. To check it after a deploy, `curl -I` one of the `/assets/` files.
