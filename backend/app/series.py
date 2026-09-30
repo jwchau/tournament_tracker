@@ -11,12 +11,23 @@ from app.models import Game, Match, PlayoffBracket, Tournament
 from app.scoring import InvalidScore, MatchNotFound, VersionConflict, submit_score
 
 
+def best_of_in(tournament: Tournament, section: str) -> int:
+    """The games a playoff match in this bracket section (winners, losers or
+    grand_final) is played over. The losers bracket and the grand final follow
+    the winners bracket's best-of until they are set on their own."""
+    own = {
+        "losers": tournament.playoff_best_of_losers,
+        "grand_final": tournament.playoff_best_of_final,
+    }.get(section, 0)
+    return own or tournament.playoff_best_of
+
+
 def best_of(session: Session, match: Match) -> int:
-    """How many games a match is played over: the tournament's playoff best-of, or 1."""
+    """How many games a match is played over: its section's playoff best-of, or 1."""
     if match.playoff_bracket_id is None:
         return 1
     bracket = session.get(PlayoffBracket, match.playoff_bracket_id)
-    return session.get(Tournament, bracket.tournament_id).playoff_best_of
+    return best_of_in(session.get(Tournament, bracket.tournament_id), match.bracket)
 
 
 def games_of(session: Session, match_id: int) -> list[Game]:

@@ -10,6 +10,35 @@ export function slotLabel(teamsById, teamId, status) {
   return status === 'complete' ? 'BYE' : 'TBD'
 }
 
+// The games each section of a bracket is played over, from the tournament's
+// settings. The losers bracket and the grand final follow the winners
+// bracket's best-of until they are set on their own (0).
+export function bestOfSettings(tournament) {
+  const winners = tournament.playoff_best_of ?? 1
+  return {
+    winners,
+    losers: tournament.playoff_best_of_losers || winners,
+    grand_final: tournament.playoff_best_of_final || winners,
+  }
+}
+
+// The games a match is played over. `bestOf` is bestOfSettings' object, or a
+// single number for every match.
+export function bestOfFor(bestOf, match) {
+  if (typeof bestOf === 'object' && bestOf !== null) return bestOf[sectionOf(match)]
+  return bestOf ?? 1
+}
+
+// "best of 3" when a bracket plays one series length, each section's when they
+// differ (double elimination only), or nothing when every match is a single game.
+export function bestOfLabel(bestOf, format) {
+  const { winners, losers, grand_final: final } = bestOf
+  if (format !== 'double' || (winners === losers && winners === final)) {
+    return winners > 1 ? `best of ${winners}` : ''
+  }
+  return `winners best of ${winners} · losers best of ${losers} · final best of ${final}`
+}
+
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 // Match id -> place in line for a court (1 = next), from the bracket's

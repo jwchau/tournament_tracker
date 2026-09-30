@@ -300,3 +300,7 @@ change, untick the boxes it touches.
 - [ ] **Pool point cap**
   - Do: in Settings, set Pool point cap to 21. Open a pool court and tap +1 for one team up to 21; type 30 into a score box; on the pool page correct a finished match to 25–10.
   - Expect: +1 is disabled at 21 and the typed 30 becomes 21; the correction is refused with "A pool game is capped at 21 points." Clearing the box (no cap) lifts all three. A match finished before the cap was set keeps its score. Playoff matches are never capped by it.
+
+- [ ] **Best-of per bracket**
+  - Setup: a double-elimination tournament with Playoff best-of 3, Losers bracket best-of 1 and Grand final best-of 5, then advance to playoffs.
+  - Expect: the bracket page header reads "winners best of 3 · losers best of 1 · final best of 5". A winners match is scored game by game on its court; a losers match is one game with +1/Finish; the grand final (and its reset match) is game by game. "Same as winners" makes the losers bracket and grand final follow Playoff best-of. Once any playoff match is scored, all three settings lock. Single elimination ignores the two new settings.

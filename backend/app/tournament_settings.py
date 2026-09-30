@@ -5,7 +5,7 @@ tournament has got:
 
 - games per pairing and pool size: once any match has a score;
 - advance per pool and the number of brackets: once the playoff brackets exist;
-- the playoff best-of: once a playoff match has a score;
+- the playoff best-ofs (winners, losers, grand final): once a playoff match has a score;
 - court count: never. Matches being played stay put (see `redispatch`).
 """
 
@@ -27,7 +27,11 @@ LABELS = {
     "games_per_pairing": "Games per pairing",
     "target_pool_size": "Pool size",
     "playoff_best_of": "Playoff best-of",
+    "playoff_best_of_losers": "Losers bracket best-of",
+    "playoff_best_of_final": "Grand final best-of",
 }
+
+BEST_OF_SETTINGS = ("playoff_best_of", "playoff_best_of_losers", "playoff_best_of_final")
 
 PLAY_STARTED = "play has started"
 BRACKETS_EXIST = "the playoff brackets exist; reset them first"
@@ -82,7 +86,8 @@ def setting_locks(
     if progress.brackets:
         locks["advance_per_pool"] = locks["playoff_bracket_count"] = BRACKETS_EXIST
     if progress.playoff_scored:
-        locks["playoff_best_of"] = PLAYOFF_SCORED
+        for field in BEST_OF_SETTINGS:
+            locks[field] = PLAYOFF_SCORED
     return locks
 
 
@@ -172,6 +177,19 @@ def setting_effects(session: Session, tournament: Tournament, changed: dict) -> 
             f"The {_plural(brackets, 'playoff bracket')} that exist will be played best of "
             f"{changed['playoff_best_of']}."
         )
+
+    if brackets:
+        for field, section in (
+            ("playoff_best_of_losers", "losers bracket"),
+            ("playoff_best_of_final", "grand final"),
+        ):
+            if field in changed:
+                games = changed[field]
+                effects.append(
+                    f"The {section} will be played best of {games}."
+                    if games
+                    else f"The {section} will follow the winners bracket's best-of."
+                )
 
     if ("games_per_pairing" in changed or "target_pool_size" in changed) and pool_matches:
         effects.append(

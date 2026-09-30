@@ -1,21 +1,21 @@
 import { Link } from 'react-router-dom'
 
-import { bothTeamsKnown, matchStatus, refLabel, slotLabel } from './bracketModel'
+import { bestOfFor, bothTeamsKnown, matchStatus, refLabel, slotLabel } from './bracketModel'
 
 // A team's score on a card: a series' games won, a finished game's score, or
 // a single game's running score while it's played (shown muted).
-function cardScore(match, index, bestOf) {
+function cardScore(match, index, games) {
   const score = [match.team1_score, match.team2_score][index]
   const teamId = [match.team1_id, match.team2_id][index]
   if (teamId == null || score == null) return null
-  if (bestOf > 1 || match.status === 'complete') return { value: score, live: false }
+  if (games > 1 || match.status === 'complete') return { value: score, live: false }
   return { value: score, live: true }
 }
 
 // The match's two teams, each with its score as a small flip card.
 export function MatchTeams({ match, teamsById, bestOf }) {
   return [match.team1_id, match.team2_id].map((teamId, index) => {
-    const score = cardScore(match, index, bestOf)
+    const score = cardScore(match, index, bestOfFor(bestOf, match))
     const decided = match.status === 'complete' && match.winner_id != null
     const won = decided && teamId === match.winner_id
     const lost = decided && teamId != null && teamId !== match.winner_id

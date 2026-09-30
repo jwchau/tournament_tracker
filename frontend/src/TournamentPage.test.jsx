@@ -527,7 +527,13 @@ test('the settings are grouped by what they run', async () => {
       .concat(within(screen.getByRole('group', { name })).queryAllByRole('combobox'))
       .map((field) => field.id)
   expect(fields('Pool play')).toEqual(['target-pool-size', 'games-per-pairing', 'pool-point-cap'])
-  expect(fields('Playoffs')).toEqual(['playoff-bracket-count', 'advance-per-pool', 'playoff-best-of'])
+  expect(fields('Playoffs')).toEqual([
+    'playoff-bracket-count',
+    'advance-per-pool',
+    'playoff-best-of',
+    'playoff-best-of-losers',
+    'playoff-best-of-final',
+  ])
   expect(fields('Courts')).toEqual(['court-count'])
   expect(within(screen.getByRole('group', { name: 'Tournament' })).getByLabelText('Venue')).toBeInTheDocument()
 })
@@ -953,4 +959,34 @@ test('the pool point cap is set from the pool play settings, and blank means no 
   fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
   await waitFor(() => expect(updateTournament).toHaveBeenLastCalledWith('1', { pool_point_cap: 0 }))
+})
+
+test('the losers bracket and grand final best-of are chosen separately, defaulting to the winners bracket’s', async () => {
+  mockSettingsPage({ ...settings, playoff_best_of: 3, playoff_best_of_losers: 0, playoff_best_of_final: 0 })
+  mockPreview()
+  const updateTournament = vi
+    .spyOn(api, 'updateTournament')
+    .mockImplementation(async (id, values) => ({ ...settings, ...values }))
+
+  renderAt(1)
+
+  const losers = await screen.findByLabelText(/losers bracket best-of/i)
+  expect(losers).toHaveValue('0')
+  expect([...losers.options].map((option) => option.textContent)).toEqual([
+    'Same as winners',
+    '1',
+    '3',
+    '5',
+    '7',
+  ])
+  fireEvent.change(losers, { target: { value: '1' } })
+  fireEvent.change(screen.getByLabelText(/grand final best-of/i), { target: { value: '5' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+  await waitFor(() =>
+    expect(updateTournament).toHaveBeenCalledWith('1', {
+      playoff_best_of_losers: 1,
+      playoff_best_of_final: 5,
+    }),
+  )
 })

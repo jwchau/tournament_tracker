@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { getPlayoffBracket, getTournament, getTournamentResults, listTeams } from './api'
+import { bestOfLabel, bestOfSettings } from './bracketModel'
 import BracketBoard from './BracketBoard'
 import Loading from './Loading'
 import NotFound from './NotFound'
@@ -107,7 +108,8 @@ export default function BracketPage() {
   if (status === 'not-found') return <NotFound thing="Bracket" />
   if (status !== 'ready') return <Loading label="Loading bracket" rows={6} />
 
-  const bestOf = tournament.playoff_best_of ?? 1
+  const bestOf = bestOfSettings(tournament)
+  const bestOfText = bestOfLabel(bestOf, bracket.format)
   const format = bracket.format === 'double' ? 'Double elimination' : 'Single elimination'
 
   return (
@@ -117,7 +119,7 @@ export default function BracketPage() {
           <h2>Bracket {bracket.tier}</h2>
           <p className="court-strip-label">
             {format}
-            {bestOf > 1 && ` · best of ${bestOf}`}
+            {bestOfText && ` · ${bestOfText}`}
           </p>
         </div>
         <Link to={`/tournaments/${bracket.tournament_id}`} className="court-strip-link">
