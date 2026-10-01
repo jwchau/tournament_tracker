@@ -10,8 +10,17 @@
   opened up. Everyone who could sign in before becomes an admin. `app.users create`
   takes `--role` (a scorekeeper unless told), `app.users set-role <username> <role>`
   changes one, and admins get `GET /users`, `POST /users` and `PATCH /users/{id}/role`
-  (never their own). A role change signs that user out everywhere. The app's screens
-  don't use roles yet.
+  (never their own). A role change signs that user out everywhere.
+
+- **User roles in the app.** Controls a role can't use are hidden, not greyed out. A
+  scorekeeper still sees every page, read-only like a spectator, plus the court links and
+  Hold; setup (teams, players, settings, pools, schedules, refs, playoffs, corrections,
+  New tournament) needs an organizer, and Delete tournament an admin. Admins get a
+  **Users** link in the nav bar to a page that lists everyone, changes another user's
+  role from a dropdown (your own row is read-only), and adds a user with a username, an
+  initial password and a role. A write the server refuses for want of the right role
+  says "You don't have permission to do that" and re-reads who is signed in, in case
+  their role just changed.
 
 - **The Teams section, redesigned.** It is one panel: a toolbar on top with the add-team
   box (its button fused to the box) and a **Show players** switch, and under it the

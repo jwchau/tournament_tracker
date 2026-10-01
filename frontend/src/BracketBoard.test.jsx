@@ -1,5 +1,5 @@
 import { MemoryRouter } from 'react-router-dom'
-import { act, boardOf, fireEvent, render, screen, waitFor, within } from './testUtils'
+import { act, boardOf, fireEvent, render, screen, userWithRole, waitFor, within } from './testUtils'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
@@ -281,6 +281,39 @@ test('signed out, a match opens with its court but no tools', async () => {
   const semi = panel('Semis · match 2')
   expect(within(semi).getByRole('link', { name: 'Watch Court 2' })).toBeInTheDocument()
   expect(within(semi).queryByRole('button', { name: /save schedule|hold|correct/i })).not.toBeInTheDocument()
+})
+
+test('a scorekeeper can hold a match from its panel and go to its court, but not schedule or ref it', async () => {
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(
+    fiveTeamBracket.map((match) => (match.id === 16 ? { ...match, court: 2 } : match)),
+  ))
+  vi.spyOn(api, 'getRefOptions').mockResolvedValue([])
+
+  renderBoard({}, { user: userWithRole('scorekeeper') })
+
+  await open('Semis · match 2: Spikers vs Diggers')
+  const semi = panel('Semis · match 2')
+  expect(within(semi).getByRole('link', { name: 'Score on Court 2' })).toBeInTheDocument()
+  expect(within(semi).getByRole('button', { name: 'Hold Semis · match 2' })).toBeInTheDocument()
+  expect(within(semi).queryByRole('button', { name: /save schedule|correct/i })).not.toBeInTheDocument()
+  expect(within(semi).queryByRole('combobox')).not.toBeInTheDocument()
+})
+
+test('a scorekeeper cannot correct a finished match', async () => {
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(
+    fiveTeamBracket.map((match) =>
+      match.id === 16
+        ? { ...match, status: 'complete', team1_score: 21, team2_score: 17, winner_id: 20 }
+        : match,
+    ),
+  ))
+
+  renderBoard({}, { user: userWithRole('scorekeeper') })
+
+  await open('Semis · match 2: Spikers vs Diggers')
+  expect(
+    within(panel('Semis · match 2')).queryByRole('button', { name: /correct/i }),
+  ).not.toBeInTheDocument()
 })
 
 test('keeps polling, so a result scored on the court shows up', async () => {

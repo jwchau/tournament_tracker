@@ -9,7 +9,7 @@ import {
   listPlayoffBrackets,
   resetPlayoffBrackets,
 } from './api'
-import { useAuth } from './auth'
+import { hasRole, useAuth } from './auth'
 import BracketDiagram from './BracketDiagram'
 import ConfirmModal from './ConfirmModal'
 import Loading from './Loading'
@@ -118,7 +118,7 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
             </li>
           ))}
         </ul>
-        {user && resettable && (
+        {hasRole(user, 'organizer') && resettable && (
           <button type="button" onClick={() => setConfirmingReset(true)}>
             Reset brackets
           </button>
@@ -136,7 +136,7 @@ export default function PlayoffsPanel({ tournamentId, teams, hasPools, bestOf = 
     )
   }
 
-  if (!user) {
+  if (!hasRole(user, 'organizer')) {
     return (
       <p className="setup-note">
         {hasPools && blocker ? blocker : 'The playoffs haven’t started yet.'}

@@ -1,4 +1,4 @@
-import { boardOf, fireEvent, render, screen, waitFor, within } from './testUtils'
+import { boardOf, fireEvent, render, screen, userWithRole, waitFor, within } from './testUtils'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
@@ -823,6 +823,32 @@ test('signed out, the tournament is read-only', async () => {
   expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
 })
 
+test('a scorekeeper sees the pools and playoffs as read-only, like a spectator', async () => {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([
+    { id: 10, tournament_id: 1, name: 'Ice Wolves', pool_id: 7, player_count: 2 },
+  ])
+  vi.spyOn(api, 'listPools').mockResolvedValue([{ id: 7, tournament_id: 1, name: 'Pool A', courts: [1] }])
+  vi.spyOn(api, 'getPoolStandings').mockResolvedValue([])
+  vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([])
+  vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'Pool A has no schedule yet' })
+
+  renderTeamsPageAs(userWithRole('scorekeeper'))
+
+  expect(await screen.findByRole('link', { name: 'Open Pool A' })).toBeInTheDocument()
+  expect(await screen.findByText('Pool A has no schedule yet')).toBeInTheDocument()
+  expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
+    'Refresh standings',
+  ])
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+})
+
 function mockCompleteTournament(stage) {
   vi.spyOn(api, 'getTournament').mockResolvedValue({
     id: 1,
@@ -1142,6 +1168,48 @@ test('players are added to a team from the teams list, and its count and roster 
   fireEvent.submit(aces.closest('form'))
   await waitFor(() => expect(createPlayer).toHaveBeenCalledWith(11, { name: 'Rae Chen' }))
   expect(await screen.findByText((_, el) => el.className === 'team-count' && el.textContent === '1 player')).toBeInTheDocument()
+})
+
+function renderTeamsPageAs(user) {
+  return render(
+    <MemoryRouter initialEntries={['/tournaments/1']}>
+      <NotificationProvider>
+        <Routes>
+          <Route path="/tournaments/:tournamentId" element={<TournamentPage />} />
+        </Routes>
+      </NotificationProvider>
+    </MemoryRouter>,
+    { user },
+  )
+}
+
+test('a scorekeeper sees the tournament but none of its setup controls', async () => {
+  mockTeamsPage()
+
+  renderTeamsPageAs(userWithRole('scorekeeper'))
+
+  await screen.findByRole('link', { name: 'Ice Wolves' })
+  expect(screen.queryByPlaceholderText('Team name')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /add players to/i })).not.toBeInTheDocument()
+  expect(screen.queryByText('Settings')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Delete tournament', hidden: true })).not.toBeInTheDocument()
+})
+
+test('an organizer can set a tournament up but only an admin can delete it', async () => {
+  mockTeamsPage()
+  const organizer = renderTeamsPageAs(userWithRole('organizer'))
+
+  await screen.findByRole('link', { name: 'Ice Wolves' })
+  expect(screen.getByPlaceholderText('Team name')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Add players to Ice Wolves' })).toBeInTheDocument()
+  expect(screen.getByText('Settings')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Delete tournament', hidden: true })).not.toBeInTheDocument()
+  organizer.unmount()
+
+  renderTeamsPageAs(userWithRole('admin'))
+
+  await screen.findByRole('link', { name: 'Ice Wolves' })
+  expect(screen.getByRole('button', { name: 'Delete tournament', hidden: true })).toBeInTheDocument()
 })
 
 test('signed out, the teams list has no way to add players', async () => {

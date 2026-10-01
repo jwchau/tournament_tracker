@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { generatePoolSchedule, getPoolMatches, setMatchRef } from './api'
-import { useAuth } from './auth'
+import { hasRole, useAuth } from './auth'
 import CorrectionForm from './CorrectionForm'
 import Loading from './Loading'
 import { refName, refUpdate } from './refModel'
@@ -257,7 +257,7 @@ export default function PoolSchedule({
   if (matches === null) return <Loading label="Loading schedule" rows={4} />
 
   if (matches.length === 0) {
-    return user ? (
+    return hasRole(user, 'organizer') ? (
       <form onSubmit={handleGenerate} className="pool-generate">
         <p className="setup-note">No schedule yet. Generate one from the pool’s teams and courts.</p>
         <button type="submit">Generate schedule</button>
@@ -341,7 +341,7 @@ export default function PoolSchedule({
                               match={match}
                               eligible={idle}
                               nameOf={nameOf}
-                              signedIn={Boolean(user)}
+                              signedIn={hasRole(user, 'organizer')}
                               onChange={handleRefChange}
                               saving={savingRefId === match.id}
                               error={refError?.matchId === match.id ? refError.message : null}
@@ -378,7 +378,7 @@ export default function PoolSchedule({
                               {user ? `Score on Court ${match.court}` : `Watch Court ${match.court}`}
                             </Link>
                           )}
-                          {user && complete && (
+                          {hasRole(user, 'organizer') && complete && (
                             <CorrectionForm
                               key={`${match.id}-${match.version}`}
                               match={match}

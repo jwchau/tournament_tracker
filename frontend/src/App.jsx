@@ -16,6 +16,7 @@ import { PageTrailProvider } from './PageTrailContext'
 import PoolPage from './PoolPage'
 import TeamPage from './TeamPage'
 import TournamentPage from './TournamentPage'
+import UsersPage from './UsersPage'
 
 function App() {
   return (
@@ -54,6 +55,7 @@ function App() {
                   <Route path="/tournaments/:tournamentId/courts/:court" element={<CourtPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/account" element={<AccountPage />} />
+                  <Route path="/users" element={<UsersPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

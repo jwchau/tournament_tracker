@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { listTournaments } from './api'
-import { useAuth } from './auth'
+import { hasRole, useAuth } from './auth'
 import { IN_PLAY, groupTournaments, heldOn, shortDate, tournamentName } from './homeModel'
 import Loading from './Loading'
 import { useNotifyFailure } from './useNotifyFailure'
@@ -111,14 +111,14 @@ export default function MainPage() {
     <div className="home-page">
       <header className="court-strip home-band">
         <h2>Tournaments</h2>
-        {user && !creating && (
+        {hasRole(user, 'organizer') && !creating && (
           <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
             New tournament
           </button>
         )}
       </header>
 
-      {user && creating && (
+      {hasRole(user, 'organizer') && creating && (
         <section className="home-create" aria-labelledby="new-tournament-heading">
           <h3 id="new-tournament-heading">New tournament</h3>
           <TournamentForm onCreated={handleCreated} onCancel={() => setCreating(false)} />
@@ -129,7 +129,7 @@ export default function MainPage() {
         <Loading label="Loading tournaments" rows={4} />
       ) : groups.length === 0 ? (
         <p className="setup-note">
-          No tournaments yet.{user && !creating ? ' Start one with New tournament.' : ''}
+          No tournaments yet.{hasRole(user, 'organizer') && !creating ? ' Start one with New tournament.' : ''}
         </p>
       ) : (
         groups.map((group) => (

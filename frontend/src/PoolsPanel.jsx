@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { autoAssignPools, createPool, generatePoolSchedule, listPools, updateTeam } from './api'
-import { useAuth } from './auth'
+import { hasRole, useAuth } from './auth'
 import Loading from './Loading'
 import { useNotify } from './NotificationContext'
 import { useNotifyFailure } from './useNotifyFailure'
@@ -94,7 +94,7 @@ export default function PoolsPanel({
     <>
       {pools.length === 0 ? (
         <p className="setup-note">
-          {user
+          {hasRole(user, 'organizer')
             ? 'No pools yet. Open Edit pools to auto-assign the teams or add pools by hand.'
             : 'The pools haven’t been drawn yet.'}
         </p>
@@ -113,7 +113,7 @@ export default function PoolsPanel({
         </ul>
       )}
 
-      {user && (
+      {hasRole(user, 'organizer') && (
         <details className="disclosure">
           <summary>Edit pools</summary>
           <div className="disclosure-body">

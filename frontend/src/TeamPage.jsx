@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import ConfirmModal from './ConfirmModal'
 import { deletePlayer, deleteTeam, getTeam, listPlayers, updateTeam } from './api'
-import { useAuth } from './auth'
+import { hasRole, useAuth } from './auth'
 import Loading from './Loading'
 import NotFound from './NotFound'
 import { useNotify } from './NotificationContext'
@@ -99,7 +99,7 @@ export default function TeamPage() {
       </header>
 
       <div className="team-sheet">
-        {user && (
+        {hasRole(user, 'organizer') && (
           <section className="board-section" aria-labelledby="team-details-heading">
             <h3 id="team-details-heading">Details</h3>
             <form onSubmit={handleSave} className="team-panel team-details">
@@ -134,7 +134,7 @@ export default function TeamPage() {
               {players.map((player) => (
                 <li key={player.id}>
                   <span className="roster-name">{player.name}</span>
-                  {user && (
+                  {hasRole(user, 'organizer') && (
                     <button
                       type="button"
                       aria-label={`Remove ${player.name}`}
@@ -146,7 +146,7 @@ export default function TeamPage() {
                 </li>
               ))}
             </ul>
-            {user && (
+            {hasRole(user, 'organizer') && (
               <PlayerForm
                 teamId={teamId}
                 onCreated={(player) => setPlayers((current) => [...current, player])}
@@ -156,7 +156,7 @@ export default function TeamPage() {
         </section>
       </div>
 
-      {user && (
+      {hasRole(user, 'organizer') && (
         <section className="danger-zone">
           <button type="button" onClick={() => setConfirmingDelete(true)}>
             Delete team

@@ -130,6 +130,43 @@ test('a 401 from a write goes to the unauthorized handler', async () => {
   api.setUnauthorizedHandler(null)
 })
 
+test('a 403 from a write goes to the forbidden handler, not the sign-in redirect', async () => {
+  const unauthorized = vi.fn()
+  const forbidden = vi.fn()
+  api.setUnauthorizedHandler(unauthorized)
+  api.setForbiddenHandler(forbidden)
+  fetchMock.mockImplementation(() => jsonResponse({ detail: "your role can't do that" }, 403))
+
+  await expect(api.createTeam(1, { name: 'Ice Wolves' })).rejects.toMatchObject({ status: 403 })
+  await expect(api.deletePool(3)).rejects.toMatchObject({ status: 403 })
+
+  expect(forbidden).toHaveBeenCalledTimes(2)
+  expect(unauthorized).not.toHaveBeenCalled()
+  api.setUnauthorizedHandler(null)
+  api.setForbiddenHandler(null)
+})
+
+test('the admin calls list users, create one, and change a role', async () => {
+  fetchMock.mockImplementation(() => jsonResponse([]))
+
+  await api.listUsers()
+  await api.createUser({ username: 'keeper', password: 'a-long-enough-one', role: 'organizer' })
+  await api.changeUserRole(4, 'admin')
+
+  const [list, create, change] = fetchMock.mock.calls
+  expect(list[0]).toMatch(/\/users$/)
+  expect(create[0]).toMatch(/\/users$/)
+  expect(create[1]).toMatchObject({ method: 'POST' })
+  expect(JSON.parse(create[1].body)).toEqual({
+    username: 'keeper',
+    password: 'a-long-enough-one',
+    role: 'organizer',
+  })
+  expect(change[0]).toMatch(/\/users\/4\/role$/)
+  expect(change[1]).toMatchObject({ method: 'PATCH' })
+  expect(JSON.parse(change[1].body)).toEqual({ role: 'admin' })
+})
+
 test('a failed sign-in is an error to show, not a redirect', async () => {
   const handler = vi.fn()
   api.setUnauthorizedHandler(handler)

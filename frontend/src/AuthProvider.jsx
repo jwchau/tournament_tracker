@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
-import { getMe, login, logout, setUnauthorizedHandler } from './api'
+import { getMe, login, logout, setForbiddenHandler, setUnauthorizedHandler } from './api'
 import { AuthContext, loginPath } from './auth'
 import { useNotify } from './NotificationContext'
 
@@ -33,6 +33,19 @@ export default function AuthProvider({ children }) {
     // notify is a new function every render; the handler only needs the latest path.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPath, navigate])
+
+  useEffect(() => {
+    setForbiddenHandler(() => {
+      notify("You don't have permission to do that", { type: 'error' })
+      // Their role may have changed since this page loaded; show what they can do now.
+      getMe()
+        .then(setUser)
+        .catch(() => {})
+    })
+    return () => setForbiddenHandler(null)
+    // notify is a new function every render; the handler only needs the latest one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const signIn = useCallback(async (credentials) => {
     setUser(await login(credentials))

@@ -201,6 +201,19 @@ test('signed out, the nav bar offers to sign in and come back to this page', asy
   expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument()
 })
 
+test('only an admin gets a Users link', async () => {
+  const getMe = vi.spyOn(api, 'getMe').mockResolvedValue({ id: 2, username: 'boss', role: 'organizer' })
+
+  const organizer = renderApp()
+  expect(await screen.findByRole('link', { name: 'boss' })).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Users' })).not.toBeInTheDocument()
+  organizer.unmount()
+
+  getMe.mockResolvedValue({ id: 1, username: 'root', role: 'admin' })
+  renderApp()
+  expect(await screen.findByRole('link', { name: 'Users' })).toHaveAttribute('href', '/users')
+})
+
 test('signed in, the nav bar shows the username and signs out', async () => {
   vi.spyOn(api, 'getMe').mockResolvedValue({ id: 1, username: 'organizer' })
   const logout = vi.spyOn(api, 'logout').mockResolvedValue(null)

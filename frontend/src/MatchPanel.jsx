@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { getRefOptions } from './api'
+import { hasRole, useAuth } from './auth'
 import { bestOfFor, bothTeamsKnown, pointCapsFor, slotLabel, teamName } from './bracketModel'
 import CorrectionForm from './CorrectionForm'
 import { CourtLink, MatchStatus, MatchTeams } from './MatchCard'
@@ -18,8 +19,9 @@ function CloseIcon() {
 
 /**
  * One match of the bracket, opened from its card or box: its teams and
- * score, where it stands, and a link to its court. Signed in, the
- * organizer's tools for it: court and time, hold or release, correct.
+ * score, where it stands, and a link to its court. Signed in, tools for it:
+ * hold or release for anyone, and court and time, the ref and a correction
+ * for an organizer.
  */
 export default function MatchPanel({
   match,
@@ -47,6 +49,8 @@ export default function MatchPanel({
     return () => document.removeEventListener('keydown', handleKey)
   }, [onClose])
 
+  const { user } = useAuth()
+  const canSetUp = hasRole(user, 'organizer')
   const name = label ?? matchName(match)
   const teams = `${slotLabel(teamsById, match.team1_id, match.status)} vs ${slotLabel(teamsById, match.team2_id, match.status)}`
   const playable = bothTeamsKnown(match) && match.status !== 'complete'
@@ -54,7 +58,7 @@ export default function MatchPanel({
   const holdable = playable && !match.on_hold && match.team1_score == null && match.team2_score == null
   const correctable = bothTeamsKnown(match) && match.status === 'complete'
   // A ref can be set once both teams are known, and changed after the match.
-  const reffable = signedIn && bothTeamsKnown(match)
+  const reffable = canSetUp && bothTeamsKnown(match)
 
   // Who could ref depends on who is on a court, so ask again as the match changes.
   const [refOptions, setRefOptions] = useState([])
@@ -108,7 +112,7 @@ export default function MatchPanel({
           <CourtLink match={match} tournamentId={tournamentId} signedIn={signedIn} />
         </p>
 
-        {signedIn && playable && (
+        {canSetUp && playable && (
           <section className="match-panel-tools" aria-label="Court and time">
             <h4>Court and time</h4>
             <ScheduleForm
@@ -149,7 +153,7 @@ export default function MatchPanel({
           </section>
         )}
 
-        {signedIn && correctable && (
+        {canSetUp && correctable && (
           <section className="match-panel-tools" aria-label="Correct">
             <CorrectionForm
               key={`${match.id}-${match.version}`}
