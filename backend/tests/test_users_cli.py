@@ -37,6 +37,16 @@ def test_create_adds_a_user_with_a_hashed_password(engine, typed, capsys):
     assert "cli-fake-password" not in capsys.readouterr().out
 
 
+def test_create_makes_a_scorekeeper_unless_told_a_role(engine, typed):
+    typed.extend(["cli-fake-password"] * 4)
+
+    assert main(["create", "keeper"], bind=engine) == 0
+    assert main(["create", "boss", "--role", "organizer"], bind=engine) == 0
+
+    assert _user(engine, "keeper").role == "scorekeeper"
+    assert _user(engine, "boss").role == "organizer"
+
+
 def test_create_refuses_passwords_that_do_not_match(engine, typed, capsys):
     typed.extend(["cli-fake-password", "something-else"])
 
@@ -85,6 +95,27 @@ def test_reset_password_signs_the_user_out_everywhere(engine, typed):
 
     with Session(engine) as session:
         assert session_user(session, token) is None
+
+
+def test_set_role_changes_the_role_and_signs_the_user_out_everywhere(engine, typed):
+    typed.extend(["cli-fake-password", "cli-fake-password"])
+    main(["create", "keeper"], bind=engine)
+    with Session(engine) as session:
+        token = start_session(session, _user(engine, "keeper"))
+
+    assert main(["set-role", "keeper", "admin"], bind=engine) == 0
+
+    assert _user(engine, "keeper").role == "admin"
+    with Session(engine) as session:
+        assert session_user(session, token) is None
+
+
+def test_set_role_needs_a_known_user_and_a_role(engine, capsys):
+    assert main(["set-role", "nobody", "admin"], bind=engine) == 1
+    assert "no user" in capsys.readouterr().err
+
+    assert main(["set-role", "nobody"], bind=engine) == 1
+    assert "needs a role" in capsys.readouterr().err
 
 
 def test_reset_password_for_an_unknown_user_fails(engine, typed, capsys):

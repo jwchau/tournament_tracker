@@ -13,12 +13,17 @@ class User(SQLModel, table=True):
     username: str = Field(sa_column=Column(String(collation="NOCASE"), unique=True, nullable=False))
     # argon2id; the plain-text password is never stored.
     password_hash: str
+    # New users start at the lowest role. The server default is what a database
+    # that predates roles backfills into its existing users: all of them could do
+    # everything then, so they become admins.
+    role: str = Field(default="scorekeeper", sa_column_kwargs={"server_default": "admin"})
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class UserPublic(SQLModel):
     id: int
     username: str
+    role: str
 
 
 class UserSession(SQLModel, table=True):

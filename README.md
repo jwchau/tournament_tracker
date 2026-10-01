@@ -66,6 +66,18 @@ cd backend && uv run python -m app.users create <username>
 docker compose exec backend uv run python -m app.users create <username>
 ```
 
+Every user has a role, and each role can do what the ones below it can:
+
+- **scorekeeper**: enter and finish scores, and hold a match.
+- **organizer**: set a tournament up (teams, players, pools, schedule, refs,
+  playoffs, settings) and correct finished matches.
+- **admin**: delete a tournament, and manage users.
+
+A new user is a scorekeeper unless you pass `--role organizer` or
+`--role admin` to `create`. `... app.users set-role <username> <role>` changes
+one. Admins can also add users and change other users' roles in the app (never
+their own); a role change signs that user out everywhere.
+
 `... app.users reset-password <username>` sets a new password for a user who
 lost theirs and signs them out everywhere. Five wrong passwords for a
 username lock it out for 15 minutes. Session cookies last 14 days; set

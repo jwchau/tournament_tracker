@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **User roles (the server side).** Every user is a scorekeeper, an organizer or an
+  admin, and each can do what the ones below it can. A scorekeeper enters and finishes
+  scores and holds a match; an organizer also sets a tournament up and corrects finished
+  matches; an admin also deletes a tournament and manages users. A write the role
+  doesn't allow gets 403, and any new write route needs an organizer until it is
+  opened up. Everyone who could sign in before becomes an admin. `app.users create`
+  takes `--role` (a scorekeeper unless told), `app.users set-role <username> <role>`
+  changes one, and admins get `GET /users`, `POST /users` and `PATCH /users/{id}/role`
+  (never their own). A role change signs that user out everywhere. The app's screens
+  don't use roles yet.
+
 - **The Teams section, redesigned.** It is one panel: a toolbar on top with the add-team
   box (its button fused to the box) and a **Show players** switch, and under it the
   teams as a strip of cards that scrolls sideways when there are more than fit, so a

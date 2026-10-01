@@ -10,12 +10,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from tests.helpers import sign_in
 
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 # Signing in is the one write a signed-out user has to be able to make.
 PUBLIC_WRITES = {("POST", "/auth/login")}
-# Says who is signed in, so a spectator gets 401 there (tested with the auth API).
-PRIVATE_READS = {("GET", "/auth/me")}
+# Says who is signed in, so a spectator gets 401 there (tested with the auth API); and the
+# list of users, which only an admin sees (tested with the roles API).
+PRIVATE_READS = {("GET", "/auth/me"), ("GET", "/users")}
 
 
 def _routes(methods):
@@ -53,6 +55,41 @@ def test_every_write_route_refuses_signed_out_requests(anonymous_client, method,
 def test_every_read_route_stays_public(anonymous_client, method, path):
     # There's no data, so most answer 404; the point is they don't ask for a session.
     assert anonymous_client.request(method, _url(path)).status_code not in (401, 403)
+
+
+# What a scorekeeper does from a court, and looking after their own sign-in.
+SCOREKEEPER_WRITES = [
+    ("PATCH", "/matches/{match_id}/score"),
+    ("POST", "/matches/{match_id}/games"),
+    ("PUT", "/matches/{match_id}/game-in-play"),
+    ("PATCH", "/matches/{match_id}/games/{number}"),
+    ("PATCH", "/matches/{match_id}/hold"),
+    ("POST", "/auth/logout"),
+    ("POST", "/auth/password"),
+]
+
+
+@pytest.fixture(name="scorekeeper_client")
+def scorekeeper_client_fixture(anonymous_client, session):
+    sign_in(anonymous_client, session, "keeper", role="scorekeeper")
+    return anonymous_client
+
+
+@pytest.mark.parametrize(
+    ("method", "path"), SCOREKEEPER_WRITES, ids=[" ".join(route) for route in SCOREKEEPER_WRITES]
+)
+def test_a_scorekeeper_can_use_the_court_and_sign_in_routes(scorekeeper_client, method, path):
+    # There's no data, so most answer 404 or 422; the point is the role isn't what stops them.
+    assert scorekeeper_client.request(method, _url(path)).status_code not in (401, 403)
+
+
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [route for route in WRITE_ROUTES if route not in SCOREKEEPER_WRITES],
+    ids=" ".join,
+)
+def test_every_other_write_route_refuses_a_scorekeeper(scorekeeper_client, method, path):
+    assert scorekeeper_client.request(method, _url(path)).status_code == 403
 
 
 def test_signed_out_users_can_read_what_signed_in_users_wrote(client, anonymous_client):
