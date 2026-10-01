@@ -343,18 +343,15 @@ export function getTournamentResults(tournamentId) {
   return getCachedJson(`/tournaments/${tournamentId}/results`)
 }
 
-export function getPlayoffBracketMatches(bracketId) {
-  return getJson(`/playoff-brackets/${bracketId}/matches`)
+// A bracket's matches and its dispatch (the courts and who is in line for
+// them) in one read: { matches, dispatch }.
+export function getBracketBoard(bracketId) {
+  return getJson(`/playoff-brackets/${bracketId}/board`)
 }
 
 // Every court with its current match and what's next; live, so never cached.
 export function listCourts(tournamentId) {
   return getJson(`/tournaments/${tournamentId}/courts`)
-}
-
-// The bracket's courts and who's in line for them.
-export function getBracketDispatch(bracketId) {
-  return getJson(`/playoff-brackets/${bracketId}/dispatch`)
 }
 
 export function holdMatch(matchId, { onHold, version }) {

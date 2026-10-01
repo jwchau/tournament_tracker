@@ -31,8 +31,6 @@ Each changes how the app looks or behaves, so none was done unasked.
   done" line, or a checklist of what to do next, would say where an organizer is.
 - **Self-hosting the fonts**: no third-party request, cacheable forever. It means adding font
   files or a `@fontsource` dependency.
-- **One request for a bracket's matches and dispatch** instead of two: halves a bracket
-  viewer's requests, but adds an endpoint.
 - **Prebuilt queries** for the hottest reads: a little more off a cold read, across many call sites.
 
 ## Decided against

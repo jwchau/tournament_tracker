@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from './testUtils'
+import { boardOf, fireEvent, render, screen, waitFor, within } from './testUtils'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
@@ -266,7 +266,7 @@ test('has a playoffs section showing the tier brackets once the tournament has a
     { id: 30, tournament_id: 1, tier: 1, format: 'single' },
   ])
   vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'advanced' })
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([])
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf([]))
 
   renderAt(1)
 
@@ -289,7 +289,7 @@ test('a tournament that went straight to a bracket shows no standings section', 
     { id: 30, tournament_id: 1, tier: 1, format: 'single' },
   ])
   vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'advanced' })
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([])
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf([]))
 
   renderAt(1)
 
@@ -640,7 +640,7 @@ test('generating a bracket locks advance per pool and the bracket count without 
     .mockResolvedValue([{ id: 30, tournament_id: 1, tier: 1, format: 'single', has_scores: false }])
   vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'x' })
   vi.spyOn(api, 'generateBracket').mockResolvedValue([])
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([])
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf([]))
 
   renderAt(1)
 

@@ -68,8 +68,7 @@ def tournament_page(client, ids):
         client, "GET /tournaments/{id}/playoff-brackets", "GET", f"/tournaments/{tid}/playoff-brackets"
     ).json()
     for bracket in brackets:
-        call(client, "GET /playoff-brackets/{id}/matches", "GET", f"/playoff-brackets/{bracket['id']}/matches")
-        call(client, "GET /playoff-brackets/{id}/dispatch", "GET", f"/playoff-brackets/{bracket['id']}/dispatch")
+        call(client, "GET /playoff-brackets/{id}/board", "GET", f"/playoff-brackets/{bracket['id']}/board")
 
 
 def pool_page(client, ids):
@@ -85,8 +84,7 @@ def bracket_page(client, ids):
         return
     bid = brackets[0]["id"]
     call(client, "GET /playoff-brackets/{id}", "GET", f"/playoff-brackets/{bid}")
-    call(client, "GET /playoff-brackets/{id}/matches", "GET", f"/playoff-brackets/{bid}/matches")
-    call(client, "GET /playoff-brackets/{id}/dispatch", "GET", f"/playoff-brackets/{bid}/dispatch")
+    call(client, "GET /playoff-brackets/{id}/board", "GET", f"/playoff-brackets/{bid}/board")
 
 
 def courts_page(client, ids):

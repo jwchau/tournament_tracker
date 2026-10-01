@@ -9,7 +9,7 @@ from pydantic import TypeAdapter
 
 from app.court_routes import CourtSummary
 from app.models import Match, TournamentDetail
-from app.playoff_routes import DispatchStatus
+from app.playoff_routes import BracketBoard, DispatchStatus
 from app.pool_routes import StandingsEntry
 from tests.test_playoff_advancement_api import _advance, _play, _setup
 
@@ -75,6 +75,8 @@ def test_playoff_reads_match_their_models(client):
         assert matches
         dispatch = _same_as_its_model(client.get(f"/playoff-brackets/{bracket['id']}/dispatch"), DispatchStatus)
         assert dispatch["courts"]
+        board = _same_as_its_model(client.get(f"/playoff-brackets/{bracket['id']}/board"), BracketBoard)
+        assert board == {"matches": matches, "dispatch": dispatch}
     courts = _same_as_its_model(client.get(f"/tournaments/{tournament_id}/courts"), list[CourtSummary])
     assert {court["use"] for court in courts} == {"playoff"}
     current = [court["current"] for court in courts if court["current"]]
@@ -88,5 +90,6 @@ def test_a_missing_pool_or_bracket_is_still_a_404(client):
     assert client.get("/pools/999/standings").status_code == 404
     assert client.get("/playoff-brackets/999/matches").status_code == 404
     assert client.get("/playoff-brackets/999/dispatch").status_code == 404
+    assert client.get("/playoff-brackets/999/board").status_code == 404
     assert client.get("/tournaments/999").status_code == 404
     assert client.get("/tournaments/999/courts").status_code == 404

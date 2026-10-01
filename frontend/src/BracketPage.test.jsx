@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from './testUtils'
+import { act, boardOf, fireEvent, render, screen, waitFor, within } from './testUtils'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
@@ -33,9 +33,9 @@ test('shows one tier with its format, team names, courts, and a link back', asyn
     { id: 10, name: 'Spikers' },
     { id: 11, name: 'Diggers' },
   ])
-  const matches = vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([
+  const matches = vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf([
     { id: 1, bracket: 'winners', round: 1, position: 1, team1_id: 10, team2_id: 11, status: 'ready', version: 1 },
-  ])
+  ]))
 
   renderAt(30)
 
@@ -60,9 +60,9 @@ test('a best-of tournament says so, and its matches are scored on the court', as
     { id: 10, name: 'Spikers' },
     { id: 11, name: 'Diggers' },
   ])
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf([
     { id: 1, bracket: 'winners', round: 1, position: 1, team1_id: 10, team2_id: 11, status: 'ready', court: 1, version: 1 },
-  ])
+  ]))
 
   renderAt(30)
 
@@ -95,9 +95,9 @@ test('signed out, the bracket is read-only', async () => {
     { id: 10, name: 'Spikers' },
     { id: 11, name: 'Diggers' },
   ])
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf([
     { id: 1, bracket: 'winners', round: 1, position: 1, team1_id: 10, team2_id: 11, status: 'ready', version: 1 },
-  ])
+  ]))
 
   render(
     <MemoryRouter initialEntries={['/brackets/30']}>
@@ -120,7 +120,7 @@ test('once the tournament is complete, lists this tier\'s full placings', async 
   vi.spyOn(api, 'getPlayoffBracket').mockResolvedValue({ id: 31, tournament_id: 3, tier: 2 })
   vi.spyOn(api, 'getTournament').mockResolvedValue({ id: 3, court_count: 2, stage: 'complete' })
   vi.spyOn(api, 'listTeams').mockResolvedValue([])
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([])
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf([]))
   vi.spyOn(api, 'getTournamentResults').mockResolvedValue([
     {
       tier: 1,
@@ -160,7 +160,7 @@ test('double-elimination placings name the losers-bracket round', async () => {
   vi.spyOn(api, 'getPlayoffBracket').mockResolvedValue({ id: 30, tournament_id: 3, tier: 1 })
   vi.spyOn(api, 'getTournament').mockResolvedValue({ id: 3, court_count: 2, stage: 'complete' })
   vi.spyOn(api, 'listTeams').mockResolvedValue([])
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([])
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf([]))
   vi.spyOn(api, 'getTournamentResults').mockResolvedValue([
     {
       tier: 1,
@@ -194,7 +194,7 @@ test('a final scored on the court shows the placings without a reload', async ()
     { id: 10, name: 'Spikers' },
     { id: 11, name: 'Diggers' },
   ])
-  const loadMatches = vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([final])
+  const loadMatches = vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf([final]))
   vi.spyOn(api, 'getTournamentResults').mockResolvedValue([
     {
       tier: 1,
@@ -210,9 +210,11 @@ test('a final scored on the court shows the placings without a reload', async ()
 
   await screen.findByRole('button', { name: 'Final: Spikers vs Diggers' })
   // The scorekeeper finishes it on the court; the next poll brings it here.
-  loadMatches.mockResolvedValue([
-    { ...final, team1_score: 21, team2_score: 15, status: 'complete', winner_id: 10, version: 2 },
-  ])
+  loadMatches.mockResolvedValue(
+    boardOf([
+      { ...final, team1_score: 21, team2_score: 15, status: 'complete', winner_id: 10, version: 2 },
+    ]),
+  )
   await act(() => vi.advanceTimersByTimeAsync(4000))
 
   const placings = await screen.findByRole('region', { name: 'Placings' })
@@ -223,7 +225,7 @@ test('shows no placings while the tournament is still being played', async () =>
   vi.spyOn(api, 'getPlayoffBracket').mockResolvedValue({ id: 30, tournament_id: 3, tier: 1 })
   vi.spyOn(api, 'getTournament').mockResolvedValue({ id: 3, court_count: 2, stage: 'playoffs' })
   vi.spyOn(api, 'listTeams').mockResolvedValue([])
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([])
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf([]))
   vi.spyOn(api, 'getTournamentResults')
 
   renderAt(30)

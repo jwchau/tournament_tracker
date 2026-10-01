@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from './testUtils'
+import { boardOf, fireEvent, render, screen, waitFor, within } from './testUtils'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
@@ -22,7 +22,7 @@ const seeding = {
 }
 
 beforeEach(() => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([])
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf([]))
   vi.spyOn(api, 'getPlayoffSeeding').mockResolvedValue(seeding)
 })
 
@@ -83,8 +83,8 @@ test('advancing once pools are complete shows each tier bracket', async () => {
   expect(await screen.findByRole('heading', { name: 'Bracket 1' })).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: 'Bracket 2' })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /advance to playoffs/i })).not.toBeInTheDocument()
-  await waitFor(() => expect(api.getPlayoffBracketMatches).toHaveBeenCalledWith(30))
-  expect(api.getPlayoffBracketMatches).toHaveBeenCalledWith(31)
+  await waitFor(() => expect(api.getBracketBoard).toHaveBeenCalledWith(30))
+  expect(api.getBracketBoard).toHaveBeenCalledWith(31)
 })
 
 test('shows a loading placeholder until the brackets arrive', () => {
@@ -171,10 +171,10 @@ test('brackets can no longer be reset once any playoff match has a score', async
 test('tier diagrams here are read-only and link to each bracket page for scoring', async () => {
   vi.spyOn(api, 'listPlayoffBrackets').mockResolvedValue([tierBrackets[0]])
   vi.spyOn(api, 'getPlayoffReadiness').mockResolvedValue({ ready: false, reason: 'advanced' })
-  api.getPlayoffBracketMatches.mockResolvedValue([
+  api.getBracketBoard.mockResolvedValue(boardOf([
     { id: 1, bracket: 'winners', round: 1, position: 1, team1_id: 10, team2_id: 20, status: 'ready', version: 1 },
     { id: 2, bracket: 'winners', round: 1, position: 2, team1_id: 30, team2_id: 40, status: 'complete', winner_id: 30, team1_score: 21, team2_score: 9, version: 2 },
-  ])
+  ]))
 
   renderPanel()
 

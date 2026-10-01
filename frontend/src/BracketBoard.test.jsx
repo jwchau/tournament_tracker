@@ -1,5 +1,5 @@
 import { MemoryRouter } from 'react-router-dom'
-import { act, fireEvent, render, screen, waitFor, within } from './testUtils'
+import { act, boardOf, fireEvent, render, screen, waitFor, within } from './testUtils'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
@@ -41,7 +41,7 @@ const open = async (name) => fireEvent.click(await screen.findByRole('button', {
 const panel = (name) => screen.getByRole('dialog', { name })
 
 test('shows the bracket round by round, opening on the round being played', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(fiveTeamBracket))
 
   renderBoard()
 
@@ -60,9 +60,9 @@ test('shows the bracket round by round, opening on the round being played', asyn
 })
 
 test('a match on a court links to its scoreboard', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(
     fiveTeamBracket.map((match) => (match.id === 16 ? { ...match, court: 2 } : match)),
-  )
+  ))
 
   renderBoard()
 
@@ -75,7 +75,7 @@ test('a match on a court links to its scoreboard', async () => {
 })
 
 test('opening a match shows its tools, only once both teams are known', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(fiveTeamBracket))
 
   renderBoard()
 
@@ -95,7 +95,7 @@ test('opening a match shows its tools, only once both teams are known', async ()
 })
 
 test('Escape closes the match', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(fiveTeamBracket))
 
   renderBoard()
   await open('Semis · match 2: Spikers vs Diggers')
@@ -110,7 +110,7 @@ test('a finished match between two teams can be corrected; a bye cannot', async 
       ? { ...match, status: 'complete', team1_score: 21, team2_score: 10, winner_id: 20 }
       : match,
   )
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(played)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(played))
 
   renderBoard()
 
@@ -136,10 +136,9 @@ const dispatched = [
 
 test('a match can be held and released from its panel', async () => {
   const held = { ...dispatched[2], on_hold: true, version: 2 }
-  const loadMatches = vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(dispatched)
-  vi.spyOn(api, 'getBracketDispatch').mockResolvedValue({ courts: [], queue: [], overflow: false })
+  const loadMatches = vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(dispatched, { courts: [], queue: [], overflow: false }))
   const holdMatch = vi.spyOn(api, 'holdMatch').mockImplementation(async () => {
-    loadMatches.mockResolvedValue(dispatched.map((m) => (m.id === 3 ? held : m)))
+    loadMatches.mockResolvedValue(boardOf(dispatched.map((m) => (m.id === 3 ? held : m))))
     return held
   })
 
@@ -161,8 +160,7 @@ test('a match can be held and released from its panel', async () => {
 })
 
 test('a refused hold says why', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(dispatched)
-  vi.spyOn(api, 'getBracketDispatch').mockResolvedValue({ courts: [], queue: [], overflow: false })
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(dispatched, { courts: [], queue: [], overflow: false }))
   vi.spyOn(api, 'holdMatch').mockRejectedValue({
     json: () => Promise.resolve({ detail: "this match has a score, so it can't be put on hold" }),
   })
@@ -175,12 +173,11 @@ test('a refused hold says why', async () => {
 })
 
 test('a match waiting for a court shows its place in line', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(dispatched)
-  vi.spyOn(api, 'getBracketDispatch').mockResolvedValue({
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(dispatched, {
     courts: [{ court: 1, match_id: 1 }, { court: 2, match_id: 2 }],
     queue: [4, 99, 3],
     overflow: false,
-  })
+  }))
 
   renderBoard()
 
@@ -190,7 +187,7 @@ test('a match waiting for a court shows its place in line', async () => {
 })
 
 test('a saved court and time show on the match right away', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(fiveTeamBracket))
   vi.spyOn(api, 'scheduleMatch').mockImplementation((id, { court, scheduledTime }) =>
     Promise.resolve({
       ...fiveTeamBracket.find((match) => match.id === id),
@@ -230,10 +227,10 @@ const fourTeamDouble = [
 ]
 
 test('double elimination names its winners, losers and grand final rounds', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf([
     ...fourTeamDouble,
     doubleMatch(6, 'grand_final', 1, 1),
-  ])
+  ]))
 
   renderBoard()
 
@@ -253,9 +250,9 @@ test('a correction that removes the reset match takes it off the bracket right a
   })
   const resetMatch = doubleMatch(7, 'grand_final', 2, 1, { team1_id: 20, team2_id: 30, status: 'ready' })
   const corrected = { ...grandFinal, team1_score: 21, team2_score: 10, winner_id: 20, version: 2 }
-  vi.spyOn(api, 'getPlayoffBracketMatches')
-    .mockResolvedValueOnce([...fourTeamDouble, grandFinal, resetMatch])
-    .mockResolvedValue([...fourTeamDouble, corrected])
+  vi.spyOn(api, 'getBracketBoard')
+    .mockResolvedValueOnce(boardOf([...fourTeamDouble, grandFinal, resetMatch]))
+    .mockResolvedValue(boardOf([...fourTeamDouble, corrected]))
   vi.spyOn(api, 'previewCorrection').mockResolvedValue({ reset_matches: [resetMatch] })
   vi.spyOn(api, 'correctScore').mockResolvedValue({ match: corrected, reset_matches: [resetMatch] })
 
@@ -274,9 +271,9 @@ test('a correction that removes the reset match takes it off the bracket right a
 })
 
 test('signed out, a match opens with its court but no tools', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(
     fiveTeamBracket.map((match) => (match.id === 16 ? { ...match, court: 2 } : match)),
-  )
+  ))
 
   renderBoard({}, { user: null })
 
@@ -295,11 +292,11 @@ test('keeps polling, so a result scored on the court shows up', async () => {
   )
   // The semifinal is on a court, so the bracket is live and polled every 4s.
   const onCourt = fiveTeamBracket.map((match) => (match.id === 16 ? { ...match, court: 1 } : match))
-  const loadMatches = vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(onCourt)
+  const loadMatches = vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(onCourt))
 
   renderBoard()
   await act(() => vi.advanceTimersByTimeAsync(0))
-  loadMatches.mockResolvedValue(finished)
+  loadMatches.mockResolvedValue(boardOf(finished))
   await act(() => vi.advanceTimersByTimeAsync(4000))
 
   const semis = screen.getByRole('region', { name: 'Semis' })
@@ -316,9 +313,9 @@ const semiOnCourt = (fields = {}) =>
   )
 
 test('a card shows its ref once the match has a court', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(
     semiOnCourt().map((match) => (match.id === 12 ? { ...match, ref_team_id: null } : match)),
-  )
+  ))
 
   renderBoard({ teams: withRefs })
 
@@ -330,7 +327,7 @@ test('a card shows its ref once the match has a court', async () => {
 })
 
 test('an on-court match nobody can ref shows N/A', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(semiOnCourt({ ref_team_id: null }))
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(semiOnCourt({ ref_team_id: null })))
 
   renderBoard({ teams: withRefs })
 
@@ -339,15 +336,14 @@ test('an on-court match nobody can ref shows N/A', async () => {
 })
 
 test('the panel Ref dropdown lists the teams free to ref and saves a choice', async () => {
-  const loadMatches = vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(semiOnCourt())
-  vi.spyOn(api, 'getBracketDispatch').mockResolvedValue({ courts: [], queue: [], overflow: false })
+  const loadMatches = vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(semiOnCourt(), { courts: [], queue: [], overflow: false }))
   vi.spyOn(api, 'getRefOptions').mockResolvedValue([
     { id: 40, name: 'Aces' },
     { id: 50, name: 'Blocks' },
   ])
   const byHand = { ref_team_id: 50, ref_set_at: '2026-09-28T10:00:00', version: 2 }
   const setMatchRef = vi.spyOn(api, 'setMatchRef').mockImplementation(async () => {
-    loadMatches.mockResolvedValue(semiOnCourt(byHand))
+    loadMatches.mockResolvedValue(boardOf(semiOnCourt(byHand)))
     return semiOnCourt(byHand).find((match) => match.id === 16)
   })
 
@@ -373,8 +369,7 @@ test('the panel Ref dropdown lists the teams free to ref and saves a choice', as
 })
 
 test('a refused ref change says why', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(semiOnCourt())
-  vi.spyOn(api, 'getBracketDispatch').mockResolvedValue({ courts: [], queue: [], overflow: false })
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(semiOnCourt(), { courts: [], queue: [], overflow: false }))
   vi.spyOn(api, 'getRefOptions').mockResolvedValue([{ id: 50, name: 'Blocks' }])
   vi.spyOn(api, 'setMatchRef').mockRejectedValue({
     json: () => Promise.resolve({ detail: "Blocks can't ref this match: it is on a court" }),
@@ -391,7 +386,7 @@ test('a refused ref change says why', async () => {
 })
 
 test('signed out, the panel shows the ref but no Ref dropdown', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(semiOnCourt())
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(semiOnCourt()))
 
   renderBoard({ teams: withRefs }, { user: null })
   await open('Semis · match 2: Spikers vs Diggers')
@@ -403,7 +398,7 @@ test('signed out, the panel shows the ref but no Ref dropdown', async () => {
 // How often the bracket is read depends on how live it is.
 async function pollsAfter(matches, waitMs) {
   vi.useFakeTimers()
-  const load = vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(matches)
+  const load = vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(matches))
   renderBoard()
   await act(() => vi.advanceTimersByTimeAsync(0))
   const first = load.mock.calls.length
@@ -436,7 +431,7 @@ test('a finished bracket is read every 30 seconds', async () => {
 test('a hidden tab is not read, and is read again the moment it is shown', async () => {
   const live = fiveTeamBracket.map((match) => (match.id === 16 ? { ...match, court: 2 } : match))
   vi.useFakeTimers()
-  const load = vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(live)
+  const load = vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(live))
   renderBoard()
   await act(() => vi.advanceTimersByTimeAsync(0))
   const hide = (hidden) => {
@@ -461,7 +456,7 @@ test('a correction from the match panel holds a typed score at the playoff point
       ? { ...match, status: 'complete', team1_score: 15, team2_score: 10, winner_id: 20 }
       : match,
   )
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(played)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(played))
   const preview = vi.spyOn(api, 'previewCorrection').mockResolvedValue({ reset_matches: [] })
 
   renderBoard({ bestOf: bestOfSettings({ playoff_point_caps: [15] }) })
