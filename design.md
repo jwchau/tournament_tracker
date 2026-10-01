@@ -651,7 +651,7 @@ Content max-width is 1200px. The court view's scoreboard, Finish match and Up ne
 
 ### Type roles as used
 
-Loaded from Google Fonts: Unbounded 400/700, Inter 400 to 700, Manrope 500/700, DM Sans 500.
+Served from the app's own origin (the `@fontsource` packages, imported in `src/fonts.js`, Latin subset): Unbounded 400/700, Inter 400 to 700, Manrope 500/700, DM Sans 500 as a variable font (the family is named `DM Sans Variable`). A font is never fetched from another site, and `fonts.test.js` checks that every font token has its files.
 
 - **Unbounded 700 (`--display`)** is used for names, section heads and scoreboard numerals:
   - Tournament name (`h2.board-title`): 32/36, and 48/48 from 768px, tracking -0.02em. The pool name on the pool page's strip (`.pool-page .court-strip h2`) and the tier on the bracket page's strip (`.bracket-page .court-strip h2`, "Bracket A") take the same 32/36 and 48/48, so they outrank the page's section heads, and so does "Tournaments" on the main page's band (`.home-band h2`).

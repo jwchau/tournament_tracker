@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Fonts served from the app's own origin.** The four fonts (Unbounded, Inter,
+  Manrope, DM Sans) are bundled with the app, not loaded from Google, so a page
+  makes no request to another site, still draws in the right fonts when Google
+  is slow or blocked, and the files are cached for a year with the rest of the
+  assets. Only the Latin subset is bundled; any other character shows in the
+  system font.
 - **Point caps per bracket section**: the losers bracket and the grand final can
   have playoff point caps of their own, one box per set of their best-of. Each
   has a "Same as winners" checkbox, on by default, so existing tournaments are

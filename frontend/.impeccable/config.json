@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          "src/fonts.test.js"
+        ],
+        "createdAt": "2026-10-01T01:43:40.863Z",
+        "reason": "regexes that read font-family declarations in a test file, not fonts the app uses (agent: false positive)"
+      }
+    ]
+  }
+}
