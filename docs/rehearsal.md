@@ -26,6 +26,8 @@ cloudflared tunnel run tournament-tracker            # in another terminal
 
 - [ ] `https://tournament.johnchau.org` loads and the header shows
       "Backend status: connected".
+- [ ] The fonts come from the app's own address: the browser's network tab
+      shows no requests to Google Fonts.
 - [ ] **Upgrading from the last event's database:** run `scripts/backup-db`
       before the rebuild above. After it, the backend log shows a clean start
       and last event's tournaments still open.
@@ -50,21 +52,34 @@ On the laptop, signed in:
    | Losers bracket best-of | 1 |
    | Grand final best-of | 5 |
    | Pool point cap | 21 |
-   | Playoff point cap | Set 1 and Set 2: 21, Set 3: 15, the rest blank |
+   | Winners bracket point cap | Set 1 and Set 2: 21, Set 3: 15 |
+   | Losers bracket point cap | Untick "same as winners": Set 1: 15 |
+   | Grand final point cap | Untick "same as winners": 21, 21, 21, 21, 15 |
 
 - [ ] Saving with no teams or pools yet goes straight through, with no review dialog.
 - [ ] Teams and pools can be added straight away.
 - [ ] Set a date and a venue: both show under the tournament's name.
-- [ ] The playoff point cap shows five boxes (the grand final is best of 5),
-      and three after the grand final is set back to "Same as winners".
+- [ ] The point caps show three rows: winners (three boxes), losers (one box)
+      and grand final (five boxes). Each of the losers and grand final rows
+      has a "same as winners" checkbox, ticked by default. Ticking it again
+      drops the row's own boxes, and unticking it copies the winners' caps.
 
 ## 2. Teams
 
-1. Add 14 teams, each with a seed from 1 to 14.
-2. Delete one team (e.g. seed 14).
-3. Open another team and change its seed to 14, the one freed by the
+1. Add 14 teams, each with a seed from 1 to 14. The add-team box is in the
+   toolbar at the top of the Teams panel.
+2. On two teams' cards, tap **+ Player** and add three players with Enter
+   after each, then **Done**.
+3. Delete one team (e.g. seed 14).
+4. Open another team and change its seed to 14, the one freed by the
    deletion.
 
+- [ ] The teams show as a strip of cards that scrolls sideways, and a long
+      list or an open add box doesn't spill off the page.
+- [ ] After each Enter the name box is empty, still open and focused, and the
+      card's player count goes up. With **Show players** on, the roster
+      lists them.
+- [ ] Signed out (Phone C), the cards have no **+ Player** button.
 - [ ] 13 teams remain, and the team page shows the new seed.
 
 ## 3. Pools and schedules
@@ -92,13 +107,16 @@ On the laptop, signed in:
    scores on both, then tap **Submit score** on both within a second.
 
 - [ ] Each court moves on to its next match after a score, with no reload.
+- [ ] A court with nothing on it says "Nothing on this court right now" and
+      links to the court where its own pool is playing. Its tile in the
+      courts list names that court.
 - [ ] In the conflict, one phone saves and the other shows a version
       conflict with **Refetch latest**. Refetching shows the saved score.
       (The API answers 409.)
 - [ ] Phone C sees scores and standings update within about 10 seconds,
       and has no score or edit controls.
-- [ ] On a court, +1 stops at 21 and stays disabled after the point has
-      saved, and a typed 30 is held at 21.
+- [ ] On a court, +1 stops at 21 (the pool cap) and stays disabled after the
+      point has saved, and a typed 30 is held at 21.
 - [ ] The court view shows the match's ref. Choose a different ref for one
       match from the pool page; the court view follows.
 - [ ] Play every pool match to the end.
@@ -144,8 +162,12 @@ Along the way:
 
 - [ ] Courts that free up get the next match in line on their own, and each
       match on a court has a ref.
-- [ ] A series game stops at its own set's cap (21, 21, then 15), and a
-      single losers-bracket game at 21.
+- [ ] A winners-bracket series game stops at its own set's cap (21, 21,
+      then 15), a losers-bracket game at 15, and the grand final at 21, 21,
+      21, 21, then 15.
+- [ ] A court that frees up while its bracket has matches on other courts
+      links to the one where its own bracket is playing, and says it is
+      waiting for a free court when a match is queued for it with no court.
 - [ ] The correction preview lists the later matches it resets. After you
       confirm, those matches are reset and the right team moves on.
 - [ ] Winning the grand final from the lower bracket creates a reset match,
@@ -221,7 +243,9 @@ password was reset to a random value that wasn't kept.
 
 ### Run 2 — (date)
 
-Played on the v1.1.0 build (refs, point caps, best-of per section, rounds).
+Played on the v1.1.0 build plus what has merged since (point caps per
+section, next-match pointers on idle courts, adding players from the Teams
+list, the redesigned Teams panel, self-hosted fonts, one request per bracket).
 
 | # | Step | What happened | Bug? | Test / fix |
 | - | ---- | ------------- | ---- | ---------- |
