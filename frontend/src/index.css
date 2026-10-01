@@ -1492,6 +1492,26 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   flex: none;
 }
 
+.settings-form .cap-rows {
+  gap: 16px;
+}
+
+.settings-form .cap-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* A 48px-tall target, like the other controls in the form. */
+.settings-form .cap-same {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  font: 500 16px/24px var(--ui);
+  color: var(--text);
+}
+
 .settings-form .cap-boxes {
   flex: none;
   flex-direction: row;

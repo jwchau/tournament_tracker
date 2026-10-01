@@ -16,10 +16,6 @@ choice or a tidy-up waiting for its turn.
 
 Each changes how the app looks or behaves, so none was done unasked.
 
-- **Point caps per bracket section.** The playoff point cap has one box per set, shared by the
-  winners bracket, the losers bracket and the grand final (set 1's box applies to all three).
-  Separate boxes per section would let the grand final be played to a different score, at
-  the price of up to three rows of boxes in Settings.
 - **Faster score entry on the court.** Tab goes from the left score to its +1 button, not to
   the right score, and the Finish confirmation is not answered by Enter (about 7 actions per
   match). Reordering focus would make +1/−1 harder for keyboard users.

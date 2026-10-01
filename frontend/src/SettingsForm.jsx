@@ -104,16 +104,49 @@ const capsText = (boxes) => {
   return kept.join(',')
 }
 
-// One box per set of the longest series in any section of the bracket.
-function capBoxesOf(form) {
-  const winners = Number(form.playoff_best_of) || 1
-  const sets = Math.max(
-    winners,
-    Number(form.playoff_best_of_losers) || winners,
-    Number(form.playoff_best_of_final) || winners,
-  )
-  const held = form.playoff_point_caps.split(',')
+// The point cap rows: the winners bracket (and single elimination), then the
+// losers bracket and grand final, which follow the winners until switched to
+// caps of their own (their value is null while they follow). A row has one box
+// per set of its section's best-of.
+const winnersSets = (form) => Number(form.playoff_best_of) || 1
+const CAP_ROWS = [
+  {
+    key: 'playoff_point_caps',
+    heading: 'Winners bracket',
+    group: 'Winners bracket point caps',
+    idPrefix: 'playoff-point-cap',
+    boxLabel: (number) => `Set ${number} point cap`,
+    sets: winnersSets,
+  },
+  {
+    key: 'playoff_point_caps_losers',
+    heading: 'Losers bracket',
+    group: 'Losers bracket point caps',
+    idPrefix: 'playoff-point-cap-losers',
+    boxLabel: (number) => `Losers bracket set ${number} point cap`,
+    same: 'Losers bracket: same as winners',
+    sets: (form) => Number(form.playoff_best_of_losers) || winnersSets(form),
+  },
+  {
+    key: 'playoff_point_caps_final',
+    heading: 'Grand final',
+    group: 'Grand final point caps',
+    idPrefix: 'playoff-point-cap-final',
+    boxLabel: (number) => `Grand final set ${number} point cap`,
+    same: 'Grand final: same as winners',
+    sets: (form) => Number(form.playoff_best_of_final) || winnersSets(form),
+  },
+]
+
+// A row's boxes: one per set, the ones not filled in blank.
+function capBoxesOf(text, sets) {
+  const held = text.split(',')
   return Array.from({ length: sets }, (_, i) => held[i] ?? '')
+}
+
+const capList = (value) => {
+  if (value === null) return null
+  return value === '' ? [] : value.split(',').map(asNumber)
 }
 
 // What the form holds (strings, so a box can be empty) from what the server has.
@@ -131,6 +164,15 @@ function toForm(tournament) {
     playoff_best_of_final: String(tournament.playoff_best_of_final ?? 0),
     pool_point_cap: tournament.pool_point_cap ? String(tournament.pool_point_cap) : '',
     playoff_point_caps: capsText((tournament.playoff_point_caps ?? []).map(String)),
+    // null: the same as the winners bracket's
+    playoff_point_caps_losers:
+      tournament.playoff_point_caps_losers == null
+        ? null
+        : capsText(tournament.playoff_point_caps_losers.map(String)),
+    playoff_point_caps_final:
+      tournament.playoff_point_caps_final == null
+        ? null
+        : capsText(tournament.playoff_point_caps_final.map(String)),
     court_count: String(tournament.court_count ?? 1),
   }
 }
@@ -140,7 +182,7 @@ function toServer(key, value) {
   if (key === 'name') return value
   if (key === 'date' || key === 'venue') return value.trim() === '' ? null : value.trim()
   if (key === 'advance_per_pool') return value === '' ? null : asNumber(value)
-  if (key === 'playoff_point_caps') return value === '' ? [] : value.split(',').map(asNumber)
+  if (key.startsWith('playoff_point_caps')) return capList(value)
   return asNumber(value)
 }
 
@@ -166,13 +208,15 @@ export default function SettingsForm({ tournamentId, tournament, onSaved }) {
 
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
 
-  const capBoxes = capBoxesOf(form)
-  const setCap = (index) => (event) =>
+  const setCap = (row, index) => (event) =>
     setForm((current) => {
-      const boxes = capBoxesOf(current)
+      const boxes = capBoxesOf(current[row.key], row.sets(current))
       boxes[index] = event.target.value
-      return { ...current, playoff_point_caps: capsText(boxes) }
+      return { ...current, [row.key]: capsText(boxes) }
     })
+  // Switching a row to caps of its own starts it from the winners', so nothing is lost.
+  const setSameAsWinners = (row, same) =>
+    setForm((current) => ({ ...current, [row.key]: same ? null : current.playoff_point_caps }))
 
   async function explain(error, fallback) {
     const body = await error?.json?.().catch(() => null)
@@ -258,28 +302,47 @@ export default function SettingsForm({ tournamentId, tournament, onSaved }) {
             )
           })}
           {group.title === 'Playoffs' && (
-            <div className="field" role="group" aria-label="Playoff point caps">
+            <div className="field cap-rows" role="group" aria-label="Playoff point caps">
               <span className="field-label">Playoff point cap, by set</span>
-              <span className="cap-boxes">
-                {capBoxes.map((value, index) => (
-                  <span key={index} className="cap-box">
-                    <label htmlFor={`playoff-point-cap-${index + 1}`}>Set {index + 1}</label>
-                    <input
-                      id={`playoff-point-cap-${index + 1}`}
-                      aria-label={`Set ${index + 1} point cap`}
-                      type="number"
-                      min="1"
-                      placeholder="No cap"
-                      value={value}
-                      onChange={setCap(index)}
-                      aria-describedby="playoff-point-caps-note"
-                    />
-                  </span>
-                ))}
-              </span>
+              {CAP_ROWS.map((row) => (
+                <div key={row.key} className="cap-row">
+                  <span className="field-label">{row.heading}</span>
+                  {row.same && (
+                    <label className="cap-same">
+                      <input
+                        type="checkbox"
+                        aria-label={row.same}
+                        checked={form[row.key] === null}
+                        onChange={(event) => setSameAsWinners(row, event.target.checked)}
+                      />
+                      Same as winners
+                    </label>
+                  )}
+                  {form[row.key] !== null && (
+                    <span className="cap-boxes" role="group" aria-label={row.group}>
+                      {capBoxesOf(form[row.key], row.sets(form)).map((value, index) => (
+                        <span key={index} className="cap-box">
+                          <label htmlFor={`${row.idPrefix}-${index + 1}`}>Set {index + 1}</label>
+                          <input
+                            id={`${row.idPrefix}-${index + 1}`}
+                            aria-label={row.boxLabel(index + 1)}
+                            type="number"
+                            min="1"
+                            placeholder="No cap"
+                            value={value}
+                            onChange={setCap(row, index)}
+                            aria-describedby="playoff-point-caps-note"
+                          />
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </div>
+              ))}
               <small id="playoff-point-caps-note" className="field-note">
                 The most points a team can score in each set; blank is no cap, and a set is won by
-                reaching it. Sets already scored are kept as they are.
+                reaching it. Sets already scored are kept as they are. The losers bracket and
+                grand final use the winners bracket&apos;s caps unless switched to their own.
               </small>
             </div>
           )}

@@ -120,6 +120,8 @@ def _view(tournament: Tournament) -> dict:
     view = tournament.model_dump()
     view["advance_per_pool"] = tournament.advance_per_pool or None
     view["playoff_point_caps"] = tournament.playoff_caps()
+    view["playoff_point_caps_losers"] = tournament.own_caps("losers")
+    view["playoff_point_caps_final"] = tournament.own_caps("grand_final")
     return view
 
 
@@ -184,6 +186,9 @@ def update_tournament(
     for field, value in changes.items():
         if field == "playoff_point_caps":
             value = _caps_text(value)
+        elif field in ("playoff_point_caps_losers", "playoff_point_caps_final"):
+            # None stays None (follow the winners bracket); a list is stored as text.
+            value = None if value is None else _caps_text(value)
         # An automatic advance-per-pool and no pool point cap are both stored as 0.
         zero_for_none = field in (
             "advance_per_pool",

@@ -34,13 +34,15 @@ def enforce_point_cap(
     """Refuse a score above the tournament's point cap for this game (0 is no cap).
 
     A pool game has the pool cap; a playoff match's set has the cap of its
-    number (set 1 is the first box), or none past the last box.
+    number (set 1 is the first box), or none past the last box. The losers
+    bracket and the grand final have caps of their own once set, and follow
+    the winners bracket's until then.
     """
     tournament = session.get(Tournament, match.tournament_id)
     if match.pool_id is not None:
         cap, name = tournament.pool_point_cap, "a pool game"
     elif match.playoff_bracket_id is not None:
-        caps = tournament.playoff_caps()
+        caps = tournament.caps_in(match.bracket)
         cap = caps[game_number - 1] if game_number <= len(caps) else 0
         name = f"set {game_number}"
     else:

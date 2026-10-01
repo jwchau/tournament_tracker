@@ -992,7 +992,7 @@ test('the losers bracket and grand final best-of are chosen separately, defaulti
   )
 })
 
-test('the playoff point caps get one box per set of the longest series, following the best-of settings', async () => {
+test('the winners bracket gets one point cap box per set of its best-of, following that setting', async () => {
   mockSettingsPage({ ...settings, playoff_best_of: 3, playoff_point_caps: [21, 21] })
   mockPreview()
   const updateTournament = vi
@@ -1001,16 +1001,16 @@ test('the playoff point caps get one box per set of the longest series, followin
 
   renderAt(1)
 
-  const boxes = async () =>
-    within(await screen.findByRole('group', { name: 'Playoff point caps' })).getAllByRole('spinbutton')
-  const values = async () => (await boxes()).map((box) => box.value)
-  expect((await boxes()).map((box) => box.id)).toEqual([
+  const winners = async () =>
+    within(await screen.findByRole('group', { name: 'Winners bracket point caps' })).getAllByRole(
+      'spinbutton',
+    )
+  expect((await winners()).map((box) => box.id)).toEqual([
     'playoff-point-cap-1',
     'playoff-point-cap-2',
     'playoff-point-cap-3',
   ])
-  expect(await values()).toEqual(['21', '21', ''])
-  expect(screen.getByLabelText('Set 3 point cap')).toBeInTheDocument()
+  expect((await winners()).map((box) => box.value)).toEqual(['21', '21', ''])
 
   fireEvent.change(screen.getByLabelText('Set 3 point cap'), { target: { value: '15' } })
   fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -1018,10 +1018,76 @@ test('the playoff point caps get one box per set of the longest series, followin
     expect(updateTournament).toHaveBeenCalledWith('1', { playoff_point_caps: [21, 21, 15] }),
   )
 
-  // A longer series in the losers bracket means more sets to cap; a shorter winners one, fewer.
-  fireEvent.change(screen.getByLabelText(/losers bracket best-of/i), { target: { value: '5' } })
-  expect(await boxes()).toHaveLength(5)
-  fireEvent.change(screen.getByLabelText(/losers bracket best-of/i), { target: { value: '0' } })
   fireEvent.change(screen.getByLabelText(/^playoff best-of/i), { target: { value: '1' } })
-  expect(await boxes()).toHaveLength(1)
+  expect(await winners()).toHaveLength(1)
+})
+
+test('the losers bracket and grand final follow the winners caps until their own are switched on', async () => {
+  mockSettingsPage({
+    ...settings,
+    playoff_best_of: 3,
+    playoff_best_of_final: 5,
+    playoff_point_caps: [21, 21, 15],
+    playoff_point_caps_losers: null,
+    playoff_point_caps_final: null,
+  })
+  mockPreview()
+  const updateTournament = vi
+    .spyOn(api, 'updateTournament')
+    .mockImplementation(async (id, values) => ({ ...settings, ...values }))
+
+  renderAt(1)
+
+  const losersSame = await screen.findByRole('checkbox', { name: 'Losers bracket: same as winners' })
+  const finalSame = screen.getByRole('checkbox', { name: 'Grand final: same as winners' })
+  expect(losersSame).toBeChecked()
+  expect(finalSame).toBeChecked()
+  expect(screen.queryByRole('group', { name: 'Losers bracket point caps' })).not.toBeInTheDocument()
+
+  // Switching a row on starts it from the winners' caps, one box per set of its own series.
+  fireEvent.click(finalSame)
+  const final = within(screen.getByRole('group', { name: 'Grand final point caps' }))
+  expect(final.getAllByRole('spinbutton').map((box) => box.value)).toEqual(['21', '21', '15', '', ''])
+  fireEvent.change(final.getByLabelText('Grand final set 1 point cap'), { target: { value: '11' } })
+
+  fireEvent.click(losersSame)
+  const losers = within(screen.getByRole('group', { name: 'Losers bracket point caps' }))
+  expect(losers.getAllByRole('spinbutton')).toHaveLength(3)
+  for (const box of losers.getAllByRole('spinbutton')) fireEvent.change(box, { target: { value: '' } })
+
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() =>
+    expect(updateTournament).toHaveBeenCalledWith('1', {
+      playoff_point_caps_losers: [],
+      playoff_point_caps_final: [11, 21, 15],
+    }),
+  )
+})
+
+test('a row with caps of its own opens unchecked, and checking it again sends null', async () => {
+  mockSettingsPage({
+    ...settings,
+    playoff_best_of: 3,
+    playoff_point_caps: [21],
+    playoff_point_caps_losers: [15, 11],
+  })
+  mockPreview()
+  const updateTournament = vi
+    .spyOn(api, 'updateTournament')
+    .mockImplementation(async (id, values) => ({ ...settings, ...values }))
+
+  renderAt(1)
+
+  const losersSame = await screen.findByRole('checkbox', { name: 'Losers bracket: same as winners' })
+  expect(losersSame).not.toBeChecked()
+  const losers = within(screen.getByRole('group', { name: 'Losers bracket point caps' }))
+  expect(losers.getAllByRole('spinbutton').map((box) => box.value)).toEqual(['15', '11', ''])
+
+  fireEvent.click(losersSame)
+  expect(screen.queryByRole('group', { name: 'Losers bracket point caps' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+  await waitFor(() =>
+    expect(updateTournament).toHaveBeenCalledWith('1', { playoff_point_caps_losers: null }),
+  )
 })
