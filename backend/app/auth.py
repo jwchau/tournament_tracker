@@ -1,8 +1,8 @@
 """Sign-in: password hashing, session cookies, and the one rule for writes.
 
 Spectators can read everything. Every POST/PATCH/DELETE needs a signed-in
-session, enforced by `require_session_for_writes`, which runs on every route;
-signing in is the only write that doesn't need one.
+session with a high enough role, enforced by `require_session_for_writes`, which
+runs on every route; signing in is the only write that doesn't need one.
 """
 
 import hashlib
@@ -27,6 +27,23 @@ LOCKOUT_WINDOW = timedelta(minutes=15)
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 PUBLIC_WRITE_PATHS = {"/auth/login"}
+
+# Each role can do what the ones below it can.
+ROLE_RANK = {"scorekeeper": 0, "organizer": 1, "admin": 2}
+# What a write needs unless REQUIRED_ROLES says otherwise, so a new route starts locked down.
+REQUIRED_ROLE_DEFAULT = "organizer"
+# The exceptions, by method and route template: what a scorekeeper does from a court,
+# looking after their own sign-in, and what only an admin may do.
+REQUIRED_ROLES = {
+    ("DELETE", "/tournaments/{tournament_id}"): "admin",
+    ("PATCH", "/matches/{match_id}/score"): "scorekeeper",
+    ("POST", "/matches/{match_id}/games"): "scorekeeper",
+    ("PUT", "/matches/{match_id}/game-in-play"): "scorekeeper",
+    ("PATCH", "/matches/{match_id}/games/{number}"): "scorekeeper",
+    ("PATCH", "/matches/{match_id}/hold"): "scorekeeper",
+    ("POST", "/auth/logout"): "scorekeeper",
+    ("POST", "/auth/password"): "scorekeeper",
+}
 
 # argon2id with the library's recommended cost parameters.
 _hasher = PasswordHasher()
@@ -113,10 +130,28 @@ def current_user(request: Request, db: Session = Depends(get_session)) -> User:
     return user
 
 
+def check_role(user: User, needed: str) -> None:
+    if ROLE_RANK.get(user.role, -1) < ROLE_RANK[needed]:
+        raise HTTPException(status_code=403, detail="your role can't do that")
+
+
+def require_role(needed: str):
+    """A dependency for a route that isn't a write (reads are public) but needs a role."""
+
+    def dependency(user: User = Depends(current_user)) -> User:
+        check_role(user, needed)
+        return user
+
+    return dependency
+
+
 def require_session_for_writes(request: Request, db: Session = Depends(get_session)) -> None:
     if request.method in SAFE_METHODS or request.url.path in PUBLIC_WRITE_PATHS:
         return
-    current_user(request, db)
+    user = current_user(request, db)
+    check_role(
+        user, REQUIRED_ROLES.get((request.method, request.scope["route"].path), REQUIRED_ROLE_DEFAULT)
+    )
 
 
 router = APIRouter(prefix="/auth")

@@ -14,6 +14,7 @@ from app.pool_routes import router as pool_router
 from app.refs import backfill_refs
 from app.routers import router
 from app.series_routes import router as series_router
+from app.user_routes import router as user_router
 
 
 @asynccontextmanager
@@ -68,5 +69,6 @@ def create_app() -> FastAPI:
     app.include_router(playoff_router)
     app.include_router(series_router)
     app.include_router(court_router)
+    app.include_router(user_router)
 
     return app
