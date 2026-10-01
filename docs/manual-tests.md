@@ -313,3 +313,7 @@ change, untick the boxes it touches.
 - [ ] **A bracket is polled with one request**
   - Do: open a bracket page (or a tournament page with brackets) with the browser's network tab open, with a match on a court so it polls every 4 seconds.
   - Expect: each poll is a single `GET /playoff-brackets/{id}/board` (a 304 when nothing changed), with no separate `/matches` or `/dispatch` requests. Court places ("Court 2", "Waiting for a court · #2") still show on the match cards, and update after a score, a hold or a hand-set court.
+
+- [ ] **Fonts come from the app, not Google**
+  - Do: open any page with the browser's network tab open, with the cache disabled; then reload with `fonts.googleapis.com` and `fonts.gstatic.com` blocked.
+  - Expect: font files (`.woff2`) come from the app's own address, and nothing is requested from another site. Headings are in Unbounded, body text in Inter, the nav buttons in DM Sans, and the tab names in Manrope, with and without the block. On a repeat visit the font files come from the cache.

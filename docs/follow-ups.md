@@ -29,8 +29,6 @@ Each changes how the app looks or behaves, so none was done unasked.
   would change.
 - **The stage** stays "Pool play" once every pool match is finished; a "12 of 12 pool matches
   done" line, or a checklist of what to do next, would say where an organizer is.
-- **Self-hosting the fonts**: no third-party request, cacheable forever. It means adding font
-  files or a `@fontsource` dependency.
 - **Prebuilt queries** for the hottest reads: a little more off a cold read, across many call sites.
 
 ## Decided against
