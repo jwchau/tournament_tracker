@@ -311,10 +311,11 @@ export default function SettingsForm({ tournamentId, tournament, onSaved }) {
                     <label className="cap-same">
                       <input
                         type="checkbox"
+                        aria-label={row.same}
                         checked={form[row.key] === null}
                         onChange={(event) => setSameAsWinners(row, event.target.checked)}
                       />
-                      {row.same}
+                      Same as winners
                     </label>
                   )}
                   {form[row.key] !== null && (
