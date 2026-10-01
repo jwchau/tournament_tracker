@@ -37,6 +37,11 @@ Each changes how the app looks or behaves, so none was done unasked.
 - **Roles per tournament.** Roles are global: an organizer can set up any tournament. If separate
   people ever run separate tournaments on one install, memberships (user, tournament, role) could
   override the global role.
+- **The Users page at scale**: pagination and search. `GET /users` returns every account and the
+  page lists them all, which is fine for a handful of people but not for a long roster. A page size
+  with next/previous (server-side, so the list isn't all loaded), and a search box that filters by
+  username (also server-side, e.g. `GET /users?search=…&page=…`), would keep it usable. Today the
+  list is ordered by id, so a new user lands at the bottom.
 - **Prebuilt queries** for the hottest reads: a little more off a cold read, across many call sites.
 
 ## Decided against
