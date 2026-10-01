@@ -7,6 +7,9 @@ export * from '@testing-library/react'
 
 export const TEST_USER = { id: 1, username: 'organizer' }
 
+// What the bracket board read returns: a bracket's matches and, when a test cares, its dispatch.
+export const boardOf = (matches, dispatch = null) => ({ matches, dispatch })
+
 // Renders signed in as TEST_USER, since pages hide their write controls from
 // spectators. Pass `{ user: null }` to render signed out.
 export function render(ui, { user = TEST_USER, ...options } = {}) {

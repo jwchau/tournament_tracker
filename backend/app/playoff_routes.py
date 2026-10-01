@@ -396,30 +396,56 @@ class DispatchStatus(SQLModel):
     overflow: bool
 
 
-@router.get("/playoff-brackets/{bracket_id}/dispatch", response_model=DispatchStatus)
-def get_bracket_dispatch(bracket_id: int, session: Session = Depends(get_session)):
-    """The bracket's courts with the match on each, and the matches waiting for one."""
+def _dispatch_status(session: Session, bracket: PlayoffBracket) -> dict:
+    snapshot = Snapshot(session, bracket.tournament_id, rows=True)
+    return {
+        "courts": [
+            {"court": court, "match_id": match_id}
+            for court, match_id in snapshot.occupancy(bracket.id).items()
+        ],
+        "queue": snapshot.queue(bracket.id),
+        "overflow": snapshot.overflow(bracket.id),
+    }
+
+
+def _bracket_or_404(session: Session, bracket_id: int) -> PlayoffBracket:
     bracket = session.get(PlayoffBracket, bracket_id)
     if bracket is None:
         raise HTTPException(status_code=404, detail="Playoff bracket not found")
-    snapshot = Snapshot(session, bracket.tournament_id, rows=True)
-    return json_response(
-        {
-            "courts": [
-                {"court": court, "match_id": match_id}
-                for court, match_id in snapshot.occupancy(bracket_id).items()
-            ],
-            "queue": snapshot.queue(bracket_id),
-            "overflow": snapshot.overflow(bracket_id),
-        }
-    )
+    return bracket
+
+
+@router.get("/playoff-brackets/{bracket_id}/dispatch", response_model=DispatchStatus)
+def get_bracket_dispatch(bracket_id: int, session: Session = Depends(get_session)):
+    """The bracket's courts with the match on each, and the matches waiting for one."""
+    bracket = _bracket_or_404(session, bracket_id)
+    return json_response(_dispatch_status(session, bracket))
 
 
 @router.get("/playoff-brackets/{bracket_id}/matches", response_model=list[Match])
 def list_playoff_bracket_matches(bracket_id: int, session: Session = Depends(get_session)):
-    if session.get(PlayoffBracket, bracket_id) is None:
-        raise HTTPException(status_code=404, detail="Playoff bracket not found")
+    _bracket_or_404(session, bracket_id)
     return json_response(match_dicts(session, Match.playoff_bracket_id == bracket_id))
+
+
+class BracketBoard(SQLModel):
+    matches: list[Match]
+    dispatch: DispatchStatus
+
+
+@router.get("/playoff-brackets/{bracket_id}/board", response_model=BracketBoard)
+def get_bracket_board(bracket_id: int, session: Session = Depends(get_session)):
+    """A bracket's matches and its dispatch in one read, for the page that polls both.
+
+    The same data as `/matches` and `/dispatch`, so a viewer makes one request, not two.
+    """
+    bracket = _bracket_or_404(session, bracket_id)
+    return json_response(
+        {
+            "matches": match_dicts(session, Match.playoff_bracket_id == bracket_id),
+            "dispatch": _dispatch_status(session, bracket),
+        }
+    )
 
 
 class PlacedTeam(SQLModel):

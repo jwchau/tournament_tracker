@@ -1,5 +1,5 @@
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { act, fireEvent, render, screen, within } from './testUtils'
+import { act, boardOf, fireEvent, render, screen, within } from './testUtils'
 import { afterEach, expect, test, vi } from 'vitest'
 
 import * as api from './api'
@@ -37,7 +37,7 @@ const eightTeamBracket = [
 ]
 
 test('shows every round and match of an 8-team bracket as cards', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(eightTeamBracket)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(eightTeamBracket))
 
   renderDiagram()
 
@@ -49,8 +49,7 @@ test('shows every round and match of an 8-team bracket as cards', async () => {
 })
 
 test('shows a loading placeholder, not an empty diagram, until the matches arrive', () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockReturnValue(new Promise(() => {}))
-  vi.spyOn(api, 'getBracketDispatch').mockReturnValue(new Promise(() => {}))
+  vi.spyOn(api, 'getBracketBoard').mockReturnValue(new Promise(() => {}))
 
   renderDiagram()
 
@@ -69,7 +68,7 @@ const fiveTeamBracket = [
 ]
 
 test('shows byes as pre-completed matches for a 5-team bracket', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(fiveTeamBracket))
 
   renderDiagram()
 
@@ -84,7 +83,7 @@ const teams = [
 ]
 
 test('shows team names instead of team ids', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(fiveTeamBracket))
 
   renderDiagram({ teams })
 
@@ -100,7 +99,7 @@ test('shows the champion once the final match is complete', async () => {
       ? { ...match, team1_id: 10, team2_id: 30, status: 'complete', winner_id: 30 }
       : match,
   )
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(finished)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(finished))
 
   renderDiagram({ teams })
 
@@ -109,7 +108,7 @@ test('shows the champion once the final match is complete', async () => {
 })
 
 test('does not show a champion while the final is unfinished', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(fiveTeamBracket))
 
   renderDiagram({ teams })
 
@@ -146,7 +145,7 @@ const fourTeamDouble = [
 ]
 
 test('lays out a double-elimination bracket in winners, losers, and grand final rounds', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fourTeamDouble)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(fourTeamDouble))
 
   renderDiagram()
 
@@ -163,10 +162,10 @@ test('lays out a double-elimination bracket in winners, losers, and grand final 
 })
 
 test('shows the grand final reset match once it exists', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue([
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf([
     ...fourTeamDouble,
     doubleMatch(7, 'grand_final', 2, 1, { team1_id: 10, team2_id: 20, status: 'ready' }),
-  ])
+  ]))
 
   renderDiagram()
 
@@ -178,11 +177,11 @@ function withGrandFinals(...grandFinals) {
 }
 
 test('the winners champion taking grand final one is the champion', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(
     withGrandFinals(
       doubleMatch(6, 'grand_final', 1, 1, { team1_id: 20, team2_id: 30, status: 'complete', winner_id: 20 }),
     ),
-  )
+  ))
 
   renderDiagram({ teams })
 
@@ -190,11 +189,11 @@ test('the winners champion taking grand final one is the champion', async () => 
 })
 
 test('no champion yet when the losers champion takes grand final one', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(
     withGrandFinals(
       doubleMatch(6, 'grand_final', 1, 1, { team1_id: 20, team2_id: 30, status: 'complete', winner_id: 30 }),
     ),
-  )
+  ))
 
   renderDiagram({ teams })
 
@@ -203,12 +202,12 @@ test('no champion yet when the losers champion takes grand final one', async () 
 })
 
 test('the reset match decides the champion', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(
     withGrandFinals(
       doubleMatch(6, 'grand_final', 1, 1, { team1_id: 20, team2_id: 30, status: 'complete', winner_id: 30 }),
       doubleMatch(7, 'grand_final', 2, 1, { team1_id: 20, team2_id: 30, status: 'complete', winner_id: 20 }),
     ),
-  )
+  ))
 
   renderDiagram({ teams })
 
@@ -219,7 +218,7 @@ test('shows each match court and time on its card, and no scoring controls', asy
   const scheduled = fiveTeamBracket.map((match) =>
     match.id === 16 ? { ...match, court: 2, scheduled_time: '2026-10-03T10:30:00' } : match,
   )
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(scheduled)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(scheduled))
 
   renderDiagram({ teams })
 
@@ -242,13 +241,12 @@ const dispatched = eightTeamBracket.map((match) => ({
 }))
 
 test('shows the court each match was dispatched to and the queue position of those waiting', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(dispatched)
-  // Match 4 is first in line; 99 is an overflow bracket's match sharing these courts.
-  vi.spyOn(api, 'getBracketDispatch').mockResolvedValue({
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(dispatched, {
     courts: [{ court: 1, match_id: 1 }, { court: 2, match_id: 2 }],
     queue: [4, 99, 3],
     overflow: false,
-  })
+  }))
+  // Match 4 is first in line; 99 is an overflow bracket's match sharing these courts.
 
   renderDiagram()
 
@@ -261,12 +259,11 @@ test('shows the court each match was dispatched to and the queue position of tho
 })
 
 test("an overflow bracket's waiting matches take any free court", async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(dispatched)
-  vi.spyOn(api, 'getBracketDispatch').mockResolvedValue({
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(dispatched, {
     courts: [{ court: 1, match_id: 1 }],
     queue: [3, 4],
     overflow: true,
-  })
+  }))
 
   renderDiagram()
 
@@ -281,7 +278,7 @@ test('a best-of series shows games won on its card', async () => {
       ? { ...match, status: 'in_progress', team1_score: 1, team2_score: 0, version: 2 }
       : match,
   )
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(inSeries)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(inSeries))
 
   renderDiagram({ teams, bestOf: 3 })
 
@@ -293,7 +290,7 @@ test('a best-of series shows games won on its card', async () => {
 
 test('stops polling after 3 consecutive failures and resumes after the cooldown', async () => {
   vi.useFakeTimers()
-  const loadMatches = vi.spyOn(api, 'getPlayoffBracketMatches').mockRejectedValue(new Error('network down'))
+  const loadMatches = vi.spyOn(api, 'getBracketBoard').mockRejectedValue(new Error('network down'))
 
   renderDiagram()
 
@@ -306,7 +303,7 @@ test('stops polling after 3 consecutive failures and resumes after the cooldown'
   await act(() => vi.advanceTimersByTimeAsync(28000))
   expect(loadMatches).toHaveBeenCalledTimes(3)
 
-  loadMatches.mockResolvedValue(eightTeamBracket)
+  loadMatches.mockResolvedValue(boardOf(eightTeamBracket))
   await act(() => vi.advanceTimersByTimeAsync(4000))
   expect(loadMatches).toHaveBeenCalledTimes(4)
   expect(screen.queryByText(/connection lost/i)).not.toBeInTheDocument()
@@ -319,7 +316,7 @@ const finishedSemifinal = fiveTeamBracket.map((match) =>
 )
 
 test("a finished match shows each team's final score beside it, the winner's in amber", async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(finishedSemifinal)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(finishedSemifinal))
 
   renderDiagram({ teams })
 
@@ -334,7 +331,7 @@ test("a game in progress shows its running score, muted, and a bye shows none", 
   const partlyScored = fiveTeamBracket.map((match) =>
     match.id === 12 ? { ...match, status: 'in_progress', team1_score: 9, team2_score: 4 } : match,
   )
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(partlyScored)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(partlyScored))
 
   renderDiagram({ teams })
 
@@ -345,7 +342,7 @@ test("a game in progress shows its running score, muted, and a bye shows none", 
 })
 
 test('a finished match no longer shows the court it was played on', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(finishedSemifinal)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(finishedSemifinal))
 
   renderDiagram({ teams })
 
@@ -353,7 +350,7 @@ test('a finished match no longer shows the court it was played on', async () => 
 })
 
 test('a card leads to the bracket page', async () => {
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(fiveTeamBracket)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(fiveTeamBracket))
 
   render(
     <MemoryRouter>
@@ -376,7 +373,7 @@ test('a wide screen draws the tree of cards, with each round named over its colu
     addEventListener: () => {},
     removeEventListener: () => {},
   }))
-  vi.spyOn(api, 'getPlayoffBracketMatches').mockResolvedValue(eightTeamBracket)
+  vi.spyOn(api, 'getBracketBoard').mockResolvedValue(boardOf(eightTeamBracket))
 
   const { container } = renderDiagram()
 

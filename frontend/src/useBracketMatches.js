@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { getBracketDispatch, getPlayoffBracketMatches, holdMatch, setMatchRef } from './api'
+import { getBracketBoard, holdMatch, setMatchRef } from './api'
 import { createCircuitBreaker } from './circuitBreaker'
 import { refUpdate } from './refModel'
 import { withTimeout } from './withTimeout'
@@ -56,11 +56,13 @@ export function useBracketMatches(playoffBracketId) {
     function refresh() {
       clearTimeout(timer)
       breaker
-        .execute(() => withTimeout(getPlayoffBracketMatches(playoffBracketId), REQUEST_TIMEOUT_MS))
-        .then((data) => {
+        .execute(() => withTimeout(getBracketBoard(playoffBracketId), REQUEST_TIMEOUT_MS))
+        .then((board) => {
           if (cancelled) return
-          latest = data
-          setMatches(data)
+          latest = board.matches
+          setMatches(board.matches)
+          // Queue places only; the bracket still works without them.
+          setDispatch(board.dispatch ?? null)
           setLoaded(true)
         })
         .catch(() => {})
@@ -69,12 +71,6 @@ export function useBracketMatches(playoffBracketId) {
           setConnectionLost(breaker.getState() === 'open')
           schedule()
         })
-      // Queue places only; the bracket still works without them.
-      getBracketDispatch(playoffBracketId)
-        .then((data) => {
-          if (!cancelled) setDispatch(data)
-        })
-        .catch(() => {})
     }
 
     // Nobody is looking at a hidden tab, so stop polling until it is shown again.
@@ -100,11 +96,11 @@ export function useBracketMatches(playoffBracketId) {
   }
 
   function reload() {
-    getPlayoffBracketMatches(playoffBracketId)
-      .then(setMatches)
-      .catch(() => {})
-    getBracketDispatch(playoffBracketId)
-      .then(setDispatch)
+    getBracketBoard(playoffBracketId)
+      .then((board) => {
+        setMatches(board.matches)
+        setDispatch(board.dispatch ?? null)
+      })
       .catch(() => {})
   }
 
