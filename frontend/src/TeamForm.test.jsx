@@ -97,3 +97,16 @@ test('a blank name cannot be submitted', () => {
   fireEvent.submit(input.closest('form'))
   expect(createTeam).not.toHaveBeenCalled()
 })
+
+test('a placeholder names the empty box while its label stays for screen readers', () => {
+  render(<TeamForm tournamentId={42} placeholder="Team name" />)
+
+  const input = screen.getByLabelText('Team name')
+  expect(input).toHaveAttribute('placeholder', 'Team name')
+})
+
+test('without a placeholder the box shows none', () => {
+  render(<TeamForm tournamentId={42} />)
+
+  expect(screen.getByLabelText('Team name')).not.toHaveAttribute('placeholder')
+})

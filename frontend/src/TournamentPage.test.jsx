@@ -52,7 +52,7 @@ test('loads the tournament and lists its teams with player counts, linking to th
   expect(await screen.findByText('Spring Classic')).toBeInTheDocument()
   const link = screen.getByRole('link', { name: /ice wolves/i })
   expect(link).toHaveAttribute('href', '/teams/10')
-  expect(screen.getByText(/2 players/i)).toBeInTheDocument()
+  expect(screen.getByText((_, el) => el.className === 'team-count' && el.textContent === '2 players')).toBeInTheDocument()
 })
 
 test('the Teams heading counts every registered team', async () => {
@@ -318,10 +318,9 @@ test('a team with one player says "1 player"', async () => {
   renderAt(1)
 
   const aces = (await screen.findByRole('link', { name: 'Aces' })).closest('li')
-  expect(aces).toHaveTextContent('Aces (1 player)')
-  expect(screen.getByRole('link', { name: 'Blockers' }).closest('li')).toHaveTextContent(
-    'Blockers (2 players)',
-  )
+  expect(aces).toHaveTextContent('1 player')
+  expect(aces).not.toHaveTextContent('1 players')
+  expect(screen.getByRole('link', { name: 'Blockers' }).closest('li')).toHaveTextContent('2 players')
 })
 
 const settings = {
@@ -1134,7 +1133,7 @@ test('players are added to a team from the teams list, and its count and roster 
 
   expect(await screen.findByText('Sam Ortiz')).toBeInTheDocument()
   expect(createPlayer).toHaveBeenCalledWith(10, { name: 'Sam Ortiz' })
-  expect(screen.getByText(/3 players/)).toBeInTheDocument()
+  expect(screen.getByText((_, el) => el.className === 'team-count' && el.textContent === '3 players')).toBeInTheDocument()
 
   // Another team, with its roster not fetched yet, just counts the new player.
   fireEvent.click(screen.getByRole('button', { name: 'Add players to Aces' }))
@@ -1142,7 +1141,7 @@ test('players are added to a team from the teams list, and its count and roster 
   fireEvent.change(aces, { target: { value: 'Rae Chen' } })
   fireEvent.submit(aces.closest('form'))
   await waitFor(() => expect(createPlayer).toHaveBeenCalledWith(11, { name: 'Rae Chen' }))
-  expect(await screen.findByText(/1 player\b/)).toBeInTheDocument()
+  expect(await screen.findByText((_, el) => el.className === 'team-count' && el.textContent === '1 player')).toBeInTheDocument()
 })
 
 test('signed out, the teams list has no way to add players', async () => {

@@ -325,3 +325,7 @@ change, untick the boxes it touches.
 - [ ] **Add players from the Teams list**
   - Do: signed in, on a tournament page with teams, tap "+ Player" on a team, type a name and press Enter, type another and press Enter, then press Escape. Turn on Show players. Sign out and reload.
   - Expect: the box opens focused inside the team's chip; after each Enter the player count goes up, the box is empty and still focused; Escape closes it without adding the half-typed name. With Show players on, the new names are listed under the team. A blank name adds nothing, and a failed add shows why and keeps the typed name. Signed out, there is no "+ Player" button.
+
+- [ ] **The Teams panel**
+  - Setup: a tournament with several teams, one with a very long name, signed in. Try it at phone width (about 390px) and on a laptop.
+  - Expect: the Teams heading, then one panel. Its toolbar has the "Team name" box with the Add team button fused to its right edge, and a Show players switch at the other end (orange when on); a hairline divides it from the cards. Teams are cards in a row that scrolls sideways, fading at the ends; the page itself never scrolls sideways, at any width, with the add box open or a long name. Tab reaches the strip and shows an orange outline, and the arrow keys scroll it. "+ Player" opens inside its card. Show players lists each team's players under its count. Signed out, the toolbar has only the switch. With pool play started, the box and button are disabled with the note underneath.
