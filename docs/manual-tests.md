@@ -321,3 +321,7 @@ change, untick the boxes it touches.
 - [ ] **An empty court points to where its match is**
   - Setup: a playoff with 2 courts and a bracket with one match ready (for example 3 teams, single elimination), so the match is on court 1 and court 2 is free. Or a finished bracket lending its court to another.
   - Expect: court 2's page reads "Nothing on this court right now." with a button "Next match: A vs B on Court 1" that opens court 1. In the courts list, court 2's tile says Free with "Next match on Court 1: A vs B" in orange. A court with its own match shows neither. With nothing playing on any court but a match waiting, it reads "Next match: A vs B, waiting for a free court"; with nothing coming, the page keeps "Nothing left to play on this court right now."
+
+- [ ] **Add players from the Teams list**
+  - Do: signed in, on a tournament page with teams, tap "+ Player" on a team, type a name and press Enter, type another and press Enter, then press Escape. Turn on Show players. Sign out and reload.
+  - Expect: the box opens focused inside the team's chip; after each Enter the player count goes up, the box is empty and still focused; Escape closes it without adding the half-typed name. With Show players on, the new names are listed under the team. A blank name adds nothing, and a failed add shows why and keeps the typed name. Signed out, there is no "+ Player" button.

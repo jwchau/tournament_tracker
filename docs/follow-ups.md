@@ -19,7 +19,11 @@ Each changes how the app looks or behaves, so none was done unasked.
 - **Faster score entry on the court.** Tab goes from the left score to its +1 button, not to
   the right score, and the Finish confirmation is not answered by Enter (about 7 actions per
   match). Reordering focus would make +1/−1 harder for keyboard users.
-- **Adding players without a page hop per team**: an inline add-player box, or a pasted roster.
+- **Pasted roster**: a dialog to paste a whole tournament's teams and players at once, reviewed
+  before anything is created. The format chosen: a team's name on a line, its players on the
+  lines below, and a blank line between teams; a name that matches an existing team adds to it.
+  It needs a bulk endpoint. (The inline "+ Player" box on the Teams list covers adding players
+  one team at a time.)
 - **Settings**: the Save button is at the bottom of a long panel, and the panel opens over the
   page for any tournament with no teams.
 - **The correction confirmation** says "Round 2 match 1", not the teams, or that a champion
