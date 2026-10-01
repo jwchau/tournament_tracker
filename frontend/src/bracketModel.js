@@ -12,23 +12,30 @@ export function slotLabel(teamsById, teamId, status) {
 
 // The games each section of a bracket is played over, from the tournament's
 // settings. The losers bracket and the grand final follow the winners
-// bracket's best-of until they are set on their own (0). It also carries the
-// point cap of each set (pointCaps, 0 or missing is no cap), which the
-// correction forms check against; see pointCapsFor.
+// bracket's best-of until they are set on their own (0). It also carries each
+// section's point cap for every set (pointCaps; 0 or missing is no cap), which
+// the correction forms check against; see pointCapsFor. The losers bracket and
+// the grand final use the winners' caps until they have caps of their own
+// (null from the server), and an own list that is empty means no cap.
 export function bestOfSettings(tournament) {
   const winners = tournament.playoff_best_of ?? 1
+  const winnerCaps = tournament.playoff_point_caps ?? []
   return {
     winners,
     losers: tournament.playoff_best_of_losers || winners,
     grand_final: tournament.playoff_best_of_final || winners,
-    pointCaps: tournament.playoff_point_caps ?? [],
+    pointCaps: {
+      winners: winnerCaps,
+      losers: tournament.playoff_point_caps_losers ?? winnerCaps,
+      grand_final: tournament.playoff_point_caps_final ?? winnerCaps,
+    },
   }
 }
 
 // The point caps of a match's sets: one per set it is played over.
 export function pointCapsFor(bestOf, match) {
   if (typeof bestOf !== 'object' || bestOf === null) return []
-  return (bestOf.pointCaps ?? []).slice(0, bestOfFor(bestOf, match))
+  return (bestOf.pointCaps?.[sectionOf(match)] ?? []).slice(0, bestOfFor(bestOf, match))
 }
 
 // The games a match is played over. `bestOf` is bestOfSettings' object, or a

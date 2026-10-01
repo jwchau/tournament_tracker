@@ -61,13 +61,38 @@ class Tournament(SQLModel, table=True):
     # The most points a team can score in each set of a playoff match, as
     # comma-separated numbers, the first for set 1 (0 or missing: no cap).
     playoff_point_caps: str = Field(default="", sa_column_kwargs={"server_default": ""})
+    # The same for the losers bracket and the grand final of a double elimination;
+    # None means the same caps as the winners bracket, "" its own caps with none set.
+    playoff_point_caps_losers: str | None = None
+    playoff_point_caps_final: str | None = None
     date: Date | None = None
     venue: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def playoff_caps(self) -> list[int]:
-        """The playoff point cap of each set, in order."""
-        return [int(part) for part in self.playoff_point_caps.split(",") if part]
+        """The winners bracket's playoff point cap of each set, in order."""
+        return _caps_list(self.playoff_point_caps)
+
+    def own_caps(self, section: str) -> list[int] | None:
+        """A losers bracket's or grand final's own caps, or None when it follows the winners."""
+        text = {
+            "losers": self.playoff_point_caps_losers,
+            "grand_final": self.playoff_point_caps_final,
+        }.get(section)
+        return None if text is None else _caps_list(text)
+
+    def caps_in(self, section: str) -> list[int]:
+        """The point cap of each set for a playoff match in this bracket section.
+
+        The losers bracket and the grand final follow the winners bracket's
+        until they have caps of their own.
+        """
+        own = self.own_caps(section)
+        return self.playoff_caps() if own is None else own
+
+
+def _caps_list(text: str) -> list[int]:
+    return [int(part) for part in text.split(",") if part]
 
 
 class TournamentCreate(SQLModel):
@@ -91,6 +116,13 @@ class TournamentUpdate(SQLModel):
     playoff_point_caps: list[Annotated[int, Field(ge=0)]] | None = Field(
         default=None, max_length=7
     )
+    # null puts the losers bracket's or grand final's caps back to the winners'
+    playoff_point_caps_losers: list[Annotated[int, Field(ge=0)]] | None = Field(
+        default=None, max_length=7
+    )
+    playoff_point_caps_final: list[Annotated[int, Field(ge=0)]] | None = Field(
+        default=None, max_length=7
+    )
 
 
 class TournamentDetail(SQLModel):
@@ -110,6 +142,9 @@ class TournamentDetail(SQLModel):
     playoff_best_of_final: int
     pool_point_cap: int
     playoff_point_caps: list[int]
+    # None: the same as the winners bracket's
+    playoff_point_caps_losers: list[int] | None
+    playoff_point_caps_final: list[int] | None
     created_at: datetime
     # Settings that can't change right now, each with the reason.
     setting_locks: dict[str, str]

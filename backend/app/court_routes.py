@@ -102,7 +102,7 @@ def list_courts(tournament_id: int, session: Session = Depends(get_session)):
         data["point_cap"] = tournament.pool_point_cap if match.pool_id is not None else 0
         data["point_caps"] = []
         if match.playoff_bracket_id is not None:
-            data["point_caps"] = tournament.playoff_caps()[:games]
+            data["point_caps"] = tournament.caps_in(match.bracket)[:games]
             if games == 1 and data["point_caps"]:
                 data["point_cap"] = data["point_caps"][0]
         return data

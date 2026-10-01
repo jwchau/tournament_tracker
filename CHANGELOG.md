@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Point caps per bracket section**: the losers bracket and the grand final can
+  have playoff point caps of their own, one box per set of their best-of. Each
+  has a "Same as winners" checkbox, on by default, so existing tournaments are
+  unchanged. Switching it off starts the row from the winners' caps; a row with
+  no boxes filled in has no cap.
+
 ## v1.1.0 — 2026-09-30
 
 Refs for every match, point caps, a different best-of for each part of a
