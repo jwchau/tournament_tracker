@@ -27,6 +27,7 @@ const PATTERNS = [
   [/^\/brackets\/([^/]+)$/, ([id]) => ({ kind: 'bracket', id })],
   [/^\/teams\/([^/]+)$/, ([id]) => ({ kind: 'team', id })],
   [/^\/account$/, () => ({ kind: 'account' })],
+  [/^\/users$/, () => ({ kind: 'users' })],
   [/^\/login$/, () => ({ kind: 'login' })],
 ]
 
@@ -107,6 +108,7 @@ export function placeholderLabel(path) {
     bracket: 'Bracket',
     team: 'Team',
     account: 'Account',
+    users: 'Users',
     login: 'Sign in',
     other: 'Not found',
   }[page.kind]

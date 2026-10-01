@@ -44,6 +44,11 @@ test('pools, brackets and teams sit under their tournament, the courts list too'
   expect(await ancestorsOf('/tournaments/1/courts')).toEqual(underTournament)
 })
 
+test('the Users page is named in the trail and sits under Home', async () => {
+  expect(await labelOf('/users')).toBe('Users')
+  expect(await ancestorsOf('/users')).toEqual(['/'])
+})
+
 test('pages outside the tree, and ones whose data cannot load, sit under Home', async () => {
   api.getTeam.mockRejectedValue(new Error('not found'))
 
