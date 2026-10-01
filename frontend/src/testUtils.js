@@ -5,7 +5,11 @@ import { AuthContext } from './auth'
 
 export * from '@testing-library/react'
 
-export const TEST_USER = { id: 1, username: 'organizer' }
+// An admin, so the tests that aren't about roles can use every control.
+export const TEST_USER = { id: 1, username: 'organizer', role: 'admin' }
+
+// A signed-in user with `role`, for `render(ui, { user: userWithRole('scorekeeper') })`.
+export const userWithRole = (role) => ({ id: 2, username: role, role })
 
 // What the bracket board read returns: a bracket's matches and, when a test cares, its dispatch.
 export const boardOf = (matches, dispatch = null) => ({ matches, dispatch })

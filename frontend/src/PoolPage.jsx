@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { deletePool, getPool, getTournament, listTeams } from './api'
-import { useAuth } from './auth'
+import { hasRole, useAuth } from './auth'
 import ConfirmModal from './ConfirmModal'
 import Loading from './Loading'
 import NotFound from './NotFound'
@@ -116,7 +116,7 @@ export default function PoolPage() {
         />
       </div>
 
-      {user && (
+      {hasRole(user, 'organizer') && (
         <section className="danger-zone pool-manage">
           <button type="button" onClick={() => setConfirmingDelete(true)}>
             Delete pool

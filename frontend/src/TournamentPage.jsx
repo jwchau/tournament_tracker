@@ -10,7 +10,7 @@ import {
   listPlayers,
   listTeams,
 } from './api'
-import { useAuth } from './auth'
+import { hasRole, useAuth } from './auth'
 import InlineAddPlayer from './InlineAddPlayer'
 import Loading from './Loading'
 import NotFound from './NotFound'
@@ -242,17 +242,19 @@ export default function TournamentPage() {
             <Link to={`/tournaments/${tournamentId}/courts`}>Courts (scorekeeper view)</Link>
           </div>
         </div>
-        {user && (
+        {hasRole(user, 'organizer') && (
           <ManageDrawer startOpen={teams.length === 0 && tournament.stage === 'draft'}>
             <section aria-labelledby="settings-heading">
               <h4 id="settings-heading">Settings</h4>
               <SettingsForm tournamentId={tournamentId} tournament={tournament} onSaved={setTournament} />
             </section>
-            <section className="danger-zone">
-              <button type="button" onClick={() => setShowDeleteConfirm(true)}>
-                Delete tournament
-              </button>
-            </section>
+            {hasRole(user, 'admin') && (
+              <section className="danger-zone">
+                <button type="button" onClick={() => setShowDeleteConfirm(true)}>
+                  Delete tournament
+                </button>
+              </section>
+            )}
           </ManageDrawer>
         )}
       </header>
@@ -272,7 +274,7 @@ export default function TournamentPage() {
         </div>
         <div className="team-panel">
           <div className="team-toolbar">
-            {user && (
+            {hasRole(user, 'organizer') && (
               <div className="team-add-bar">
                 <TeamForm
                   tournamentId={tournamentId}
@@ -307,7 +309,7 @@ export default function TournamentPage() {
                   <span className="team-count-n">{team.player_count}</span>{' '}
                   {team.player_count === 1 ? 'player' : 'players'}
                 </span>
-                {user && (
+                {hasRole(user, 'organizer') && (
                   <InlineAddPlayer team={team} onAdded={(player) => handlePlayerAdded(team, player)} />
                 )}
                 {showRosters &&

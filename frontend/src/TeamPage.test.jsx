@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from './testUtils'
+import { fireEvent, render, screen, userWithRole } from './testUtils'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
@@ -155,6 +155,24 @@ test('signed out, the team and roster are read-only', async () => {
   )
 
   expect(await screen.findByRole('heading', { name: 'Ice Wolves' })).toBeInTheDocument()
+  expect(await screen.findByText('Alex Kim')).toBeInTheDocument()
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button')).not.toBeInTheDocument()
+})
+
+test('a scorekeeper sees the team and roster read-only, like a spectator', async () => {
+  vi.spyOn(api, 'getTeam').mockResolvedValue({ id: 10, tournament_id: 1, name: 'Ice Wolves' })
+  vi.spyOn(api, 'listPlayers').mockResolvedValue([{ id: 100, team_id: 10, name: 'Alex Kim' }])
+
+  render(
+    <MemoryRouter initialEntries={['/teams/10']}>
+      <Routes>
+        <Route path="/teams/:teamId" element={<TeamPage />} />
+      </Routes>
+    </MemoryRouter>,
+    { user: userWithRole('scorekeeper') },
+  )
+
   expect(await screen.findByText('Alex Kim')).toBeInTheDocument()
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   expect(screen.queryByRole('button')).not.toBeInTheDocument()

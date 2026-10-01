@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from './testUtils'
+import { fireEvent, render, screen, userWithRole, within } from './testUtils'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, expect, test, vi } from 'vitest'
 
@@ -67,6 +67,28 @@ test('signed out, the tournaments are listed but there is no create form', async
   expect(await screen.findByRole('link', { name: /spring classic/i })).toBeInTheDocument()
   expect(screen.queryByLabelText(/tournament name/i)).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /create|new tournament/i })).not.toBeInTheDocument()
+})
+
+test('a scorekeeper sees the tournaments but cannot start one, an organizer can', async () => {
+  vi.spyOn(api, 'listTournaments').mockResolvedValue([{ id: 1, name: 'Spring Classic', team_count: 3 }])
+
+  const scorekeeper = render(
+    <MemoryRouter>
+      <MainPage />
+    </MemoryRouter>,
+    { user: userWithRole('scorekeeper') },
+  )
+  expect(await screen.findByRole('link', { name: /spring classic/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'New tournament' })).not.toBeInTheDocument()
+  scorekeeper.unmount()
+
+  render(
+    <MemoryRouter>
+      <MainPage />
+    </MemoryRouter>,
+    { user: userWithRole('organizer') },
+  )
+  expect(await screen.findByRole('button', { name: 'New tournament' })).toBeInTheDocument()
 })
 
 test('shows each tournament\'s stage', async () => {

@@ -13,6 +13,19 @@ export function setUnauthorizedHandler(handler) {
   onUnauthorized = handler
 }
 
+// Called when a write is refused for want of the right role, so the app can say so.
+let onForbidden = null
+
+export function setForbiddenHandler(handler) {
+  onForbidden = handler
+}
+
+function refuse(response, redirectIfSignedOut = true) {
+  if (response.status === 401 && redirectIfSignedOut) onUnauthorized?.()
+  if (response.status === 403) onForbidden?.()
+  return Promise.reject(response)
+}
+
 // Signing in and out answer 401 for their own reasons (wrong password, already
 // signed out), so they skip the sign-in redirect.
 async function sendJson(method, path, body, { redirectIfSignedOut = true } = {}) {
@@ -22,10 +35,7 @@ async function sendJson(method, path, body, { redirectIfSignedOut = true } = {})
     body: JSON.stringify(body),
   })
   clearApiCache()
-  if (!response.ok) {
-    if (response.status === 401 && redirectIfSignedOut) onUnauthorized?.()
-    return Promise.reject(response)
-  }
+  if (!response.ok) return refuse(response, redirectIfSignedOut)
   return response.status === 204 ? null : response.json()
 }
 
@@ -119,10 +129,7 @@ function getCachedJson(path) {
 async function deleteRequest(path) {
   const response = await request(path, { method: 'DELETE' })
   clearApiCache()
-  if (!response.ok) {
-    if (response.status === 401) onUnauthorized?.()
-    return Promise.reject(response)
-  }
+  if (!response.ok) return refuse(response)
 }
 
 export function login({ username, password }) {
@@ -139,6 +146,21 @@ export async function getMe() {
   if (response.status === 401) return null
   if (!response.ok) return Promise.reject(response)
   return response.json()
+}
+
+// Admin only: who has an account, and with what role.
+export async function listUsers() {
+  const response = await request('/users')
+  if (!response.ok) return refuse(response)
+  return response.json()
+}
+
+export function createUser({ username, password, role }) {
+  return postJson('/users', { username, password, role })
+}
+
+export function changeUserRole(userId, role) {
+  return patchJson(`/users/${userId}/role`, { role })
 }
 
 export function changePassword({ currentPassword, newPassword }) {

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from './testUtils'
+import { act, fireEvent, render, screen, userWithRole } from './testUtils'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
@@ -206,6 +206,45 @@ test('signed out, the pool shows standings and schedule but no controls', async 
   expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
     'Refresh standings',
   ])
+})
+
+test('a scorekeeper can open the court from a pool but has no setup controls', async () => {
+  vi.spyOn(api, 'getPool').mockResolvedValue({ id: 7, tournament_id: 3, name: 'Pool A', courts: [1] })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([
+    { id: 10, name: 'Spikers', pool_id: 7 },
+    { id: 11, name: 'Diggers', pool_id: 7 },
+    { id: 12, name: 'Setters', pool_id: 7 },
+  ])
+  vi.spyOn(api, 'getPoolMatches').mockResolvedValue([
+    {
+      id: 1, bracket: 'pool', pool_id: 7, round: 1, position: 1, court: 1, team1_id: 10,
+      team2_id: 11, team1_score: null, team2_score: null, status: 'ready', version: 1,
+    },
+    {
+      id: 2, bracket: 'pool', pool_id: 7, round: 2, position: 1, court: null, team1_id: 10,
+      team2_id: 12, team1_score: 21, team2_score: 15, winner_id: 10, status: 'complete', version: 2,
+    },
+  ])
+  vi.spyOn(api, 'getPoolStandings').mockResolvedValue([])
+  vi.spyOn(api, 'getRefOptions').mockResolvedValue([])
+
+  render(
+    <MemoryRouter initialEntries={['/pools/7']}>
+      <NotificationProvider>
+        <Routes>
+          <Route path="/pools/:poolId" element={<PoolPage />} />
+        </Routes>
+      </NotificationProvider>
+    </MemoryRouter>,
+    { user: userWithRole('scorekeeper') },
+  )
+
+  expect(await screen.findByRole('link', { name: 'Score on Court 1' })).toBeInTheDocument()
+  await screen.findByRole('button', { name: 'Refresh standings' })
+  expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
+    'Refresh standings',
+  ])
+  expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
 })
 
 test('signed out, an unscheduled pool has no generate button', async () => {

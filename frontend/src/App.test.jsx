@@ -10,7 +10,7 @@ afterEach(() => {
 })
 
 test('navigating from the main page to a tournament page and back to a team page', async () => {
-  vi.spyOn(api, 'getMe').mockResolvedValue({ id: 1, username: 'organizer' })
+  vi.spyOn(api, 'getMe').mockResolvedValue({ id: 1, username: 'organizer', role: 'admin' })
   vi.spyOn(api, 'listTournaments').mockResolvedValue([
     { id: 1, name: 'Spring Classic', team_count: 1 },
   ])
@@ -36,7 +36,7 @@ test('navigating from the main page to a tournament page and back to a team page
 
 const pageData = {
   '/health': { status: 'ok' },
-  '/auth/me': { id: 1, username: 'organizer' },
+  '/auth/me': { id: 1, username: 'organizer', role: 'admin' },
   '/tournaments': [{ id: 1, name: 'Spring Classic', team_count: 1 }],
   '/tournaments/1': {
     id: 1,
@@ -126,6 +126,20 @@ test('revisiting team and pool pages loads their data from the cache', async () 
   expect(hits('/teams/10')).toBe(1)
   expect(hits('/teams/10/players')).toBe(1)
   expect(hits('/pools/7')).toBe(1)
+})
+
+test('the Users page is at /users, reached from the nav bar by an admin', async () => {
+  vi.spyOn(api, 'getMe').mockResolvedValue({ id: 1, username: 'root', role: 'admin' })
+  vi.spyOn(api, 'listUsers').mockResolvedValue([{ id: 1, username: 'root', role: 'admin' }])
+  vi.spyOn(api, 'listTournaments').mockResolvedValue([])
+  window.history.pushState({}, '', '/')
+
+  render(<App />)
+
+  fireEvent.click(await screen.findByRole('link', { name: 'Users' }))
+
+  expect(await screen.findByRole('heading', { name: 'Accounts' })).toBeInTheDocument()
+  window.history.pushState({}, '', '/')
 })
 
 test('an unknown address shows a not-found page with a way home', async () => {

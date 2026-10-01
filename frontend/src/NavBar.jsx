@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 
-import { loginPath, useAuth } from './auth'
+import { hasRole, loginPath, useAuth } from './auth'
 import PageTrail from './PageTrail'
 
 // The app bar's controls: the page trail, then the account links.
@@ -15,6 +15,7 @@ export default function NavBar() {
         {!loading &&
           (user ? (
             <>
+              {hasRole(user, 'admin') && <Link to="/users">Users</Link>}
               <Link to="/account">{user.username}</Link>
               <button type="button" onClick={signOut}>
                 Sign out

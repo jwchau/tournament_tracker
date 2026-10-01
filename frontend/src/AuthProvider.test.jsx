@@ -63,6 +63,34 @@ test('a spectator is signed out', async () => {
   expect(await screen.findByText('Signed out')).toBeInTheDocument()
 })
 
+test('a write refused with 403 says so and re-reads who is signed in, since their role may have changed', async () => {
+  let reads = 0
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url) => {
+      if (url.endsWith('/auth/me')) {
+        reads += 1
+        const username = reads === 1 ? 'organizer' : 'demoted'
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ id: 1, username }) })
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 403,
+        json: () => Promise.resolve({ detail: "your role can't do that" }),
+      })
+    }),
+  )
+
+  renderApp('/tournaments/1')
+  await screen.findByText('Signed in as organizer')
+  fireEvent.click(screen.getByRole('button', { name: 'Add team' }))
+
+  expect(await screen.findByText("You don't have permission to do that")).toBeInTheDocument()
+  expect(await screen.findByText('Signed in as demoted')).toBeInTheDocument()
+  // Still on the page: they are signed in, just not allowed.
+  expect(screen.getByRole('button', { name: 'Add team' })).toBeInTheDocument()
+})
+
 test('a write refused with 401 sends the user to sign in, then back', async () => {
   vi.stubGlobal(
     'fetch',
