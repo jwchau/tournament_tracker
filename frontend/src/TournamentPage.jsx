@@ -269,50 +269,62 @@ export default function TournamentPage() {
             Teams<span className="visually-hidden">,</span>{' '}
             <span className="heading-count">{teams.length}</span>
           </h3>
-          <label htmlFor="show-rosters">
-            <input
-              id="show-rosters"
-              type="checkbox"
-              checked={showRosters}
-              onChange={handleToggleRosters}
-            />
-            Show players
-          </label>
         </div>
-        {user && (
-          <div className="team-add-bar">
-            <TeamForm
-              tournamentId={tournamentId}
-              disabledReason={
-                tournament.pool_play_started
-                  ? "Pool play has started, so teams can't be added."
-                  : null
-              }
-              onCreated={(team) =>
-                setTeams((current) => [...current, { ...team, player_count: 0 }])
-              }
-            />
+        <div className="team-panel">
+          <div className="team-toolbar">
+            {user && (
+              <div className="team-add-bar">
+                <TeamForm
+                  tournamentId={tournamentId}
+                  placeholder="Team name"
+                  disabledReason={
+                    tournament.pool_play_started
+                      ? "Pool play has started, so teams can't be added."
+                      : null
+                  }
+                  onCreated={(team) => setTeams((current) => [...current, { ...team, player_count: 0 }])}
+                />
+              </div>
+            )}
+            <label htmlFor="show-rosters" className="team-switch">
+              <input
+                id="show-rosters"
+                type="checkbox"
+                checked={showRosters}
+                onChange={handleToggleRosters}
+              />
+              Show players
+            </label>
           </div>
-        )}
-        {teams.length === 0 && <p className="setup-note">No teams yet.</p>}
-        <ul className="team-list">
-          {teams.map((team) => (
-            <li key={team.id}>
-              <Link to={`/teams/${team.id}`}>{team.name}</Link> ({team.player_count}{' '}
-              {team.player_count === 1 ? 'player' : 'players'})
-              {user && (
-                <InlineAddPlayer team={team} onAdded={(player) => handlePlayerAdded(team, player)} />
-              )}
-              {showRosters && (
-                <ul>
-                  {(playersByTeam[team.id] ?? []).map((player) => (
-                    <li key={player.id}>{player.name}</li>
+          {teams.length === 0 && <p className="setup-note">No teams yet.</p>}
+          <ul className="team-list" tabIndex={0} aria-label="Teams, scrolls sideways">
+            {teams.map((team) => (
+              <li key={team.id}>
+                <Link className="team-name" to={`/teams/${team.id}`}>
+                  {team.name}
+                </Link>
+                <span className="team-count">
+                  <span className="team-count-n">{team.player_count}</span>{' '}
+                  {team.player_count === 1 ? 'player' : 'players'}
+                </span>
+                {user && (
+                  <InlineAddPlayer team={team} onAdded={(player) => handlePlayerAdded(team, player)} />
+                )}
+                {showRosters &&
+                  team.id in playersByTeam &&
+                  (playersByTeam[team.id].length > 0 ? (
+                    <ul className="team-roster">
+                      {playersByTeam[team.id].map((player) => (
+                        <li key={player.id}>{player.name}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="team-roster">No players yet</p>
                   ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
       <ConfirmModal

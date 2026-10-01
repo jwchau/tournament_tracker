@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **The Teams section, redesigned.** It is one panel: a toolbar on top with the add-team
+  box (its button fused to the box) and a **Show players** switch, and under it the
+  teams as a strip of cards that scrolls sideways when there are more than fit, so a
+  long list or a long name can no longer spill off the page. A card shows the name,
+  the player count and "+ Player"; with Show players on it lists the roster. The strip
+  can be reached and scrolled from the keyboard.
+
 - **Add players from the Teams list.** Each team on the tournament page has a
   "+ Player" button (for signed-in organizers) that opens a name box in place.
   Enter adds the player and the box stays open and focused for the next, so a

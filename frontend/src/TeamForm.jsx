@@ -5,7 +5,13 @@ import { useNotify } from './NotificationContext'
 import { usePending } from './usePending'
 
 // `disabledReason`, when given, turns the form off and says why underneath.
-export default function TeamForm({ tournamentId, onCreated, disabledReason = null }) {
+// `placeholder` is shown in the empty name box.
+export default function TeamForm({
+  tournamentId,
+  onCreated,
+  disabledReason = null,
+  placeholder = undefined,
+}) {
   const [name, setName] = useState('')
   const notify = useNotify()
 
@@ -36,6 +42,7 @@ export default function TeamForm({ tournamentId, onCreated, disabledReason = nul
         id="team-name"
         value={name}
         required
+        placeholder={placeholder}
         disabled={Boolean(disabledReason)}
         aria-describedby={disabledReason ? 'team-name-note' : undefined}
         onChange={(event) => setName(event.target.value)}
