@@ -11,6 +11,7 @@ import {
   listTeams,
 } from './api'
 import { useAuth } from './auth'
+import InlineAddPlayer from './InlineAddPlayer'
 import Loading from './Loading'
 import NotFound from './NotFound'
 import { useNotify } from './NotificationContext'
@@ -143,6 +144,18 @@ export default function TournamentPage() {
       failureMessage: "Couldn't load the tournament",
     },
   )
+
+  // A player added from the list: the team's count, and its roster if that is loaded.
+  function handlePlayerAdded(team, player) {
+    setTeams((current) =>
+      current.map((entry) =>
+        entry.id === team.id ? { ...entry, player_count: entry.player_count + 1 } : entry,
+      ),
+    )
+    setPlayersByTeam((cached) =>
+      team.id in cached ? { ...cached, [team.id]: [...cached[team.id], player] } : cached,
+    )
+  }
 
   async function handleToggleRosters(event) {
     const next = event.target.checked
@@ -287,6 +300,9 @@ export default function TournamentPage() {
             <li key={team.id}>
               <Link to={`/teams/${team.id}`}>{team.name}</Link> ({team.player_count}{' '}
               {team.player_count === 1 ? 'player' : 'players'})
+              {user && (
+                <InlineAddPlayer team={team} onAdded={(player) => handlePlayerAdded(team, player)} />
+              )}
               {showRosters && (
                 <ul>
                   {(playersByTeam[team.id] ?? []).map((player) => (

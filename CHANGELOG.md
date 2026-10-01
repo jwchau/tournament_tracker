@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Add players from the Teams list.** Each team on the tournament page has a
+  "+ Player" button (for signed-in organizers) that opens a name box in place.
+  Enter adds the player and the box stays open and focused for the next, so a
+  team's roster goes in without opening its page; Escape or Done closes it. The
+  team's player count, and its roster if "Show players" is on, update as you go.
+
 - **A pointer from an empty court to where its match is.** Playoff matches go to
   whichever court is free, so a bracket's next match can be on another court
   while a scorekeeper waits at an empty one. An idle court's page now says

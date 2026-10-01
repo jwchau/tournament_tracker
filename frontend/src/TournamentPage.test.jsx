@@ -1091,3 +1091,74 @@ test('a row with caps of its own opens unchecked, and checking it again sends nu
     expect(updateTournament).toHaveBeenCalledWith('1', { playoff_point_caps_losers: null }),
   )
 })
+
+function mockTeamsPage() {
+  vi.spyOn(api, 'getTournament').mockResolvedValue({
+    id: 1,
+    name: 'Spring Classic',
+    advance_per_pool: 1,
+    playoff_bracket_count: 1,
+    court_count: 2,
+  })
+  vi.spyOn(api, 'listTeams').mockResolvedValue([
+    { id: 10, tournament_id: 1, name: 'Ice Wolves', player_count: 2 },
+    { id: 11, tournament_id: 1, name: 'Aces', player_count: 0 },
+  ])
+  vi.spyOn(api, 'listPlayers').mockImplementation(async (teamId) =>
+    teamId === 10
+      ? [
+          { id: 100, team_id: 10, name: 'Alex Kim' },
+          { id: 101, team_id: 10, name: 'Jordan Lee' },
+        ]
+      : [],
+  )
+}
+
+test('players are added to a team from the teams list, and its count and roster follow', async () => {
+  mockTeamsPage()
+  const createPlayer = vi
+    .spyOn(api, 'createPlayer')
+    .mockResolvedValueOnce({ id: 102, team_id: 10, name: 'Sam Ortiz' })
+    .mockResolvedValueOnce({ id: 103, team_id: 11, name: 'Rae Chen' })
+
+  renderAt(1)
+
+  await screen.findByRole('link', { name: 'Ice Wolves' })
+  fireEvent.click(screen.getByRole('checkbox', { name: /show players/i }))
+  await screen.findByText('Alex Kim')
+
+  fireEvent.click(screen.getByRole('button', { name: 'Add players to Ice Wolves' }))
+  const box = screen.getByLabelText('Player name for Ice Wolves')
+  fireEvent.change(box, { target: { value: 'Sam Ortiz' } })
+  fireEvent.submit(box.closest('form'))
+
+  expect(await screen.findByText('Sam Ortiz')).toBeInTheDocument()
+  expect(createPlayer).toHaveBeenCalledWith(10, { name: 'Sam Ortiz' })
+  expect(screen.getByText(/3 players/)).toBeInTheDocument()
+
+  // Another team, with its roster not fetched yet, just counts the new player.
+  fireEvent.click(screen.getByRole('button', { name: 'Add players to Aces' }))
+  const aces = screen.getByLabelText('Player name for Aces')
+  fireEvent.change(aces, { target: { value: 'Rae Chen' } })
+  fireEvent.submit(aces.closest('form'))
+  await waitFor(() => expect(createPlayer).toHaveBeenCalledWith(11, { name: 'Rae Chen' }))
+  expect(await screen.findByText(/1 player\b/)).toBeInTheDocument()
+})
+
+test('signed out, the teams list has no way to add players', async () => {
+  mockTeamsPage()
+
+  render(
+    <MemoryRouter initialEntries={['/tournaments/1']}>
+      <NotificationProvider>
+        <Routes>
+          <Route path="/tournaments/:tournamentId" element={<TournamentPage />} />
+        </Routes>
+      </NotificationProvider>
+    </MemoryRouter>,
+    { user: null },
+  )
+
+  await screen.findByRole('link', { name: 'Ice Wolves' })
+  expect(screen.queryByRole('button', { name: /add players to/i })).not.toBeInTheDocument()
+})
