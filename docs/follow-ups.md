@@ -20,9 +20,6 @@ Each changes how the app looks or behaves, so none was done unasked.
   the right score, and the Finish confirmation is not answered by Enter (about 7 actions per
   match). Reordering focus would make +1/−1 harder for keyboard users.
 - **Adding players without a page hop per team**: an inline add-player box, or a pasted roster.
-- **A "next match" link on every court.** Playoff matches move between courts (a bracket 2
-  semifinal on court 1 while court 2 sat free); that follows the dispatch rules, but
-  scorekeepers must check All courts.
 - **Settings**: the Save button is at the bottom of a long panel, and the panel opens over the
   page for any tournament with no teams.
 - **The correction confirmation** says "Round 2 match 1", not the teams, or that a champion

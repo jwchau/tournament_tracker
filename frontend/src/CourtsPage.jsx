@@ -7,6 +7,7 @@ import { courtLabel } from './courtLabel'
 import { isNotFound } from './failure'
 import Loading from './Loading'
 import NotFound from './NotFound'
+import { matchTeams, nextMatchFor } from './nextMatch'
 import { courtRefLine } from './refModel'
 import { usePolling } from './usePolling'
 
@@ -47,7 +48,10 @@ export default function CourtsPage() {
         <Loading label="Loading courts" rows={4} />
       ) : (
         <ul className="court-list">
-          {courts.map(({ court, label, current, ...rest }) => (
+          {courts.map(({ court, label, current, ...rest }) => {
+            // A free court says where its own bracket or pool is playing instead.
+            const next = current ? null : nextMatchFor(courts, court)
+            return (
             <li key={court}>
               <Link
                 className="court-link"
@@ -74,9 +78,17 @@ export default function CourtsPage() {
                     <span className="court-link-ref">{courtRefLine(current)}</span>
                   </>
                 )}
+                {next && (
+                  <span className="court-link-next">
+                    {next.kind === 'on-court'
+                      ? `Next match on Court ${next.court}: ${matchTeams(next.match)}`
+                      : `Next match: ${matchTeams(next.match)}, waiting for a free court`}
+                  </span>
+                )}
               </Link>
             </li>
-          ))}
+            )
+          })}
         </ul>
       )}
     </div>

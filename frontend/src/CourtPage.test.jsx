@@ -637,3 +637,63 @@ test('the tied-score note keeps its line, so nothing on the board moves when it 
   expect(note).toBeEmptyDOMElement()
   expect(within(now).getByRole('button', { name: 'Finish match' })).toBeEnabled()
 })
+
+// Bracket 1 is finished, so its court 1 is lent to bracket 2's semifinal; court 2, bracket 2's own, is idle.
+function lentCourts(courtTwo = {}) {
+  const semifinal = courtMatch(5, 'Aces', 'Kings', { bracket: 'winners', pool_id: null, playoff_bracket_id: 20, court: 1 })
+  return [
+    {
+      court: 1,
+      use: 'playoff',
+      label: 'Bracket 1',
+      now_playing: 'Bracket 2',
+      playoff_bracket_id: 10,
+      current: semifinal,
+      up_next: [],
+    },
+    { court: 2, use: 'playoff', label: 'Bracket 2', playoff_bracket_id: 20, current: null, up_next: [], ...courtTwo },
+  ]
+}
+
+test('an idle court links to the court where its own bracket is playing', async () => {
+  vi.spyOn(api, 'listCourts').mockResolvedValue(lentCourts())
+
+  renderAt('/tournaments/3/courts/2')
+
+  expect(await screen.findByText('Nothing on this court right now.')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Next match: Aces vs Kings on Court 1' })).toHaveAttribute(
+    'href',
+    '/tournaments/3/courts/1',
+  )
+})
+
+test('an idle court with a match queued for it but not yet on a court says it is waiting', async () => {
+  const waiting = courtMatch(8, 'Setters', 'Blockers', { playoff_bracket_id: 20, court: null })
+  vi.spyOn(api, 'listCourts').mockResolvedValue([
+    { court: 2, use: 'playoff', label: 'Bracket 2', playoff_bracket_id: 20, current: null, up_next: [waiting] },
+  ])
+
+  renderAt('/tournaments/3/courts/2')
+
+  expect(await screen.findByText('Next match: Setters vs Blockers, waiting for a free court')).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: /next match/i })).not.toBeInTheDocument()
+})
+
+test('an idle court with nothing coming keeps its plain message', async () => {
+  vi.spyOn(api, 'listCourts').mockResolvedValue([
+    { court: 2, use: 'playoff', label: 'Bracket 2', playoff_bracket_id: 20, current: null, up_next: [] },
+  ])
+
+  renderAt('/tournaments/3/courts/2')
+
+  expect(await screen.findByText('Nothing left to play on this court right now.')).toBeInTheDocument()
+})
+
+test('a court with a match on it shows no next-match pointer', async () => {
+  vi.spyOn(api, 'listCourts').mockResolvedValue(lentCourts())
+
+  renderAt('/tournaments/3/courts/1')
+
+  await screen.findByRole('heading', { name: 'Court 1' })
+  expect(screen.queryByText(/next match:/i)).not.toBeInTheDocument()
+})

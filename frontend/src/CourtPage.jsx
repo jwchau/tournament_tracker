@@ -10,6 +10,7 @@ import FlipBoard from './FlipBoard'
 import LiveScore from './LiveScore'
 import Loading from './Loading'
 import NotFound from './NotFound'
+import { matchTeams, nextMatchFor } from './nextMatch'
 import { courtRefLine } from './refModel'
 import SeriesForm from './SeriesForm'
 import { SwapSidesContext, useSwapSides } from './swapSides'
@@ -55,6 +56,8 @@ export default function CourtPage() {
   const court = courts.find((entry) => entry.court === Number(courtNumber))
   if (!court) return <NotFound thing="Court" />
   const { current } = court
+  // Where this court's own bracket or pool plays next, when nothing is on this court.
+  const next = nextMatchFor(courts, court.court)
 
   return (
     <div className="court-page">
@@ -129,7 +132,27 @@ export default function CourtPage() {
         </section>
         </SwapSidesContext.Provider>
       ) : (
-        <p className="setup-note">Nothing left to play on this court right now.</p>
+        <div className="court-idle">
+          {next ? (
+            <>
+              <p className="setup-note">Nothing on this court right now.</p>
+              {next.kind === 'on-court' ? (
+                <Link
+                  className="court-next-link"
+                  to={`/tournaments/${tournamentId}/courts/${next.court}`}
+                >
+                  Next match: {matchTeams(next.match)} on Court {next.court}
+                </Link>
+              ) : (
+                <p className="court-next-note">
+                  Next match: {matchTeams(next.match)}, waiting for a free court
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="setup-note">Nothing left to play on this court right now.</p>
+          )}
+        </div>
       )}
 
       {court.up_next.length > 0 && (
