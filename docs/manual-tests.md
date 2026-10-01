@@ -317,3 +317,7 @@ change, untick the boxes it touches.
 - [ ] **Fonts come from the app, not Google**
   - Do: open any page with the browser's network tab open, with the cache disabled; then reload with `fonts.googleapis.com` and `fonts.gstatic.com` blocked.
   - Expect: font files (`.woff2`) come from the app's own address, and nothing is requested from another site. Headings are in Unbounded, body text in Inter, the nav buttons in DM Sans, and the tab names in Manrope, with and without the block. On a repeat visit the font files come from the cache.
+
+- [ ] **An empty court points to where its match is**
+  - Setup: a playoff with 2 courts and a bracket with one match ready (for example 3 teams, single elimination), so the match is on court 1 and court 2 is free. Or a finished bracket lending its court to another.
+  - Expect: court 2's page reads "Nothing on this court right now." with a button "Next match: A vs B on Court 1" that opens court 1. In the courts list, court 2's tile says Free with "Next match on Court 1: A vs B" in orange. A court with its own match shows neither. With nothing playing on any court but a match waiting, it reads "Next match: A vs B, waiting for a free court"; with nothing coming, the page keeps "Nothing left to play on this court right now."

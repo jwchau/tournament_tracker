@@ -202,3 +202,59 @@ test('a busy court shows its ref; a free court shows none', async () => {
   expect(screen.getByRole('link', { name: /court 2/i })).toHaveTextContent('Ref: N/A')
   expect(screen.getByRole('link', { name: /court 3/i })).not.toHaveTextContent('Ref:')
 })
+
+function renderCourtsList() {
+  return render(
+    <MemoryRouter initialEntries={['/tournaments/3/courts']}>
+      <Routes>
+        <Route path="/tournaments/:tournamentId/courts" element={<CourtsPage />} />
+      </Routes>
+    </MemoryRouter>,
+  )
+}
+
+test('a free court names the court where its own bracket is playing, without nesting a link', async () => {
+  vi.spyOn(api, 'listCourts').mockResolvedValue([
+    {
+      court: 1,
+      use: 'playoff',
+      label: 'Bracket 1',
+      now_playing: 'Bracket 2',
+      playoff_bracket_id: 10,
+      current: { id: 5, team1_name: 'Aces', team2_name: 'Kings', playoff_bracket_id: 20 },
+      up_next: [],
+    },
+    { court: 2, use: 'playoff', label: 'Bracket 2', playoff_bracket_id: 20, current: null, up_next: [] },
+  ])
+
+  renderCourtsList()
+
+  await screen.findAllByRole('link', { name: /court 2/i })
+  const tile = (number) =>
+    screen.getAllByRole('link').find((link) => link.getAttribute('href') === `/tournaments/3/courts/${number}`)
+  const courtTwo = tile(2)
+  expect(courtTwo).toHaveTextContent('Free')
+  expect(courtTwo).toHaveTextContent('Next match on Court 1: Aces vs Kings')
+  expect(courtTwo.querySelector('a')).toBeNull()
+  // The busy court says nothing about a next match.
+  expect(tile(1)).not.toHaveTextContent('Next match')
+})
+
+test('a free court with a match waiting for it says so', async () => {
+  vi.spyOn(api, 'listCourts').mockResolvedValue([
+    {
+      court: 2,
+      use: 'playoff',
+      label: 'Bracket 2',
+      playoff_bracket_id: 20,
+      current: null,
+      up_next: [{ id: 8, team1_name: 'Setters', team2_name: 'Blockers' }],
+    },
+  ])
+
+  renderCourtsList()
+
+  expect(await screen.findByRole('link', { name: /court 2/i })).toHaveTextContent(
+    'Next match: Setters vs Blockers, waiting for a free court',
+  )
+})

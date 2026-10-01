@@ -2542,6 +2542,41 @@ table[aria-label='Standings'] tr.advancing td:first-child {
   font: 500 14.7px/21px var(--ui);
 }
 
+/* A free court's pointer to where its own bracket or pool is playing. */
+.court-link-next {
+  font: 500 14.7px/21px var(--ui);
+  color: var(--accent-text);
+}
+
+/* The court page with nothing on it: the note, then a link to the court that has the match. */
+.court-idle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.court-next-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: var(--ghost);
+  color: var(--accent-text);
+  font: 500 16px/24px var(--nav);
+  text-decoration: none;
+}
+
+.court-next-link:hover {
+  background: var(--ghost-hover);
+}
+
+.court-next-note {
+  font: 500 16px/24px var(--ui);
+  color: var(--muted);
+}
+
 /* ---------- Bracket page: round by round ---------- */
 
 .bracket-page {

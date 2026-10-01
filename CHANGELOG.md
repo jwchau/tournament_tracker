@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **A pointer from an empty court to where its match is.** Playoff matches go to
+  whichever court is free, so a bracket's next match can be on another court
+  while a scorekeeper waits at an empty one. An idle court's page now says
+  "Nothing on this court right now" and links to the court where its own bracket
+  (or pool) is playing, and its tile in the courts list names that court. If the
+  match is queued but has no court yet, it says it is waiting for a free court.
+  A court with a match on it is unchanged.
+
 - **Fonts served from the app's own origin.** The four fonts (Unbounded, Inter,
   Manrope, DM Sans) are bundled with the app, not loaded from Google, so a page
   makes no request to another site, still draws in the right fonts when Google
