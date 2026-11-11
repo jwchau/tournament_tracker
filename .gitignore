@@ -13,3 +13,7 @@ frontend/dist/
 
 # database backups (scripts/backup-db)
 backups/
+
+# /brag skill and its output
+brag-output/
+.claude/skills/brag/
